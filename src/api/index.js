@@ -62,7 +62,7 @@ export const influencerApi = {
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/influencers/import/excel', form, {
     headers: { 'Content-Type': 'multipart/form-data' }
-  })
+  }) 
 }
 
 // ===== Employees =====
