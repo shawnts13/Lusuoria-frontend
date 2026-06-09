@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', {
 
     /**
      * 可查看敏感财务字段（收入、利润、提成比例等）
-     * 仅 ADMIN（老板）和 AUDITOR（会计）
+     * 仅 ADMIN（老板）和 AUDITOR（财务）
      * STAFF（普通员工）和 GUEST（访客）不可见
      */
     canViewFinancials: (state) => state.role === 'ADMIN' || state.role === 'AUDITOR',

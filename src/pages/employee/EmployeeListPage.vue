@@ -42,6 +42,7 @@
             <a-select-option value="项目负责人">项目负责人</a-select-option>
             <a-select-option value="执行人员">执行人员</a-select-option>
             <a-select-option value="管理层">管理层</a-select-option>
+            <a-select-option value="财务">财务</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="邮箱" name="email">

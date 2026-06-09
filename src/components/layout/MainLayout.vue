@@ -134,7 +134,7 @@ const pageTitleMap = {
 const pageTitle = computed(() => pageTitleMap[currentRoute.value] || 'Lusuoria')
 
 const roleLabel = computed(() => {
-  const map = { ADMIN: '管理员', STAFF: '普通员工', AUDITOR: '审计/会计', GUEST: '访客' }
+  const map = { ADMIN: '管理员', STAFF: '普通员工', AUDITOR: '财务', GUEST: '访客' }
   return map[authStore.role] || authStore.role
 })
 const roleColor = computed(() => {
