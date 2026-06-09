@@ -1,0 +1,115 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+.page-container {
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.filter-bar {
+  background: #fff;
+  padding: 16px 24px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.table-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profit-positive {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.profit-negative {
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.status-tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Summary cards */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+
+  .label {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+
+  .value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  &.highlight .value {
+    color: #1677ff;
+  }
+
+  &.success .value {
+    color: #52c41a;
+  }
+
+  &.warning .value {
+    color: #faad14;
+  }
+
+  &.danger .value {
+    color: #ff4d4f;
+  }
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f5f9ff !important;
+}
+
+.excel-import-tip {
+  color: #888;
+  font-size: 13px;
+  margin-top: 8px;
+}
