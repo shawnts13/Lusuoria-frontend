@@ -134,6 +134,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { projectApi, brandApi, influencerApi, employeeApi } from '../../api/index'
@@ -152,9 +153,13 @@ const importResultVisible = ref(false)
 const importResults      = ref([])
 
 const pagination = reactive({ current:1, pageSize:20, total:0, showTotal: t => `共 ${t} 条` })
+const route     = useRoute()
 const filters = reactive({
   brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
-  projectType:undefined, clientStatus:undefined, internalStatus:undefined, keyword:''
+  projectType:undefined, clientStatus:undefined, internalStatus:undefined,
+  keyword:'',
+  // 从红人管理页跳转时传入
+  influencerId: route.query.influencerId ? Number(route.query.influencerId) : undefined
 })
 
 const clientStatuses = [
@@ -176,7 +181,7 @@ const allColumns = [
   { title:'月份',        dataIndex:'projectMonth',       key:'projectMonth',      width:80 },
   { title:'类型',        key:'projectType',              width:100 },
   { title:'品牌方',      dataIndex:'brandName',          key:'brandName',         width:100 },
-  { title:'红人账号',    dataIndex:'influencerAccount',  key:'influencerAccount', width:140 },
+  { title:'红人ID',       dataIndex:'influencerAccount',  key:'influencerAccount', width:140 },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
   // 非敏感成本列（所有角色可见）
   { title:'客户单价',    dataIndex:'clientUnitPrice',    key:'clientUnitPrice',   width:110,
@@ -222,6 +227,7 @@ async function loadData() {
       brandId:filters.brandId, projectMonth:filters.projectMonth,
       projectType:filters.projectType, clientStatus:filters.clientStatus,
       internalStatus:filters.internalStatus,
+      influencerId:filters.influencerId || undefined,
       keyword:filters.keyword||undefined,
       page:pagination.current-1, size:pagination.pageSize
     })
@@ -267,7 +273,7 @@ function fmtNum(val) {
 }
 
 onMounted(async () => {
-  const [b,inf,emp] = await Promise.all([brandApi.list(),influencerApi.list(),employeeApi.list()])
+  const [b,inf,emp] = await Promise.all([brandApi.list(),influencerApi.simple(),employeeApi.list()])
   brands.value=b.data||[]; influencers.value=inf.data||[]; employees.value=emp.data||[]
   loadData()
 })

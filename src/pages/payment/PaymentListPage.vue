@@ -29,7 +29,7 @@
         style="width:180px" allow-clear show-search option-filter-prop="label" @change="loadData">
         <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.id"
           :label="inf.accountName">
-          {{ inf.teamName ? `[${inf.teamName}] ` : '' }}{{ inf.accountName }}
+          {{ inf.teamNames ? `[${inf.teamNames.split(',')[0]}] ` : '' }}{{ inf.accountName }}
         </a-select-option>
       </a-select>
       <a-select v-model:value="filters.paymentStatus" placeholder="付款状态"
@@ -124,8 +124,8 @@ const allColumns = [
   { title: '结款单号',   dataIndex: 'paymentNo',       key: 'paymentNo',       width: 180 },
   { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90 },
   { title: '红人团队',   key: 'team',   width: 120,
-    customRender: ({ record }) => record.influencer?.teamName || '—' },
-  { title: '红人账号',   key: 'account', width: 140,
+    customRender: ({ record }) => record.influencer?.teamNames?.split(',')[0] || '—' },
+  { title: '红人ID',     key: 'account', width: 140,
     customRender: ({ record }) => record.influencer?.accountName || '—' },
   { title: '合作内容',   dataIndex: 'cooperationContent',  key: 'cooperationContent',  width: 120 },
   { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty',                 width: 80 },
@@ -210,7 +210,7 @@ async function handleImport(file) {
 }
 
 onMounted(async () => {
-  const inf = await influencerApi.list()
+  const inf = await influencerApi.simple()
   influencers.value = inf.data || []
   loadData()
 })

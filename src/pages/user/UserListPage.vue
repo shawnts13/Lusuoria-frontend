@@ -49,11 +49,6 @@
             placeholder="登录用户名，建议英文" />
         </a-form-item>
 
-        <a-form-item label="姓名" name="realName"
-          :rules="[{ required: true, message: '请填写姓名' }]">
-          <a-input v-model:value="form.realName" />
-        </a-form-item>
-
         <a-form-item label="密码" name="password"
           :rules="editingRecord ? [] : [{ required: true, message: '请填写密码' }, { min: 6, message: '至少6位' }]">
           <a-input-password v-model:value="form.password"
@@ -129,13 +124,12 @@ const saving       = ref(false)
 const formRef      = ref()
 
 const form = reactive({
-  username: '', realName: '', password: '',
+  username: '', password: '',
   role: 'STAFF', employeeId: undefined, enabled: true
 })
 
 const columns = [
   { title: '用户名',   dataIndex: 'username',     key: 'username' },
-  { title: '姓名',     dataIndex: 'realName',     key: 'realName' },
   { title: '角色',     key: 'role',               width: 130 },
   { title: '关联员工', dataIndex: 'employeeName', key: 'employeeName',
     customRender: ({ text }) => text || '—' },
@@ -160,8 +154,8 @@ const DEFAULT_PASSWORD = 'lusuoria2026@'
 function openCreate() {
   editingRecord.value = null
   Object.assign(form, {
-    username: '', realName: '',
-    password: DEFAULT_PASSWORD,   // 预填默认密码，管理员可以修改
+    username: '',
+    password: DEFAULT_PASSWORD,
     role: 'STAFF', employeeId: undefined, enabled: true
   })
   modalVisible.value = true
@@ -169,8 +163,8 @@ function openCreate() {
 
 function openEdit(record) {
   editingRecord.value = record
-  Object.assign(form, { username:record.username, realName:record.realName,
-    password:'', role:record.role, employeeId:record.employeeId||undefined, enabled:record.enabled })
+  Object.assign(form, { username: record.username,
+    password: '', role: record.role, employeeId: record.employeeId || undefined, enabled: record.enabled })
   modalVisible.value = true
 }
 

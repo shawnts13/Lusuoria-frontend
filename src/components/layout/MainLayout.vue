@@ -56,7 +56,7 @@
           <a-dropdown>
             <span class="user-info">
               <UserOutlined />
-              {{ authStore.realName || authStore.username }}
+              {{ authStore.displayName || authStore.username }}
               <DownOutlined style="font-size:11px; margin-left:4px" />
             </span>
             <template #overlay>

@@ -49,13 +49,16 @@ export const brandApi = {
 
 // ===== Influencers =====
 export const influencerApi = {
-  list:    (type) => http.get('/api/influencers', { params: { type } }),
-  getById: (id)   => http.get(`/api/influencers/${id}`),
-  save:    (data) => http.post('/api/influencers', data),
-  delete:  (id)   => http.delete(`/api/influencers/${id}`),
+  // 分页查询（红人管理页用）
+  list:    (params) => http.get('/api/influencers', { params }),
+  // 简单列表（下拉选择用，不分页）
+  simple:  ()      => http.get('/api/influencers/simple'),
+  getById: (id)    => http.get(`/api/influencers/${id}`),
+  save:    (data)  => http.post('/api/influencers', data),
+  delete:  (id)    => http.delete(`/api/influencers/${id}`),
 
   exportExcel:      (type) => downloadWithAuth(
-    `${BASE}/api/influencers/export/excel${type ? '?type=' + type : ''}`, '红人.xlsx'),
+    `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/influencers/import/excel', form, {
     headers: { 'Content-Type': 'multipart/form-data' }

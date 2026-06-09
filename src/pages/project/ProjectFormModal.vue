@@ -34,12 +34,12 @@
             </a-select>
           </a-form-item>
 
-          <a-form-item label="红人账号">
+          <a-form-item label="红人ID">
             <a-select v-model:value="form.influencerId"
               show-search option-filter-prop="label" allow-clear>
               <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.id"
                 :label="inf.accountName">
-                {{ inf.teamName ? `[${inf.teamName}] ` : '' }}{{ inf.accountName }}
+                {{ inf.teamNames ? `[${inf.teamNames.split(',')[0]}] ` : '' }}{{ inf.accountName }}
               </a-select-option>
             </a-select>
           </a-form-item>
