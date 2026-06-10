@@ -234,6 +234,8 @@ watch(() => form.influencerType, (newType) => {
     form.domains = Array.from(current)
   }
 })
+
+function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
 }
