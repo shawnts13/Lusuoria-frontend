@@ -58,6 +58,8 @@ export const influencerApi = {
   delete:  (id)    => http.delete(`/api/influencers/${id}`),
 
   projectCounts: (ids) => http.post('/api/influencers/project-counts', ids),
+
+  exportExcel:      (type) => downloadWithAuth(
     `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/influencers/import/excel', form, {
