@@ -47,6 +47,22 @@ export const brandApi = {
   })
 }
 
+// ===== Influencer Teams =====
+export const influencerTeamApi = {
+  list:   ()     => http.get('/api/influencer-teams'),
+  add:    (name) => http.post('/api/influencer-teams', JSON.stringify(name),
+    { headers: { 'Content-Type': 'application/json' } }),
+  delete: (id)   => http.delete(`/api/influencer-teams/${id}`)
+}
+
+// ===== Domains =====
+export const domainApi = {
+  list:   ()     => http.get('/api/domains'),
+  add:    (name) => http.post('/api/domains', JSON.stringify(name),
+    { headers: { 'Content-Type': 'application/json' } }),
+  delete: (id)   => http.delete(`/api/domains/${id}`)
+}
+
 // ===== Influencers =====
 export const influencerApi = {
   // 分页查询（红人管理页用）
@@ -57,7 +73,7 @@ export const influencerApi = {
   save:    (data)  => http.post('/api/influencers', data),
   delete:  (id)    => http.delete(`/api/influencers/${id}`),
 
-  projectCounts: (ids) => http.post('/api/influencers/project-counts', ids),
+  contractUploadUrl: () => http.get('/api/influencers/contract-upload-url'),
 
   exportExcel:      (type) => downloadWithAuth(
     `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
