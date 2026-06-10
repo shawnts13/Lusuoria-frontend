@@ -83,7 +83,11 @@
           </a-form-item>
 
           <a-form-item label="跟进人">
-            <a-input v-model:value="form.followerPerson" placeholder="员工姓名" />
+            <a-select v-model:value="form.followerPerson" allow-clear show-search
+              placeholder="选择员工" :filter-option="(input, opt) => opt.value.includes(input)">
+              <a-select-option v-for="emp in employees" :key="emp.id"
+                :value="emp.name">{{ emp.name }}</a-select-option>
+            </a-select>
           </a-form-item>
         </a-col>
 
@@ -138,9 +142,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { influencerApi } from '../../api/index'
+import { influencerApi, employeeApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 
 const props = defineProps({
@@ -150,9 +154,15 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
-const formRef = ref()
-const saving  = ref(false)
+const formRef   = ref()
+const saving    = ref(false)
+const employees = ref([])
 const { getOptions } = useOptions()
+
+onMounted(async () => {
+  const res = await employeeApi.list()
+  employees.value = res.data || []
+})
 
 const form = reactive({
   id: null,
