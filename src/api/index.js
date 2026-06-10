@@ -43,7 +43,8 @@ export const brandApi = {
   exportExcel:      ()     => downloadWithAuth(`${BASE}/api/brands/export/excel`, '品牌方.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/brands/import/template`, '品牌方导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/brands/import/excel', form, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
   })
 }
 
@@ -79,7 +80,8 @@ export const influencerApi = {
     `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/influencers/import/excel', form, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000  // 导入数据量大，超时设为2分钟
   })
 }
 
@@ -109,7 +111,8 @@ export const projectApi = {
     `${BASE}/api/projects/import/template`, '项目订单导入模板.xlsx'),
 
   importExcel: (formData) => http.post('/api/projects/import/excel', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
   })
 }
 
@@ -128,6 +131,7 @@ export const paymentApi = {
     `${BASE}/api/influencer-payments/import/template`, '红人结款导入模板.xlsx'),
 
   importExcel: (form) => http.post('/api/influencer-payments/import/excel', form, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
   })
 }
