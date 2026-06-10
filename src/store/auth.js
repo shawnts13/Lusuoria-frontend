@@ -1,6 +1,36 @@
 import { defineStore } from 'pinia'
 import { authApi } from '../api/index'
 
+// 每次部署时递增此版本号，自动触发旧缓存清除
+// 用户下次访问页面时会看到"版本已更新"提示
+export const APP_VERSION = '1.0.1'
+
+const VERSION_KEY = 'lusuoria_app_version'
+
+/**
+ * 检查版本号，若有更新则清除所有缓存
+ * 返回 true 表示版本发生了变化（需要提示用户）
+ */
+export function checkAndClearCache() {
+  const stored = localStorage.getItem(VERSION_KEY)
+  if (stored !== APP_VERSION) {
+    clearAllCache()
+    localStorage.setItem(VERSION_KEY, APP_VERSION)
+    return stored !== null  // 首次访问不提示，只有版本变化才提示
+  }
+  return false
+}
+
+export function clearAllCache() {
+  // 清除 sessionStorage（useOptions 缓存等）
+  sessionStorage.clear()
+  // 清除 localStorage 里的缓存（保留登录状态）
+  const keep = ['token', 'username', 'displayName', 'role', VERSION_KEY]
+  Object.keys(localStorage).forEach(key => {
+    if (!keep.includes(key)) localStorage.removeItem(key)
+  })
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token:       localStorage.getItem('token')       || null,
@@ -16,26 +46,10 @@ export const useAuthStore = defineStore('auth', {
     isAuditor:  (state) => state.role === 'AUDITOR',
     isGuest:    (state) => state.role === 'GUEST',
 
-    // 可写操作：ADMIN 和 STAFF
-    canWrite: (state) => state.role === 'ADMIN' || state.role === 'STAFF',
-
-    // 老板审核：仅 ADMIN
-    canApprove: (state) => state.role === 'ADMIN',
-
-    // 账号管理：仅 ADMIN
-    canManageUsers: (state) => state.role === 'ADMIN',
-
-    /**
-     * 可查看敏感财务字段（收入、利润、提成比例等）
-     * 仅 ADMIN（老板）和 AUDITOR（财务）
-     * STAFF（普通员工）和 GUEST（访客）不可见
-     */
+    canWrite:          (state) => state.role === 'ADMIN' || state.role === 'STAFF',
+    canApprove:        (state) => state.role === 'ADMIN',
+    canManageUsers:    (state) => state.role === 'ADMIN',
     canViewFinancials: (state) => state.role === 'ADMIN' || state.role === 'AUDITOR',
-
-    /**
-     * 可修改员工提成比例、奖金字段
-     * 仅 ADMIN
-     */
     canEditCommission: (state) => state.role === 'ADMIN'
   },
 

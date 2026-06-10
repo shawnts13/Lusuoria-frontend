@@ -75,6 +75,16 @@
       </a-layout-header>
 
       <a-layout-content class="main-content">
+        <!-- 版本更新提示条 -->
+        <a-alert v-if="showVersionBanner" type="info" show-icon
+          message="系统已更新，缓存已自动清除。如遇显示异常，可手动清除缓存后刷新页面。"
+          style="margin-bottom:12px;border-radius:6px"
+          :after-close="() => showVersionBanner = false"
+          closable>
+          <template #action>
+            <a-button size="small" @click="handleClearCache">手动清除缓存</a-button>
+          </template>
+        </a-alert>
         <router-view />
       </a-layout-content>
     </a-layout>
@@ -98,7 +108,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -107,12 +117,22 @@ import {
   MenuFoldOutlined, MenuUnfoldOutlined,
   DownOutlined, LogoutOutlined, LockOutlined
 } from '@ant-design/icons-vue'
-import { useAuthStore } from '../../store/auth'
+import { useAuthStore, clearAllCache } from '../../store/auth'
 import { userApi } from '../../api/index'
 
 const router    = useRouter()
 const route     = useRoute()
 const authStore = useAuthStore()
+
+// 版本更新提示
+const versionUpdated   = inject('versionUpdated', false)
+const showVersionBanner = ref(versionUpdated)
+
+function handleClearCache() {
+  clearAllCache()
+  message.success('缓存已清除，页面即将刷新')
+  setTimeout(() => window.location.reload(), 800)
+}
 const collapsed = ref(false)
 
 const showChangePwd    = ref(false)
