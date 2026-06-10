@@ -184,7 +184,7 @@ watch(() => props.record, rec => {
       links:          splitMulti(rec.links),
       casesLinks:     splitMulti(rec.casesLinks),
       email:          rec.email          || '',
-      contactStatus:  rec.contactStatus  || null,
+      contactStatus:  rec.contactStatus  || 'UNDEVELOPED',
       paymentCycle:   rec.paymentCycle   || null,
       followerPerson: rec.followerPerson || '',
       influencerCost: rec.influencerCost || '',
@@ -196,7 +196,7 @@ watch(() => props.record, rec => {
       id:null, influencerType:'OVERSEAS_INFLUENCER', teamNames:[],
       accountName:'', countryMarket:null, platform:null, domain:null,
       followerCount:null, links:[], casesLinks:[],
-      email:'', contactStatus:null, paymentCycle:null,
+      email:'', contactStatus:'UNDEVELOPED', paymentCycle:null,
       followerPerson:'', influencerCost:'', clientPrice:'', notes:''
     })
   }

@@ -57,12 +57,12 @@ export const influencerApi = {
   save:    (data)  => http.post('/api/influencers', data),
   delete:  (id)    => http.delete(`/api/influencers/${id}`),
 
-  exportExcel:      (type) => downloadWithAuth(
+  projectCounts: (ids) => http.post('/api/influencers/project-counts', ids),
     `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/influencers/import/excel', form, {
     headers: { 'Content-Type': 'multipart/form-data' }
-  }) 
+  })
 }
 
 // ===== Employees =====

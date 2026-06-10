@@ -81,8 +81,9 @@
           <template v-if="column.key === 'links'">
             <div v-if="record.links">
               <a v-for="(link, idx) in splitMulti(record.links)" :key="idx"
-                :href="link" target="_blank" style="display:block;font-size:12px">
-                链接{{ idx + 1 }}
+                :href="link" target="_blank"
+                style="display:block;font-size:12px;word-break:break-all">
+                {{ link }}
               </a>
             </div>
             <span v-else style="color:#bbb">—</span>
@@ -91,8 +92,9 @@
           <template v-if="column.key === 'casesLinks'">
             <div v-if="record.casesLinks">
               <a v-for="(link, idx) in splitMulti(record.casesLinks)" :key="idx"
-                :href="link" target="_blank" style="display:block;font-size:12px">
-                案例{{ idx + 1 }}
+                :href="link" target="_blank"
+                style="display:block;font-size:12px;word-break:break-all">
+                {{ link }}
               </a>
             </div>
             <span v-else style="color:#bbb">—</span>
@@ -122,7 +124,10 @@
           </template>
 
           <template v-if="column.key === 'projects'">
-            <a @click="goToProjects(record.id)">查看项目</a>
+            <a v-if="projectCounts[record.id] > 0" @click="goToProjects(record.id)">
+              查看（{{ projectCounts[record.id] }}个）
+            </a>
+            <span v-else style="color:#bbb">—</span>
           </template>
 
           <template v-if="column.key === 'action'">
@@ -181,8 +186,15 @@ const modalVisible       = ref(false)
 const editingRecord      = ref(null)
 const importResultVisible = ref(false)
 const importResults      = ref([])
+// 记录每个红人的合作项目数量，key 为 influencer id
+const projectCounts = ref({})
 
-const pagination = reactive({ current: 1, pageSize: 20, total: 0, showTotal: t => `共 ${t} 条` })
+const pagination = reactive({
+  current: 1, pageSize: 20, total: 0,
+  showTotal: t => `共 ${t} 条`,
+  showSizeChanger: true,
+  pageSizeOptions: ['20', '50', '100']
+})
 const filters = reactive({
   influencerType: undefined, platform: undefined,
   countryMarket:  undefined, teamName: undefined, keyword: undefined
@@ -196,8 +208,8 @@ const allColumns = [
   { title: '平台',        dataIndex: 'platform',     key: 'platform',       width: 100 },
   { title: '领域',        dataIndex: 'domain',       key: 'domain',         width: 80  },
   { title: '粉丝量',      key: 'followerCount',      width: 100 },
-  { title: '主页链接',    key: 'links',              width: 100 },
-  { title: '合作案例',    key: 'casesLinks',         width: 100 },
+  { title: '主页链接',    key: 'links',              width: 220 },
+  { title: '合作案例',    key: 'casesLinks',         width: 220 },
   { title: '红人邮箱',    dataIndex: 'email',        key: 'email',          width: 160 },
   { title: '建联情况',    key: 'contactStatus',      width: 120 },
   { title: '付款周期',    dataIndex: 'paymentCycle', key: 'paymentCycle',   width: 90  },
@@ -230,6 +242,16 @@ async function loadData() {
     })
     tableData.value  = res.data.content || []
     pagination.total = res.data.totalElements || 0
+    // 一次批量查询当前页所有红人的合作项目数量（1条SQL）
+    if (tableData.value.length > 0) {
+      const ids = tableData.value.map(inf => inf.id)
+      try {
+        const countRes = await influencerApi.projectCounts(ids)
+        projectCounts.value = countRes.data || {}
+      } catch { projectCounts.value = {} }
+    } else {
+      projectCounts.value = {}
+    }
   } finally { loading.value = false }
 }
 
@@ -269,7 +291,7 @@ function typeColor(t) {
   return { OVERSEAS_INFLUENCER:'blue', CHINA_INFLUENCER:'green', FOREIGN_IN_CHINA:'orange' }[t] || 'default'
 }
 function contactColor(s) {
-  const m = { REPLIED:'processing', INTERESTED:'cyan', COOPERATING:'blue', COOPERATED:'green' }
+  const m = { UNDEVELOPED:'default', REPLIED:'processing', INTERESTED:'cyan', COOPERATING:'blue', COOPERATED:'green' }
   return m[s] || 'default'
 }
 function fmtFollower(v) {
