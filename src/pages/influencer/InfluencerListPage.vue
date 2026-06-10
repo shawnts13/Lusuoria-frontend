@@ -54,10 +54,16 @@
         style="width:150px" allow-clear show-search
         :filter-option="(input, opt) => opt.value.includes(input)"
         @change="loadData">
-        <a-select-option v-for="t in teams" :key="t.name" :value="t.name">
-          {{ t.name }}
-        </a-select-option>
+        <a-select-option v-for="t in teams" :key="t.name" :value="t.name">{{ t.name }}</a-select-option>
       </a-select>
+      <!-- 粉丝量区间 -->
+      <a-input-number v-model:value="filters.followerMin" placeholder="粉丝量下限"
+        style="width:120px" :min="0" :formatter="fmtNum" :parser="v => v.replace(/,/g,'')"
+        @change="loadData" />
+      <span style="color:#bbb">—</span>
+      <a-input-number v-model:value="filters.followerMax" placeholder="粉丝量上限"
+        style="width:120px" :min="0" :formatter="fmtNum" :parser="v => v.replace(/,/g,'')"
+        @change="loadData" />
       <a-input-search v-model:value="filters.keyword" placeholder="搜索红人ID"
         style="width:180px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
@@ -70,19 +76,19 @@
         @change="handleTableChange">
         <template #bodyCell="{ column, record }">
 
+          <template v-if="column.key === 'brand'">
+            {{ getBrandName(record.brandId) || '—' }}
+          </template>
+
           <template v-if="column.key === 'influencerType'">
             <a-tag :color="typeColor(record.influencerType)">
               {{ getLabel('influencer_type', record.influencerType) }}
             </a-tag>
           </template>
 
-          <template v-if="column.key === 'brand'">
-            {{ getBrandName(record.brandId) || '—' }}
-          </template>
-
-          <template v-if="column.key === 'domains'">
-            <template v-if="record.domains">
-              <a-tag v-for="d in splitMulti(record.domains)" :key="d" style="margin:2px">{{ d }}</a-tag>
+          <template v-if="column.key === 'platform'">
+            <template v-if="record.platform">
+              <a-tag v-for="p in splitMulti(record.platform)" :key="p" style="margin:2px">{{ p }}</a-tag>
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -97,29 +103,10 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
-          <template v-if="column.key === 'casesLinks'">
-            <div v-if="record.casesLinks">
-              <a v-for="(link, idx) in splitMulti(record.casesLinks)" :key="idx"
-                :href="link" target="_blank" style="display:block;font-size:12px;word-break:break-all">
-                {{ link }}
-              </a>
-            </div>
-            <span v-else style="color:#bbb">—</span>
-          </template>
-
-          <template v-if="column.key === 'contractLink'">
-            <a v-if="record.contractLink" :href="record.contractLink" target="_blank"
-              style="font-size:12px">查看合同</a>
-            <span v-else style="color:#bbb">—</span>
-          </template>
-
-          <template v-if="column.key === 'contacts'">
-            <div v-if="record.contacts">
-              <div v-for="c in parseContacts(record.contacts)" :key="c.type"
-                style="font-size:12px;white-space:nowrap">
-                <span style="color:#888">{{ contactTypeLabel(c.type) }}：</span>{{ c.value }}
-              </div>
-            </div>
+          <template v-if="column.key === 'domains'">
+            <template v-if="record.domains">
+              <a-tag v-for="d in splitMulti(record.domains)" :key="d" style="margin:2px">{{ d }}</a-tag>
+            </template>
             <span v-else style="color:#bbb">—</span>
           </template>
 
@@ -148,6 +135,33 @@
           <template v-if="column.key === 'projects'">
             <a v-if="projectCounts[record.id] > 0" @click="goToProjects(record.id)">
               查看（{{ projectCounts[record.id] }}个）
+            </a>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+
+          <template v-if="column.key === 'casesLinks'">
+            <div v-if="record.casesLinks">
+              <a v-for="(link, idx) in splitMulti(record.casesLinks)" :key="idx"
+                :href="link" target="_blank" style="display:block;font-size:12px;word-break:break-all">
+                {{ link }}
+              </a>
+            </div>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+
+          <template v-if="column.key === 'contacts'">
+            <div v-if="record.contacts">
+              <div v-for="c in parseContacts(record.contacts)" :key="c.type"
+                style="font-size:12px;white-space:nowrap">
+                <span style="color:#888">{{ contactTypeLabel(c.type) }}：</span>{{ c.value }}
+              </div>
+            </div>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+
+          <template v-if="column.key === 'contractLink'">
+            <a v-if="record.contractLink" :href="record.contractLink" target="_blank" style="font-size:12px">
+              查看合同
             </a>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -212,11 +226,14 @@ const tableData = ref([])
 const brands    = ref([])
 const domains   = ref([])
 const teams     = ref([])
-const modalVisible       = ref(false)
-const editingRecord      = ref(null)
+const modalVisible        = ref(false)
+const editingRecord       = ref(null)
 const importResultVisible = ref(false)
-const importResults      = ref([])
-const projectCounts      = ref({})
+const importResults       = ref([])
+const projectCounts       = ref({})
+
+// 排序状态
+const sortState = reactive({ field: 'accountName', order: 'ascend' })
 
 const pagination = reactive({
   current: 1, pageSize: 20, total: 0,
@@ -226,30 +243,33 @@ const pagination = reactive({
 })
 const filters = reactive({
   influencerType: undefined, platform: undefined, countryMarket: undefined,
-  brandId: undefined, teamName: undefined, keyword: undefined
+  brandId: undefined, teamName: undefined,
+  followerMin: undefined, followerMax: undefined,
+  keyword: undefined
 })
 
+// 列定义（按新顺序）
 const allColumns = [
-  { title: '红人类型',      key: 'influencerType',  width: 140 },
-  { title: '红人团队',      dataIndex: 'teamName',  key: 'teamName',      width: 120 },
-  { title: '红人ID',        dataIndex: 'accountName', key: 'accountName', width: 140 },
-  { title: '品牌方',        key: 'brand',           width: 120 },
-  { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120 },
-  { title: '平台',          dataIndex: 'platform',  key: 'platform',      width: 100 },
-  { title: '所属领域',      key: 'domains',         width: 120 },
-  { title: '粉丝量',        key: 'followerCount',   width: 90  },
+  { title: '品牌方',        key: 'brand',           width: 120, sorter: true },
+  { title: '红人团队',      dataIndex: 'teamName',  key: 'teamName',      width: 120, sorter: true },
+  { title: '红人类型',      key: 'influencerType',  width: 130 },
+  { title: '红人ID',        dataIndex: 'accountName', key: 'accountName', width: 140, sorter: true },
+  { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
+  { title: '平台',          key: 'platform',        width: 120 },
   { title: '主页链接',      key: 'links',           width: 220 },
-  { title: '合作案例',      key: 'casesLinks',      width: 220 },
-  { title: '已签署合同',    key: 'contractLink',    width: 100 },
-  { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160 },
-  { title: '联系方式',      key: 'contacts',        width: 160 },
+  { title: '所属领域',      key: 'domains',         width: 130 },
+  { title: '粉丝量',        key: 'followerCount',   width: 90,  sorter: true, dataIndex: 'followerCount' },
   { title: '建联情况',      key: 'contactStatus',   width: 120 },
-  { title: '付款周期',      dataIndex: 'paymentCycle', key: 'paymentCycle', width: 90 },
   { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90 },
+  { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
   { title: '红人成本（$）',     key: 'influencerCost', width: 130, sensitive: true },
   { title: '客户合作价格（$）', key: 'clientPrice',    width: 140, sensitive: true },
-  { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
   { title: '合作项目',      key: 'projects',        width: 100 },
+  { title: '合作案例',      key: 'casesLinks',      width: 220 },
+  { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160 },
+  { title: '联系方式',      key: 'contacts',        width: 160 },
+  { title: '已签署合同',    key: 'contractLink',    width: 100 },
+  { title: '付款周期',      dataIndex: 'paymentCycle', key: 'paymentCycle', width: 90 },
   { title: '操作',          key: 'action',          width: 120, fixed: 'right' }
 ]
 
@@ -265,7 +285,6 @@ function getBrandName(brandId) {
   const b = brands.value.find(b => b.id === brandId)
   return b ? b.name : ''
 }
-
 function parseContacts(json) {
   if (!json) return []
   try { return JSON.parse(json) } catch { return [] }
@@ -283,8 +302,12 @@ async function loadData() {
       platform:       filters.platform,
       countryMarket:  filters.countryMarket,
       brandId:        filters.brandId,
-      teamName:       filters.teamName   || undefined,
-      keyword:        filters.keyword    || undefined,
+      teamName:       filters.teamName    || undefined,
+      followerMin:    filters.followerMin || undefined,
+      followerMax:    filters.followerMax || undefined,
+      keyword:        filters.keyword     || undefined,
+      sortBy:  sortState.field,
+      sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
       size: pagination.pageSize
     })
@@ -300,28 +323,41 @@ async function loadData() {
   } finally { loading.value = false }
 }
 
+function handleTableChange(pag, _filters, sorter) {
+  pagination.current  = pag.current
+  pagination.pageSize = pag.pageSize
+  // 处理列头排序
+  if (sorter && sorter.field) {
+    sortState.field = sorter.field
+    sortState.order = sorter.order || 'ascend'
+  }
+  loadData()
+}
+
+function resetFilters() {
+  Object.assign(filters, {
+    influencerType:undefined, platform:undefined, countryMarket:undefined,
+    brandId:undefined, teamName:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
+  })
+  pagination.current = 1
+  sortState.field = 'accountName'
+  sortState.order = 'ascend'
+  loadData()
+}
+
 async function loadDomains() {
   const res = await domainApi.list()
   domains.value = res.data || []
 }
-
 async function loadTeams() {
   const res = await influencerTeamApi.list()
   teams.value = res.data || []
 }
 
-function handleTableChange(pag) {
-  pagination.current = pag.current; pagination.pageSize = pag.pageSize; loadData()
-}
-function resetFilters() {
-  Object.assign(filters, { influencerType:undefined, platform:undefined,
-    countryMarket:undefined, brandId:undefined, teamName:undefined, keyword:undefined })
-  pagination.current = 1; loadData()
-}
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 async function handleDelete(id) {
-  await influencerApi.delete(id); message.success('删除成功'); loadData()
+  await influencerApi.delete(id); message.success('删除成功'); loadData(); loadDomains()
 }
 function handleExport() { influencerApi.exportExcel(filters.influencerType) }
 async function handleImport(file) {
@@ -329,7 +365,7 @@ async function handleImport(file) {
   try {
     const res = await influencerApi.importExcel(fd)
     importResults.value = res.data || []; importResultVisible.value = true
-    loadData(); loadDomains()
+    loadData(); loadDomains(); loadTeams()
   } catch {}
   return false
 }
@@ -353,6 +389,9 @@ function fmtFollower(v) {
   if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M'
   if (v >= 1000)    return (v / 1000).toFixed(1) + 'K'
   return String(v)
+}
+function fmtNum(v) {
+  return v ? Number(v).toLocaleString() : ''
 }
 function isRemark(value) {
   if (!value || !value.trim()) return false

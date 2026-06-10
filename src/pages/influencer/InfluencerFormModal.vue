@@ -55,7 +55,8 @@
           </a-form-item>
 
           <a-form-item label="平台">
-            <a-select v-model:value="form.platform" allow-clear>
+            <a-select v-model:value="form.platforms" mode="multiple" allow-clear
+              placeholder="可多选，或填写主页链接后自动识别">
               <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">
                 {{ o.label }}
               </a-select-option>
@@ -213,7 +214,7 @@ const form = reactive({
   id: null,
   influencerType: 'OVERSEAS_INFLUENCER',
   teamName: '', accountName: '',
-  brandId: null, countryMarket: null, platform: null,
+  brandId: null, countryMarket: null, platforms: [],
   domains: [],
   followerCount: null, links: [], casesLinks: [],
   contractLink: '',
@@ -225,6 +226,35 @@ const form = reactive({
 })
 
 const CHINA_DEFAULT_DOMAINS = ['科技', '童装', '玩具', 'AI素材']
+
+const PLATFORM_RULES = [
+  { pattern: 'tiktok.com',    platform: 'TikTok' },
+  { pattern: 'instagram.com', platform: 'Instagram' },
+  { pattern: 'youtube.com',   platform: 'YouTube' },
+  { pattern: 'youtu.be',      platform: 'YouTube' },
+  { pattern: 'facebook.com',  platform: 'Facebook' },
+  { pattern: 'weibo.com',     platform: '微博' },
+  { pattern: 'xiaohongshu.com', platform: '小红书' },
+  { pattern: 'xhslink.com',   platform: '小红书' },
+  { pattern: 'douyin.com',    platform: '抖音' },
+]
+
+function detectPlatformsFromLinks(links) {
+  const detected = new Set()
+  links.filter(l => l.includes('http')).forEach(link => {
+    const lower = link.toLowerCase()
+    PLATFORM_RULES.forEach(rule => {
+      if (lower.includes(rule.pattern)) detected.add(rule.platform)
+    })
+  })
+  return Array.from(detected)
+}
+
+// 主页链接变化时自动以链接识别结果覆盖平台（以链接为准）
+watch(() => [...form.links], (newLinks) => {
+  const detected = detectPlatformsFromLinks(newLinks.filter(Boolean))
+  if (detected.length > 0) form.platforms = detected
+})
 
 // 当红人类型切换为中国红人时，自动补齐默认领域
 watch(() => form.influencerType, (newType) => {
@@ -268,7 +298,7 @@ watch(() => props.record, rec => {
       accountName:    rec.accountName    || '',
       brandId:        rec.brandId        || null,
       countryMarket:  rec.countryMarket  || null,
-      platform:       rec.platform       || null,
+      platforms:      splitMulti(rec.platform),
       domains:        (() => {
         const dList = splitMulti(rec.domains)
         if (rec.influencerType === 'CHINA_INFLUENCER') {
@@ -294,7 +324,7 @@ watch(() => props.record, rec => {
   } else {
     Object.assign(form, {
       id:null, influencerType:'OVERSEAS_INFLUENCER', teamName:'', accountName:'',
-      brandId:null, countryMarket:null, platform:null, domains:[],
+      brandId:null, countryMarket:null, platforms:[], domains:[],
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', paymentCycle:null, followerPerson:null,
@@ -344,7 +374,7 @@ async function handleSave() {
       accountName:    form.accountName,
       brandId:        form.brandId,
       countryMarket:  form.countryMarket,
-      platform:       form.platform,
+      platform:       form.platforms.join("\n") || null,
       domains:        form.domains,
       followerCount:  form.followerCount,
       links:          form.links.filter(l => l.includes('http')),
