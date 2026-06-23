@@ -131,6 +131,22 @@
               {{ record.clientPrice || '—' }}
             </span>
           </template>
+          <template v-if="column.key === 'adSpendCost'">
+            <span :style="isRemark(record.adSpendCost) ? 'color:#c00000;font-weight:600' : ''">
+              {{ record.adSpendCost || '—' }}
+            </span>
+          </template>
+          <template v-if="column.key === 'adSpendTerm'">
+            {{ record.adSpendTerm || '—' }}
+          </template>
+          <template v-if="column.key === 'copyrightCost'">
+            <span :style="isRemark(record.copyrightCost) ? 'color:#c00000;font-weight:600' : ''">
+              {{ record.copyrightCost || '—' }}
+            </span>
+          </template>
+          <template v-if="column.key === 'copyrightTerm'">
+            {{ record.copyrightTerm || '—' }}
+          </template>
 
           <template v-if="column.key === 'projects'">
             <a v-if="projectCounts[record.id] > 0" @click="goToProjects(record.id)">
@@ -262,8 +278,12 @@ const allColumns = [
   { title: '建联情况',      key: 'contactStatus',   width: 120 },
   { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90 },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
-  { title: '红人成本（$）',     key: 'influencerCost', width: 130, sensitive: true },
-  { title: '客户合作价格（$）', key: 'clientPrice',    width: 140, sensitive: true },
+  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
+  { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, sensitive: true },
+  { title: '视频投流成本（$）',           key: 'adSpendCost',    width: 150, sensitive: true },
+  { title: '视频投流期限',                key: 'adSpendTerm',    width: 110, sensitive: true },
+  { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 150, sensitive: true },
+  { title: '视频版权期限',                key: 'copyrightTerm',  width: 110, sensitive: true },
   { title: '合作项目',      key: 'projects',        width: 100 },
   { title: '合作案例',      key: 'casesLinks',      width: 220 },
   { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160 },

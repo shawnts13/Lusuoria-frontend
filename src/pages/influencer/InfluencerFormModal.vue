@@ -160,7 +160,7 @@
           <!-- 敏感字段 -->
           <template v-if="canViewFinancials">
             <a-divider orientation="left" style="font-size:13px">财务信息</a-divider>
-            <a-form-item label="红人成本（美金）">
+            <a-form-item label="红人视频制作与发布成本（美金）" :label-col="{ span: 12 }">
               <a-input v-model:value="form.influencerCost" placeholder="金额或备注" />
               <div v-if="isRemark(form.influencerCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
@@ -169,6 +169,30 @@
               <a-input v-model:value="form.clientPrice" placeholder="金额或备注" />
               <div v-if="isRemark(form.clientPrice)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
+            </a-form-item>
+            <a-form-item label="视频投流成本（美金）">
+              <a-input v-model:value="form.adSpendCost" placeholder="金额或备注" />
+              <div v-if="isRemark(form.adSpendCost)"
+                style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
+            </a-form-item>
+            <a-form-item label="视频投流期限">
+              <a-select v-model:value="form.adSpendTerm" allow-clear>
+                <a-select-option v-for="o in getOptions('term')" :key="o.value" :value="o.value">
+                  {{ o.label }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="视频版权成本（美金）">
+              <a-input v-model:value="form.copyrightCost" placeholder="金额或备注" />
+              <div v-if="isRemark(form.copyrightCost)"
+                style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
+            </a-form-item>
+            <a-form-item label="视频版权期限">
+              <a-select v-model:value="form.copyrightTerm" allow-clear>
+                <a-select-option v-for="o in getOptions('term')" :key="o.value" :value="o.value">
+                  {{ o.label }}
+                </a-select-option>
+              </a-select>
             </a-form-item>
           </template>
 
@@ -222,7 +246,8 @@ const form = reactive({
   contacts: EMPTY_CONTACTS(),
   contactStatus: 'UNDEVELOPED', paymentCycle: null,
   followerPerson: null,
-  influencerCost: '', clientPrice: '', notes: ''
+  influencerCost: '', clientPrice: '', notes: '',
+  adSpendCost: '', adSpendTerm: null, copyrightCost: '', copyrightTerm: null
 })
 
 const CHINA_DEFAULT_DOMAINS = ['科技', '童装', '玩具', 'AI素材']
@@ -319,6 +344,10 @@ watch(() => props.record, rec => {
       followerPerson: rec.followerPerson || null,
       influencerCost: rec.influencerCost || '',
       clientPrice:    rec.clientPrice    || '',
+      adSpendCost:    rec.adSpendCost    || '',
+      adSpendTerm:    rec.adSpendTerm    || null,
+      copyrightCost:  rec.copyrightCost  || '',
+      copyrightTerm:  rec.copyrightTerm  || null,
       notes:          rec.notes          || ''
     })
   } else {
@@ -328,7 +357,8 @@ watch(() => props.record, rec => {
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', paymentCycle:null, followerPerson:null,
-      influencerCost:'', clientPrice:'', notes:''
+      influencerCost:'', clientPrice:'', notes:'',
+      adSpendCost:'', adSpendTerm:null, copyrightCost:'', copyrightTerm:null
     })
   }
 }, { immediate: true })
@@ -387,6 +417,10 @@ async function handleSave() {
       followerPerson: form.followerPerson,
       influencerCost: form.influencerCost,
       clientPrice:    form.clientPrice,
+      adSpendCost:    form.adSpendCost,
+      adSpendTerm:    form.adSpendTerm,
+      copyrightCost:  form.copyrightCost,
+      copyrightTerm:  form.copyrightTerm,
       notes:          form.notes
     })
     message.success(form.id ? '更新成功' : '创建成功')
