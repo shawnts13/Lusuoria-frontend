@@ -214,7 +214,7 @@
 
     <a-modal v-model:open="importResultVisible" title="导入结果" :footer="null" width="560px">
       <a-list :data-source="importResults" size="small"
-        :pagination="importResults.length > 10 ? { pageSize: 10 } : false">
+        :pagination="importListPagination">
         <template #renderItem="{ item, index }">
           <a-list-item>
             <span :style="index === 0 ? 'font-weight:600;color:#1677ff'
@@ -252,6 +252,27 @@ const editingRecord       = ref(null)
 const importResultVisible = ref(false)
 const importResults       = ref([])
 const projectCounts       = ref({})
+
+// 导入结果弹窗列表分页（独立状态，支持切换每页条数）
+const importListState = reactive({ current: 1, pageSize: 10 })
+const importListPagination = computed(() => {
+  if (importResults.value.length <= 10) return false
+  return {
+    current: importListState.current,
+    pageSize: importListState.pageSize,
+    showSizeChanger: true,
+    pageSizeOptions: ['10', '20', '50', '100'],
+    size: 'small',
+    onChange: (page, size) => {
+      importListState.current = page
+      importListState.pageSize = size
+    },
+    onShowSizeChange: (page, size) => {
+      importListState.current = 1
+      importListState.pageSize = size
+    }
+  }
+})
 
 // 排序状态
 const sortState = reactive({ field: 'accountName', order: 'ascend' })
@@ -392,7 +413,9 @@ async function handleImport(file) {
   const fd = new FormData(); fd.append('file', file)
   try {
     const res = await influencerApi.importExcel(fd)
-    importResults.value = res.data || []; importResultVisible.value = true
+    importResults.value = res.data || []
+    importListState.current = 1   // 每次新导入结果从第1页开始展示
+    importResultVisible.value = true
     loadData(); loadDomains(); loadTeams()
   } catch {}
   return false
