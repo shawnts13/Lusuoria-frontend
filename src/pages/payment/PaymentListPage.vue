@@ -26,7 +26,9 @@
         placeholder="结算月份" style="width:140px"
         @change="v => { filters.settlementMonth = v; loadData() }" />
       <a-select v-model:value="filters.influencerId" placeholder="红人"
-        style="width:180px" allow-clear show-search option-filter-prop="label" @change="loadData">
+        style="width:180px" allow-clear show-search
+        :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
+        @change="loadData">
         <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.id"
           :label="inf.accountName">
           {{ inf.teamNames ? `[${inf.teamNames.split(',')[0]}] ` : '' }}{{ inf.accountName }}

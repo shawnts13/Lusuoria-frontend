@@ -3,7 +3,7 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，自动触发旧缓存清除
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.0.4'
+export const APP_VERSION = '1.0.6'
 
 const VERSION_KEY = 'lusuoria_app_version'
 

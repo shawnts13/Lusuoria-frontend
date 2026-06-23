@@ -330,7 +330,7 @@ async function loadData() {
       teamName:       filters.teamName    || undefined,
       followerMin:    filters.followerMin || undefined,
       followerMax:    filters.followerMax || undefined,
-      keyword:        filters.keyword     || undefined,
+      keyword:        filters.keyword?.trim() || undefined,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
