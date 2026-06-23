@@ -70,7 +70,10 @@
     </div>
 
     <!-- 表格 -->
-    <div class="table-card">
+    <div class="table-card" ref="tableWrapperRef">
+      <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
+        <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
+      </div>
       <a-table :columns="visibleColumns" :data-source="tableData" :loading="loading"
         :pagination="pagination" row-key="id" size="middle" :scroll="{ x: tableScrollX }"
         @change="handleTableChange">
@@ -231,6 +234,7 @@ import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '
 import { influencerApi, brandApi, domainApi, influencerTeamApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
+import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import InfluencerFormModal from './InfluencerFormModal.vue'
 
 const authStore = useAuthStore()
@@ -238,6 +242,7 @@ const router    = useRouter()
 const { getOptions, getLabel } = useOptions()
 
 const loading   = ref(false)
+const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 const tableData = ref([])
 const brands    = ref([])
 const domains   = ref([])
@@ -340,7 +345,10 @@ async function loadData() {
         projectCounts.value = countRes.data || {}
       } catch { projectCounts.value = {} }
     } else { projectCounts.value = {} }
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+    remeasure()  // 数据变化后表格宽度可能变化，重新同步顶部滚动条
+  }
 }
 
 function handleTableChange(pag, _filters, sorter) {

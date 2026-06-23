@@ -41,7 +41,10 @@
       <a-button @click="resetFilters">重置</a-button>
     </div>
 
-    <div class="table-card">
+    <div class="table-card" ref="tableWrapperRef">
+      <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
+        <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
+      </div>
       <a-table :columns="visibleColumns" :data-source="tableData" :loading="loading"
         :pagination="pagination" row-key="id" size="middle" :scroll="{ x: tableScrollX }"
         @change="handleTableChange">
@@ -92,10 +95,12 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { paymentApi, influencerApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
+import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import PaymentFormModal from './PaymentFormModal.vue'
 
 const authStore = useAuthStore()
 const loading   = ref(false)
+const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 const tableData = ref([])
 const influencers = ref([])
 const modalVisible       = ref(false)
@@ -181,7 +186,10 @@ async function loadData() {
     })
     tableData.value  = res.data.content || []
     pagination.total = res.data.totalElements || 0
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+    remeasure()
+  }
 }
 
 function handleTableChange(pag) {
