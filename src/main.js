@@ -8,14 +8,14 @@ import './styles/global.scss'
 import { checkAndClearCache } from './store/auth'
 
 // 应用启动时检查版本，版本有更新则自动清除旧缓存
-const versionUpdated = checkAndClearCache()
+const versionInfo = checkAndClearCache()
 
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(Antd)
 
-// 把版本更新标志挂到全局，供 MainLayout 显示提示
-app.provide('versionUpdated', versionUpdated)
+// 把版本信息挂到全局，供 MainLayout 显示提示
+app.provide('versionInfo', versionInfo)
 
 app.mount('#app')

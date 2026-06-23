@@ -77,7 +77,7 @@
       <a-layout-content class="main-content">
         <!-- 版本更新提示条 -->
         <a-alert v-if="showVersionBanner" type="info" show-icon
-          message="系统已更新，缓存已自动清除。如遇显示异常，可手动清除缓存后刷新页面。"
+          :message="`系统已更新（版本 ${versionInfo.version}，发布于 ${versionInfo.time}），缓存已自动清除。如遇显示异常，可手动清除缓存后刷新页面。`"
           style="margin-bottom:12px;border-radius:6px"
           :after-close="() => showVersionBanner = false"
           closable>
@@ -125,8 +125,8 @@ const route     = useRoute()
 const authStore = useAuthStore()
 
 // 版本更新提示
-const versionUpdated   = inject('versionUpdated', false)
-const showVersionBanner = ref(versionUpdated)
+const versionInfo = inject('versionInfo', { updated: false, version: '', time: '' })
+const showVersionBanner = ref(versionInfo.updated)
 
 function handleClearCache() {
   clearAllCache()

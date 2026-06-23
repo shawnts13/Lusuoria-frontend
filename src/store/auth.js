@@ -1,24 +1,29 @@
 import { defineStore } from 'pinia'
 import { authApi } from '../api/index'
 
-// 每次部署时递增此版本号，自动触发旧缓存清除
+// 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.0.6'
+export const APP_VERSION = '1.0.7'
+export const APP_VERSION_TIME = '2026-06-23 15:16'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
 /**
  * 检查版本号，若有更新则清除所有缓存
- * 返回 true 表示版本发生了变化（需要提示用户）
+ * 返回 { updated, version, time } —— updated 为 true 表示版本发生了变化（需要提示用户）
  */
 export function checkAndClearCache() {
   const stored = localStorage.getItem(VERSION_KEY)
+  const updated = stored !== null && stored !== APP_VERSION
   if (stored !== APP_VERSION) {
     clearAllCache()
     localStorage.setItem(VERSION_KEY, APP_VERSION)
-    return stored !== null  // 首次访问不提示，只有版本变化才提示
   }
-  return false
+  return {
+    updated,
+    version: APP_VERSION,
+    time: APP_VERSION_TIME
+  }
 }
 
 export function clearAllCache() {
