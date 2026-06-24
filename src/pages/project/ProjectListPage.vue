@@ -43,6 +43,14 @@
         allow-clear @change="loadData">
         <a-select-option v-for="s in internalStatuses" :key="s.value" :value="s.value">{{ s.label }}</a-select-option>
       </a-select>
+      <a-input v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:160px"
+        allow-clear @press-enter="loadData" />
+      <a-select v-model:value="filters.projectManagerId" placeholder="负责人" style="width:130px"
+        allow-clear show-search
+        :filter-option="(input, opt) => opt.label.includes(input)"
+        @change="loadData">
+        <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+      </a-select>
       <a-input-search v-model:value="filters.keyword" placeholder="搜索项目编号/订单号"
         style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
@@ -66,8 +74,8 @@
             </a-tag>
           </template>
 
-          <template v-if="column.key === 'clientRevenue'">
-            {{ record.currency }} {{ fmtNum(record.clientRevenue) }}
+          <template v-if="column.key === 'clientPrice'">
+            {{ record.currency }} {{ fmtNum(record.clientPrice) }}
           </template>
           <template v-if="column.key === 'rmbRevenue'">¥{{ fmtNum(record.rmbRevenue) }}</template>
           <template v-if="column.key === 'grossProfit'">
@@ -162,6 +170,7 @@ const route     = useRoute()
 const filters = reactive({
   brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
   projectType:undefined, clientStatus:undefined, internalStatus:undefined,
+  accountName:undefined, projectManagerId:undefined,
   keyword:'',
   // 从红人管理页跳转时传入
   influencerId: route.query.influencerId ? Number(route.query.influencerId) : undefined
@@ -180,39 +189,37 @@ const internalStatuses = [
   { value:'IN_PAYROLL', label:'已进入工资' }, { value:'ARCHIVED', label:'已归档' }
 ]
 
-// 全部列定义，sensitive:true 的列只有 canViewFinancials 才显示
+// 全部列定义，按需求指定顺序排列，sensitive:true 的列只有 canViewFinancials 才显示
 const allColumns = [
-  { title:'内部项目编号', dataIndex:'internalProjectNo', key:'internalProjectNo', width:200, fixed:'left' },
+  { title:'甲方订单号',  dataIndex:'clientOrderNo',      key:'clientOrderNo',     width:140, fixed:'left' },
   { title:'月份',        dataIndex:'projectMonth',       key:'projectMonth',      width:80 },
-  { title:'类型',        key:'projectType',              width:100 },
   { title:'品牌方',      dataIndex:'brandName',          key:'brandName',         width:100 },
+  { title:'类型',        key:'projectType',              width:100 },
   { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160 },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
-  // 非敏感成本列（所有角色可见）
-  { title:'客户单价',    dataIndex:'clientUnitPrice',    key:'clientUnitPrice',   width:110,
-    customRender: ({ record }) => record.clientUnitPrice ? `${record.currency||''} ${fmtNum(record.clientUnitPrice)}` : '—' },
+  { title:'甲方状态',    key:'clientStatus',             width:120 },
+  { title:'内部状态',    key:'internalStatus',           width:120 },
+  // 敏感列（仅 ADMIN / AUDITOR）
+  { title:'客户合作价格（$）', dataIndex:'clientPrice',   key:'clientPrice',       width:140, sensitive:true,
+    customRender: ({ text }) => fmtNum(text) },
+  { title:'红人成本',    dataIndex:'influencerCost',     key:'influencerCost',    width:110, sensitive:true,
+    customRender: ({ text }) => fmtNum(text) },
+  // 非敏感
   { title:'币种',        dataIndex:'currency',           key:'currency',          width:70 },
   { title:'汇率',        dataIndex:'exchangeRate',       key:'exchangeRate',      width:80,
     customRender: ({ text }) => text || '—' },
-  { title:'红人单价',    dataIndex:'influencerUnitPrice',key:'influencerUnitPrice',width:110,
-    customRender: ({ text }) => fmtNum(text) },
-  { title:'红人成本',    dataIndex:'influencerCost',     key:'influencerCost',    width:110,
-    customRender: ({ text }) => fmtNum(text) },
-  // 敏感列（仅 ADMIN / AUDITOR）
-  { title:'客户收入',    key:'clientRevenue',            width:130,  sensitive:true },
-  { title:'人民币收入',  key:'rmbRevenue',               width:120,  sensitive:true },
+  // 敏感
   { title:'项目毛利',    key:'grossProfit',              width:120,  sensitive:true },
-  { title:'提成比例',    dataIndex:'commissionRate',     key:'commissionRate',    width:90,  sensitive:true,
-    customRender: ({ text }) => text ? (parseFloat(text)*100).toFixed(0)+'%' : '—' },
+  { title:'公司利润（美金）', key:'companyNetProfit',     width:140,  sensitive:true },
+  { title:'公司利润（人民币）', key:'rmbRevenue',         width:140,  sensitive:true },
   { title:'负责人提成',  dataIndex:'commissionAmount',   key:'commissionAmount',  width:110, sensitive:true,
     customRender: ({ text }) => fmtNum(text) },
-  { title:'公司利润',    key:'companyNetProfit',         width:120,  sensitive:true },
-  // 非敏感列
-  { title:'甲方状态',    key:'clientStatus',             width:120 },
-  { title:'内部状态',    key:'internalStatus',           width:120 },
+  { title:'提成比例',    dataIndex:'commissionRate',     key:'commissionRate',    width:90,  sensitive:true,
+    customRender: ({ text }) => text ? (parseFloat(text)*100).toFixed(0)+'%' : '—' },
+  // 非敏感
   { title:'已到账金额',  dataIndex:'receivedAmount',     key:'receivedAmount',    width:110,
     customRender: ({ text }) => fmtNum(text) },
-  { title:'甲方订单号',  dataIndex:'clientOrderNo',      key:'clientOrderNo',     width:140 },
+  { title:'内部项目编号', dataIndex:'internalProjectNo', key:'internalProjectNo', width:200 },
   { title:'操作',        key:'action',                   width:200,  fixed:'right' }
 ]
 
@@ -233,6 +240,8 @@ async function loadData() {
       projectType:filters.projectType, clientStatus:filters.clientStatus,
       internalStatus:filters.internalStatus,
       influencerId:filters.influencerId || undefined,
+      accountName:filters.accountName?.trim() || undefined,
+      projectManagerId:filters.projectManagerId || undefined,
       keyword:filters.keyword||undefined,
       page:pagination.current-1, size:pagination.pageSize
     })
@@ -249,7 +258,8 @@ function handleTableChange(pag) {
 }
 function resetFilters() {
   Object.assign(filters, { brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
-    projectType:undefined, clientStatus:undefined, internalStatus:undefined, keyword:'' })
+    projectType:undefined, clientStatus:undefined, internalStatus:undefined,
+    accountName:undefined, projectManagerId:undefined, keyword:'' })
   pagination.current=1; loadData()
 }
 function openCreate() { editingRecord.value=null; modalVisible.value=true }

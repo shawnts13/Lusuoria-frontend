@@ -21,11 +21,11 @@
           <div class="value">{{ summary.totalProjects || 0 }}</div>
         </div>
         <div class="summary-card">
-          <div class="label">客户收入（USD）</div>
+          <div class="label">客户合作价格（USD）</div>
           <div class="value">{{ fmt(summary.totalClientRevenue) }}</div>
         </div>
         <div class="summary-card">
-          <div class="label">人民币收入</div>
+          <div class="label">公司利润（人民币）</div>
           <div class="value">{{ fmtRmb(summary.totalRmbRevenue) }}</div>
         </div>
         <div class="summary-card warning">
@@ -53,7 +53,7 @@
           <div class="value">{{ fmt(summary.totalCommissionAmount) }}</div>
         </div>
         <div class="summary-card highlight">
-          <div class="label">公司剩余利润</div>
+          <div class="label">公司利润（美金）</div>
           <div class="value">{{ fmt(summary.totalCompanyNetProfit) }}</div>
         </div>
       </div>

@@ -52,38 +52,14 @@
             <a-input v-model:value="form.cooperationContent" />
           </a-form-item>
 
-          <a-form-item label="合作数量">
-            <a-input-number v-model:value="form.cooperationQuantity"
-              style="width:100%" :min="1" />
-          </a-form-item>
-
           <a-form-item label="自带资源/供应商">
             <a-switch v-model:checked="form.isOwnResource"
               checked-children="是" un-checked-children="否" />
           </a-form-item>
 
-          <!-- 成本/操作信息：所有角色可见可填 -->
-          <a-form-item label="客户单价">
-            <a-input-number v-model:value="form.clientUnitPrice"
-              style="width:100%" :precision="2" @change="calcPreview" />
-          </a-form-item>
-
-          <a-form-item label="币种">
-            <a-select v-model:value="form.currency">
-              <a-select-option value="USD">USD</a-select-option>
-              <a-select-option value="RMB">RMB</a-select-option>
-              <a-select-option value="EUR">EUR</a-select-option>
-            </a-select>
-          </a-form-item>
-
           <a-form-item label="汇率">
             <a-input-number v-model:value="form.exchangeRate"
               style="width:100%" :precision="4" @change="calcPreview" />
-          </a-form-item>
-
-          <a-form-item label="红人单价">
-            <a-input-number v-model:value="form.influencerUnitPrice"
-              style="width:100%" :precision="2" @change="calcPreview" />
           </a-form-item>
 
           <!-- 项目负责人：所有有写权限的角色都可以指定负责人 -->
@@ -102,10 +78,19 @@
           <template v-if="canViewFinancials">
             <a-divider orientation="left" style="font-size:13px">收入 & 利润</a-divider>
 
-            <a-form-item label="客户收入" name="clientRevenue"
-              :rules="[{ required: true, message: '请填写客户收入' }]">
-              <a-input-number v-model:value="form.clientRevenue"
+            <a-form-item label="客户合作价格" name="clientPrice"
+              :rules="[{ required: true, message: '请填写客户合作价格' }]">
+              <a-input-number v-model:value="form.clientPrice"
                 style="width:100%" :precision="2" @change="calcPreview" />
+            </a-form-item>
+
+            <a-form-item label="红人成本" v-if="form.projectType !== 'CHINA_INFLUENCER'">
+              <a-input-number v-model:value="form.influencerCost"
+                style="width:100%" :precision="2" @change="calcPreview" />
+            </a-form-item>
+            <a-form-item label="红人成本" v-else>
+              <a-input-number :value="autoInfluencerCost" disabled style="width:100%" :precision="2" />
+              <div style="font-size:12px;color:#888;margin-top:2px">中国红人按客户合作价格 65% 自动计算</div>
             </a-form-item>
 
             <a-form-item label="其他外部成本">
@@ -174,9 +159,19 @@
           </a-col>
           <a-col :span="6">
             <div class="pv-item">
-              <div class="pv-label">公司剩余利润</div>
+              <div class="pv-label">公司利润（美金）</div>
               <div class="pv-val" :class="preview.companyNetProfit >= 0 ? 'pos' : 'neg'">
                 {{ fmtNum(preview.companyNetProfit) }}
+              </div>
+            </div>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16" class="profit-preview" style="margin-top:8px">
+          <a-col :span="6" :offset="9">
+            <div class="pv-item">
+              <div class="pv-label">公司利润（人民币）</div>
+              <div class="pv-val" :class="preview.rmbRevenue >= 0 ? 'pos' : 'neg'">
+                ¥{{ fmtNum(preview.rmbRevenue) }}
               </div>
             </div>
           </a-col>
@@ -289,10 +284,10 @@ const form = reactive({
   projectType: 'OVERSEAS_INFLUENCER',
   brandId: null, influencerId: null, projectManagerId: null,
   clientOrderNo: '', cooperationContent: '',
-  cooperationQuantity: null, isOwnResource: false,
-  clientUnitPrice: null, clientRevenue: null,
-  currency: 'USD', exchangeRate: 7.25,
-  influencerUnitPrice: null, influencerCost: null,
+  isOwnResource: false,
+  clientPrice: null,
+  exchangeRate: 7.25,
+  influencerCost: null,
   otherExternalCost: 0, internalExecutionCost: 0,
   commissionRate: 0, commissionRateDisplay: 0,
   clientStatus: 'PENDING_SUBMIT', internalStatus: 'PENDING_CALC',
@@ -301,9 +296,15 @@ const form = reactive({
   receivedAmount: null, notes: ''
 })
 
+// 中国红人模式下，红人成本由客户合作价格自动算出（只读展示）
+const autoInfluencerCost = computed(() => {
+  if (form.projectType !== 'CHINA_INFLUENCER') return form.influencerCost
+  return +((+form.clientPrice || 0) * 0.65).toFixed(2)
+})
+
 const preview = reactive({
   grossProfit: 0, distributableProfit: 0,
-  commissionAmount: 0, companyNetProfit: 0
+  commissionAmount: 0, companyNetProfit: 0, rmbRevenue: 0
 })
 
 watch(() => props.record, rec => {
@@ -318,13 +319,9 @@ watch(() => props.record, rec => {
       projectManagerId:     rec.projectManagerId,
       clientOrderNo:        rec.clientOrderNo        || '',
       cooperationContent:   rec.cooperationContent   || '',
-      cooperationQuantity:  rec.cooperationQuantity,
       isOwnResource:        rec.isOwnResource         || false,
-      clientUnitPrice:      rec.clientUnitPrice,
-      clientRevenue:        rec.clientRevenue,
-      currency:             rec.currency              || 'USD',
+      clientPrice:          rec.clientPrice,
       exchangeRate:         rec.exchangeRate          || 7.25,
-      influencerUnitPrice:  rec.influencerUnitPrice,
       influencerCost:       rec.influencerCost,
       otherExternalCost:    rec.otherExternalCost     || 0,
       internalExecutionCost:rec.internalExecutionCost || 0,
@@ -348,10 +345,10 @@ watch(() => props.record, rec => {
       projectType: 'OVERSEAS_INFLUENCER', brandId: null,
       influencerId: null, projectManagerId: null,
       clientOrderNo: '', cooperationContent: '',
-      cooperationQuantity: null, isOwnResource: false,
-      clientUnitPrice: null, clientRevenue: null,
-      currency: 'USD', exchangeRate: 7.25,
-      influencerUnitPrice: null, influencerCost: null,
+      isOwnResource: false,
+      clientPrice: null,
+      exchangeRate: 7.25,
+      influencerCost: null,
       otherExternalCost: 0, internalExecutionCost: 0,
       commissionRate: 0, commissionRateDisplay: 0,
       clientStatus: 'PENDING_SUBMIT', internalStatus: 'PENDING_CALC',
@@ -360,7 +357,7 @@ watch(() => props.record, rec => {
     })
     Object.assign(preview, {
       grossProfit: 0, distributableProfit: 0,
-      commissionAmount: 0, companyNetProfit: 0
+      commissionAmount: 0, companyNetProfit: 0, rmbRevenue: 0
     })
   }
 }, { immediate: true })
@@ -378,28 +375,29 @@ function onManagerChange(id) {
 }
 
 function calcPreview() {
-  const rev   = +form.clientRevenue       || 0
+  const price = +form.clientPrice         || 0
   const other = +form.otherExternalCost   || 0
   const exec  = +form.internalExecutionCost || 0
   const rate  = +form.commissionRate      || 0
+  const rate2 = +form.exchangeRate        || 0
   let infCost = 0, gross = 0, distrib = 0
 
   if (form.projectType === 'CHINA_INFLUENCER') {
-    infCost = +(rev * 0.65).toFixed(2)
-    gross   = +(rev * 0.35).toFixed(2)
+    infCost = +(price * 0.65).toFixed(2)
+    gross   = +(price * 0.35).toFixed(2)
     distrib = +(gross - other - exec).toFixed(2)
   } else {
-    infCost = form.influencerUnitPrice && form.cooperationQuantity
-      ? +(form.influencerUnitPrice * form.cooperationQuantity).toFixed(2)
-      : (+form.influencerCost || 0)
-    gross   = +(rev - infCost - other).toFixed(2)
+    infCost = +form.influencerCost || 0
+    gross   = +(price - infCost - other).toFixed(2)
     distrib = +(gross - exec).toFixed(2)
   }
   const commission = +(distrib * rate).toFixed(2)
+  const companyUsd  = +(distrib - commission).toFixed(2)
   preview.grossProfit          = gross
   preview.distributableProfit  = distrib
   preview.commissionAmount     = commission
-  preview.companyNetProfit     = +(distrib - commission).toFixed(2)
+  preview.companyNetProfit     = companyUsd
+  preview.rmbRevenue           = rate2 > 0 ? +(companyUsd * rate2).toFixed(2) : 0
 }
 
 async function handleSave() {
