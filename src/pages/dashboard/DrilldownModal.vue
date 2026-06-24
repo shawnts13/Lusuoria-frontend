@@ -1,0 +1,136 @@
+<template>
+  <a-modal :open="visible" :title="title" width="640px" :footer="null" @cancel="close">
+    <div class="drilldown-toolbar">
+      <a-range-picker
+        v-model:value="monthRange"
+        picker="month"
+        format="YYYYMM"
+        value-format="YYYYMM"
+        @change="reload"
+        style="width:240px"
+      />
+      <template v-if="showCurrencyToggle">
+        <a-radio-group v-model:value="currency" button-style="solid" size="small" @change="reload">
+          <a-radio-button value="USD">USD</a-radio-button>
+          <a-radio-button value="RMB">RMB</a-radio-button>
+        </a-radio-group>
+        <span v-if="exchangeRateInfo?.usdToCny" class="rate-hint">
+          汇率：1 USD = {{ exchangeRateInfo.usdToCny }} CNY
+          <a :href="exchangeRateInfo.sourceUrl" target="_blank" rel="noopener">（来源）</a>
+        </span>
+      </template>
+      <a-select v-if="dimensionOptions?.length" v-model:value="dimension"
+        style="width:120px" size="small" @change="reload">
+        <a-select-option v-for="d in dimensionOptions" :key="d.value" :value="d.value">{{ d.label }}</a-select-option>
+      </a-select>
+    </div>
+
+    <a-spin :spinning="loading">
+      <a-table
+        :columns="columns"
+        :data-source="rows"
+        :pagination="rows.length > 10 ? { pageSize: 10 } : false"
+        row-key="dimensionLabel"
+        size="middle"
+        style="margin-top:12px"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'amount'">
+            {{ fmtAmount(record.amount) }}
+          </template>
+          <template v-if="column.key === 'videoCount'">
+            {{ record.videoCount }}
+          </template>
+        </template>
+      </a-table>
+      <div v-if="!loading && rows.length === 0" class="empty-hint">该时间范围内暂无数据</div>
+    </a-spin>
+  </a-modal>
+</template>
+
+<script setup>
+import { ref, reactive, watch, computed } from 'vue'
+import dayjs from 'dayjs'
+
+const props = defineProps({
+  visible: { type: Boolean, default: false },
+  title: { type: String, default: '明细拆分' },
+  // 'video' | 'client-price' | 'influencer-cost' | 'gross-profit' | 'commission'
+  metric: { type: String, required: true },
+  defaultMonth: { type: String, default: '' },
+  showCurrencyToggle: { type: Boolean, default: false },
+  dimensionOptions: { type: Array, default: null }, // null = 不显示维度切换
+  fetcher: { type: Function, required: true } // 注入具体的请求函数，便于复用
+})
+const emit = defineEmits(['update:visible'])
+
+const loading = ref(false)
+const rows = ref([])
+const exchangeRateInfo = ref(null)
+const currency = ref('USD')
+const dimension = ref(props.dimensionOptions?.[0]?.value || 'brand')
+const monthRange = ref([props.defaultMonth, props.defaultMonth])
+
+const columns = computed(() => {
+  const dimCol = { title: '维度', dataIndex: 'dimensionLabel', key: 'dimensionLabel' }
+  if (props.metric === 'video') {
+    return [dimCol, { title: '视频数量', key: 'videoCount', dataIndex: 'videoCount' }]
+  }
+  return [dimCol, { title: '金额', key: 'amount', dataIndex: 'amount' }]
+})
+
+function close() { emit('update:visible', false) }
+
+function fmtAmount(v) {
+  if (v == null) return '—'
+  const n = parseFloat(v)
+  if (isNaN(n)) return '—'
+  const prefix = currency.value === 'RMB' ? '¥' : '$'
+  return prefix + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+async function reload() {
+  if (!monthRange.value || monthRange.value.length !== 2) return
+  loading.value = true
+  try {
+    const [start, end] = monthRange.value
+    const res = await props.fetcher(start, end, currency.value, dimension.value)
+    rows.value = res.data?.rows || []
+    exchangeRateInfo.value = res.data?.exchangeRateInfo || null
+  } catch {
+    rows.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(() => props.visible, (v) => {
+  if (v) {
+    monthRange.value = [props.defaultMonth, props.defaultMonth]
+    currency.value = 'USD'
+    if (props.dimensionOptions?.length) dimension.value = props.dimensionOptions[0].value
+    reload()
+  }
+})
+</script>
+
+<style scoped>
+.drilldown-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rate-hint {
+  font-size: 12px;
+  color: #888;
+}
+.rate-hint a {
+  color: #1677ff;
+}
+.empty-hint {
+  text-align: center;
+  color: #999;
+  padding: 32px 0;
+}
+</style>

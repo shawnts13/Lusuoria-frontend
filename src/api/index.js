@@ -163,3 +163,24 @@ export const collaborationApi = {
     timeout: 120000
   })
 }
+
+// ===== Dashboard =====
+export const dashboardApi = {
+  summary:      (yearMonth, currency) => http.get('/api/dashboard/summary', { params: { yearMonth, currency } }),
+  exchangeRate: (yearMonth)           => http.get('/api/dashboard/exchange-rate', { params: { yearMonth } }),
+
+  drilldownVideoCount: (startMonth, endMonth) =>
+    http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth } }),
+
+  drilldownClientPrice: (startMonth, endMonth, currency) =>
+    http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency } }),
+
+  drilldownInfluencerCost: (startMonth, endMonth, currency, dimension) =>
+    http.get('/api/dashboard/drilldown/influencer-cost', { params: { startMonth, endMonth, currency, dimension } }),
+
+  drilldownGrossProfit: (startMonth, endMonth, currency, dimension) =>
+    http.get('/api/dashboard/drilldown/gross-profit', { params: { startMonth, endMonth, currency, dimension } }),
+
+  drilldownCommission: (startMonth, endMonth, currency) =>
+    http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } })
+}
