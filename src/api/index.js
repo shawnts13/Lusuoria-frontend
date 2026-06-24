@@ -76,6 +76,9 @@ export const influencerApi = {
 
   contractUploadUrl: () => http.get('/api/influencers/contract-upload-url'),
 
+  // 批量查询红人的合作项目数量（红人管理列表"合作项目"列用）
+  projectCounts: (influencerIds) => http.post('/api/influencers/project-counts', influencerIds),
+
   exportExcel:      (type) => downloadWithAuth(
     `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
