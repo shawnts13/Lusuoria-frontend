@@ -34,7 +34,7 @@
             </a-select>
           </a-form-item>
 
-          <a-form-item label="红人ID">
+          <a-form-item label="红人社媒完整名字">
             <a-select v-model:value="form.influencerId"
               show-search option-filter-prop="label" allow-clear>
               <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.id"

@@ -186,7 +186,7 @@ const allColumns = [
   { title:'月份',        dataIndex:'projectMonth',       key:'projectMonth',      width:80 },
   { title:'类型',        key:'projectType',              width:100 },
   { title:'品牌方',      dataIndex:'brandName',          key:'brandName',         width:100 },
-  { title:'红人ID',       dataIndex:'influencerAccount',  key:'influencerAccount', width:140 },
+  { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160 },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
   // 非敏感成本列（所有角色可见）
   { title:'客户单价',    dataIndex:'clientUnitPrice',    key:'clientUnitPrice',   width:110,

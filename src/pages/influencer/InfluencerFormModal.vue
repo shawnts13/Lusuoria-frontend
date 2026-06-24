@@ -17,8 +17,8 @@
             </a-select>
           </a-form-item>
 
-          <a-form-item label="红人ID" name="accountName"
-            :rules="[{ required: true, message: '请填写红人ID' }]">
+          <a-form-item label="红人社媒完整名字" name="accountName"
+            :rules="[{ required: true, message: '请填写红人社媒完整名字' }]">
             <a-input v-model:value="form.accountName" />
           </a-form-item>
 
@@ -37,9 +37,10 @@
           </a-form-item>
 
           <a-form-item label="品牌方">
-            <a-select v-model:value="form.brandId" allow-clear show-search
+            <a-select v-model:value="form.brands" mode="multiple" allow-clear show-search
+              placeholder="可多选"
               :filter-option="(input, opt) => opt.label.includes(input)">
-              <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">
+              <a-select-option v-for="b in brands" :key="b.id" :value="b.name" :label="b.name">
                 {{ b.name }}
               </a-select-option>
             </a-select>
@@ -165,34 +166,15 @@
               <div v-if="isRemark(form.influencerCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
             </a-form-item>
-            <a-form-item label="客户合作价格（美金）">
-              <a-input v-model:value="form.clientPrice" placeholder="金额或备注" />
-              <div v-if="isRemark(form.clientPrice)"
-                style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
-            </a-form-item>
             <a-form-item label="视频投流成本（美金）">
               <a-input v-model:value="form.adSpendCost" placeholder="金额或备注" />
               <div v-if="isRemark(form.adSpendCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
             </a-form-item>
-            <a-form-item label="视频投流期限">
-              <a-select v-model:value="form.adSpendTerm" allow-clear>
-                <a-select-option v-for="o in getOptions('term')" :key="o.value" :value="o.value">
-                  {{ o.label }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
             <a-form-item label="视频版权成本（美金）">
               <a-input v-model:value="form.copyrightCost" placeholder="金额或备注" />
               <div v-if="isRemark(form.copyrightCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
-            </a-form-item>
-            <a-form-item label="视频版权期限">
-              <a-select v-model:value="form.copyrightTerm" allow-clear>
-                <a-select-option v-for="o in getOptions('term')" :key="o.value" :value="o.value">
-                  {{ o.label }}
-                </a-select-option>
-              </a-select>
             </a-form-item>
           </template>
 
@@ -238,7 +220,7 @@ const form = reactive({
   id: null,
   influencerType: 'OVERSEAS_INFLUENCER',
   teamName: '', accountName: '',
-  brandId: null, countryMarket: null, platforms: [],
+  brands: [], countryMarket: null, platforms: [],
   domains: [],
   followerCount: null, links: [], casesLinks: [],
   contractLink: '',
@@ -246,8 +228,8 @@ const form = reactive({
   contacts: EMPTY_CONTACTS(),
   contactStatus: 'UNDEVELOPED', paymentCycle: null,
   followerPerson: null,
-  influencerCost: '', clientPrice: '', notes: '',
-  adSpendCost: '', adSpendTerm: null, copyrightCost: '', copyrightTerm: null
+  influencerCost: '', notes: '',
+  adSpendCost: '', copyrightCost: ''
 })
 
 const CHINA_DEFAULT_DOMAINS = ['科技', '童装', '玩具', 'AI素材']
@@ -321,7 +303,7 @@ watch(() => props.record, rec => {
       influencerType: rec.influencerType || 'OVERSEAS_INFLUENCER',
       teamName:       rec.teamName       || '',
       accountName:    rec.accountName    || '',
-      brandId:        rec.brandId        || null,
+      brands:         splitMulti(rec.brands),
       countryMarket:  rec.countryMarket  || null,
       platforms:      splitMulti(rec.platform),
       domains:        (() => {
@@ -343,22 +325,19 @@ watch(() => props.record, rec => {
       paymentCycle:   rec.paymentCycle   || null,
       followerPerson: rec.followerPerson || null,
       influencerCost: rec.influencerCost || '',
-      clientPrice:    rec.clientPrice    || '',
       adSpendCost:    rec.adSpendCost    || '',
-      adSpendTerm:    rec.adSpendTerm    || null,
       copyrightCost:  rec.copyrightCost  || '',
-      copyrightTerm:  rec.copyrightTerm  || null,
       notes:          rec.notes          || ''
     })
   } else {
     Object.assign(form, {
       id:null, influencerType:'OVERSEAS_INFLUENCER', teamName:'', accountName:'',
-      brandId:null, countryMarket:null, platforms:[], domains:[],
+      brands:[], countryMarket:null, platforms:[], domains:[],
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', paymentCycle:null, followerPerson:null,
-      influencerCost:'', clientPrice:'', notes:'',
-      adSpendCost:'', adSpendTerm:null, copyrightCost:'', copyrightTerm:null
+      influencerCost:'', notes:'',
+      adSpendCost:'', copyrightCost:''
     })
   }
 }, { immediate: true })
@@ -402,7 +381,7 @@ async function handleSave() {
       influencerType: form.influencerType,
       teamName:       form.teamName || null,
       accountName:    form.accountName,
-      brandId:        form.brandId,
+      brands:         form.brands,
       countryMarket:  form.countryMarket,
       platform:       form.platforms.join("\n") || null,
       domains:        form.domains,
@@ -416,11 +395,8 @@ async function handleSave() {
       paymentCycle:   form.paymentCycle,
       followerPerson: form.followerPerson,
       influencerCost: form.influencerCost,
-      clientPrice:    form.clientPrice,
       adSpendCost:    form.adSpendCost,
-      adSpendTerm:    form.adSpendTerm,
       copyrightCost:  form.copyrightCost,
-      copyrightTerm:  form.copyrightTerm,
       notes:          form.notes
     })
     message.success(form.id ? '更新成功' : '创建成功')

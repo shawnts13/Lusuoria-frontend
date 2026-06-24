@@ -40,7 +40,7 @@
         @change="loadData">
         <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
-      <a-input v-model:value="filters.accountName" placeholder="红人ID" style="width:140px"
+      <a-input v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:160px"
         allow-clear @press-enter="loadData" />
       <a-select v-model:value="filters.platform" placeholder="合作平台"
         style="width:120px" allow-clear @change="loadData">
@@ -199,7 +199,7 @@ const allColumns = [
   { title: '品牌方',        key: 'brand',          width: 120 },
   { title: '红人团队',      dataIndex: 'teamName', key: 'teamName',      width: 120 },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120 },
-  { title: '红人ID',        dataIndex: 'accountName', key: 'accountName', width: 140, sorter: true },
+  { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
   { title: '合作平台',      key: 'platform',       width: 120 },
   { title: '需求内容',      dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true },
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },

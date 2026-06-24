@@ -42,11 +42,11 @@
           {{ o.label }}
         </a-select-option>
       </a-select>
-      <a-select v-model:value="filters.brandId" placeholder="品牌方"
+      <a-select v-model:value="filters.brandName" placeholder="品牌方"
         style="width:150px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
         @change="loadData">
-        <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">
+        <a-select-option v-for="b in brands" :key="b.id" :value="b.name" :label="b.name">
           {{ b.name }}
         </a-select-option>
       </a-select>
@@ -64,8 +64,8 @@
       <a-input-number v-model:value="filters.followerMax" placeholder="粉丝量上限"
         style="width:120px" :min="0" :formatter="fmtNum" :parser="v => v.replace(/,/g,'')"
         @change="loadData" />
-      <a-input-search v-model:value="filters.keyword" placeholder="搜索红人ID"
-        style="width:180px" @search="loadData" allow-clear />
+      <a-input-search v-model:value="filters.keyword" placeholder="搜索红人社媒完整名字"
+        style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
     </div>
 
@@ -80,7 +80,10 @@
         <template #bodyCell="{ column, record }">
 
           <template v-if="column.key === 'brand'">
-            {{ getBrandName(record.brandId) || '—' }}
+            <template v-if="record.brands">
+              <a-tag v-for="b in splitMulti(record.brands)" :key="b" style="margin:2px">{{ b }}</a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
           </template>
 
           <template v-if="column.key === 'influencerType'">
@@ -129,26 +132,15 @@
               {{ record.influencerCost || '—' }}
             </span>
           </template>
-          <template v-if="column.key === 'clientPrice'">
-            <span :style="isRemark(record.clientPrice) ? 'color:#c00000;font-weight:600' : ''">
-              {{ record.clientPrice || '—' }}
-            </span>
-          </template>
           <template v-if="column.key === 'adSpendCost'">
             <span :style="isRemark(record.adSpendCost) ? 'color:#c00000;font-weight:600' : ''">
               {{ record.adSpendCost || '—' }}
             </span>
           </template>
-          <template v-if="column.key === 'adSpendTerm'">
-            {{ record.adSpendTerm || '—' }}
-          </template>
           <template v-if="column.key === 'copyrightCost'">
             <span :style="isRemark(record.copyrightCost) ? 'color:#c00000;font-weight:600' : ''">
               {{ record.copyrightCost || '—' }}
             </span>
-          </template>
-          <template v-if="column.key === 'copyrightTerm'">
-            {{ record.copyrightTerm || '—' }}
           </template>
 
           <template v-if="column.key === 'projects'">
@@ -285,17 +277,17 @@ const pagination = reactive({
 })
 const filters = reactive({
   influencerType: undefined, platform: undefined, countryMarket: undefined,
-  brandId: undefined, teamName: undefined,
+  brandName: undefined, teamName: undefined,
   followerMin: undefined, followerMax: undefined,
   keyword: undefined
 })
 
 // 列定义（按新顺序）
 const allColumns = [
-  { title: '品牌方',        key: 'brand',           width: 120, sorter: true },
+  { title: '品牌方',        key: 'brand',           width: 150 },
   { title: '红人团队',      dataIndex: 'teamName',  key: 'teamName',      width: 120, sorter: true },
   { title: '红人类型',      key: 'influencerType',  width: 130 },
-  { title: '红人ID',        dataIndex: 'accountName', key: 'accountName', width: 140, sorter: true },
+  { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
   { title: '平台',          key: 'platform',        width: 120 },
   { title: '主页链接',      key: 'links',           width: 220 },
@@ -305,11 +297,8 @@ const allColumns = [
   { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90 },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
-  { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, sensitive: true },
   { title: '视频投流成本（$）',           key: 'adSpendCost',    width: 150, sensitive: true },
-  { title: '视频投流期限',                key: 'adSpendTerm',    width: 110, sensitive: true },
   { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 150, sensitive: true },
-  { title: '视频版权期限',                key: 'copyrightTerm',  width: 110, sensitive: true },
   { title: '合作项目',      key: 'projects',        width: 100 },
   { title: '合作案例',      key: 'casesLinks',      width: 220 },
   { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160 },
@@ -326,11 +315,6 @@ const tableScrollX = computed(() =>
   visibleColumns.value.reduce((sum, c) => sum + (c.width || 120), 0)
 )
 
-function getBrandName(brandId) {
-  if (!brandId) return ''
-  const b = brands.value.find(b => b.id === brandId)
-  return b ? b.name : ''
-}
 function parseContacts(json) {
   if (!json) return []
   try { return JSON.parse(json) } catch { return [] }
@@ -347,7 +331,7 @@ async function loadData() {
       influencerType: filters.influencerType,
       platform:       filters.platform,
       countryMarket:  filters.countryMarket,
-      brandId:        filters.brandId,
+      brandName:      filters.brandName,
       teamName:       filters.teamName    || undefined,
       followerMin:    filters.followerMin || undefined,
       followerMax:    filters.followerMax || undefined,
@@ -386,7 +370,7 @@ function handleTableChange(pag, _filters, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     influencerType:undefined, platform:undefined, countryMarket:undefined,
-    brandId:undefined, teamName:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
+    brandName:undefined, teamName:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
   })
   pagination.current = 1
   sortState.field = 'accountName'

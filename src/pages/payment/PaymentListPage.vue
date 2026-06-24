@@ -132,7 +132,7 @@ const allColumns = [
   { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90 },
   { title: '红人团队',   key: 'team',   width: 120,
     customRender: ({ record }) => record.influencer?.teamNames?.split(',')[0] || '—' },
-  { title: '红人ID',     key: 'account', width: 140,
+  { title: '红人社媒完整名字', key: 'account', width: 160,
     customRender: ({ record }) => record.influencer?.accountName || '—' },
   { title: '合作内容',   dataIndex: 'cooperationContent',  key: 'cooperationContent',  width: 120 },
   { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty',                 width: 80 },

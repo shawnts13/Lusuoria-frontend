@@ -6,15 +6,7 @@
 
       <a-row :gutter="16">
         <a-col :span="12">
-          <a-form-item label="品牌方" name="brandId">
-            <a-select v-model:value="form.brandId" allow-clear show-search
-              :filter-option="(input, opt) => opt.label.includes(input)" placeholder="选择品牌方">
-              <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="红人ID" name="accountName">
+          <a-form-item label="红人社媒完整名字" name="accountName">
             <a-select v-model:value="form.accountName" allow-clear show-search
               :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
               placeholder="从红人库选择" @change="onInfluencerChange">
@@ -24,6 +16,20 @@
             </a-select>
             <div v-if="snapshotInfo" style="font-size:12px;color:#888;margin-top:2px">
               团队：{{ snapshotInfo.teamName || '—' }}　国家/市场：{{ snapshotInfo.countryMarket || '—' }}
+            </div>
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label="品牌方" name="brandId">
+            <a-select v-model:value="form.brandId" allow-clear show-search
+              :filter-option="(input, opt) => opt.label.includes(input)"
+              :placeholder="form.accountName ? '选择品牌方' : '请先选择红人'"
+              :disabled="!form.accountName">
+              <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+            </a-select>
+            <div v-if="form.accountName && availableBrands.length === 0"
+              style="font-size:12px;color:#c00000;margin-top:2px">
+              该红人尚未在红人模块关联任何品牌方，请先去红人模块维护
             </div>
           </a-form-item>
         </a-col>
@@ -123,13 +129,22 @@ const form = reactive({
 })
 
 const rules = {
-  accountName: [{ required: true, message: '请选择红人ID', trigger: 'change' }]
+  accountName: [{ required: true, message: '请选择红人社媒完整名字', trigger: 'change' }]
 }
 
 const snapshotInfo = computed(() => {
   if (!form.accountName) return null
   const inf = props.influencers.find(i => i.accountName === form.accountName)
   return inf ? { teamName: inf.teamName, countryMarket: inf.countryMarket } : null
+})
+
+// 品牌方下拉只显示当前选中红人在红人模块里已关联的品牌方
+const availableBrands = computed(() => {
+  if (!form.accountName) return []
+  const inf = props.influencers.find(i => i.accountName === form.accountName)
+  if (!inf || !inf.brands) return []
+  const names = splitMulti(inf.brands)
+  return props.brands.filter(b => names.includes(b.name))
 })
 
 watch(() => props.visible, (v) => {
@@ -172,7 +187,10 @@ function isRemark(value) {
   if (!value || !value.trim()) return false
   return isNaN(parseFloat(value.trim()))
 }
-function onInfluencerChange() { /* snapshotInfo 是 computed，自动更新 */ }
+function onInfluencerChange() {
+  // 切换红人后，原选中的品牌方可能不再适用，清空让用户重新选
+  form.brandId = null
+}
 
 function close() { emit('update:visible', false) }
 
