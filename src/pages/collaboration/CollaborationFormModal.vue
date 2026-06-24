@@ -42,7 +42,7 @@
       </a-form-item>
 
       <a-form-item label="需求内容">
-        <a-textarea v-model:value="form.demandContent" :rows="2" placeholder="如 1 IG+TT" />
+        <a-textarea v-model:value="form.demandContent" :rows="2" placeholder="填写具体产品名，如 手持游戏机、Padfolio文件夹" />
       </a-form-item>
 
       <a-row :gutter="16">

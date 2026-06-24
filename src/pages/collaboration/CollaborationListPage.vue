@@ -309,11 +309,11 @@ async function handleImport(file) {
 
 onMounted(async () => {
   const [b, t, inf] = await Promise.all([
-    brandApi.list(), influencerTeamApi.list(), influencerApi.list({ page: 0, size: 1000 })
+    brandApi.list(), influencerTeamApi.list(), influencerApi.simple()
   ])
   brands.value      = b.data || []
   teams.value       = t.data || []
-  influencers.value = inf.data?.content || []
+  influencers.value = inf.data || []
   loadData()
 })
 </script>
