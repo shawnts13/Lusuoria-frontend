@@ -16,13 +16,13 @@
           <a-radio-button value="USD">USD</a-radio-button>
           <a-radio-button value="RMB">RMB</a-radio-button>
         </a-radio-group>
-        <span v-if="summary.exchangeRateInfo?.usdToCny" class="exchange-rate-display">
+        <span v-if="summary.exchangeRateInfo?.isFallback" class="exchange-rate-error">
+          汇率获取失败，当前使用默认汇率 1 USD = {{ summary.exchangeRateInfo.usdToCny }} CNY
+          <a :href="summary.exchangeRateInfo.sourceUrl" target="_blank" rel="noopener">重试来源</a>
+        </span>
+        <span v-else-if="summary.exchangeRateInfo?.usdToCny" class="exchange-rate-display">
           汇率（{{ summary.exchangeRateInfo.rateDate }}）：1 USD = {{ summary.exchangeRateInfo.usdToCny }} CNY
           <a :href="summary.exchangeRateInfo.sourceUrl" target="_blank" rel="noopener">查看来源</a>
-        </span>
-        <span v-else-if="summary.exchangeRateInfo && !summary.exchangeRateInfo.usdToCny && !loading"
-          class="exchange-rate-error">
-          汇率获取失败，金额暂按 USD 展示
         </span>
       </a-space>
     </div>
@@ -43,6 +43,16 @@
         <div class="summary-card warning clickable" @click="openDrilldown('influencer-cost')">
           <div class="label">红人成本 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalInfluencerCost) }}</div>
+        </div>
+
+        <div class="summary-card">
+          <div class="label">其他外部成本</div>
+          <div class="value">{{ fmt(summary.totalOtherExternalCost) }}</div>
+        </div>
+
+        <div class="summary-card">
+          <div class="label">内部执行人力成本</div>
+          <div class="value">{{ fmt(summary.totalInternalExecutionCost) }}</div>
         </div>
 
         <div class="summary-card success clickable" @click="openDrilldown('gross-profit')">
