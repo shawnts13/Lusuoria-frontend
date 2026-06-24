@@ -14,6 +14,9 @@
         <a-menu-item key="/projects">
           <template #icon><ProjectOutlined /></template>项目订单
         </a-menu-item>
+        <a-menu-item key="/collaborations">
+          <template #icon><SolutionOutlined /></template>红人合作跟踪
+        </a-menu-item>
         <a-menu-item key="/payments">
           <template #icon><PayCircleOutlined /></template>红人结款
         </a-menu-item>
@@ -113,6 +116,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   DashboardOutlined, ProjectOutlined, PayCircleOutlined,
+  SolutionOutlined,
   ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   DownOutlined, LogoutOutlined, LockOutlined

@@ -19,6 +19,7 @@ const routes = [
         meta: { financialOnly: true }       // 仅 ADMIN / AUDITOR
       },
       { path: 'projects',    name: 'Projects',    component: () => import('./pages/project/ProjectListPage.vue') },
+      { path: 'collaborations', name: 'Collaborations', component: () => import('./pages/collaboration/CollaborationListPage.vue') },
       { path: 'payments',    name: 'Payments',    component: () => import('./pages/payment/PaymentListPage.vue') },
       { path: 'brands',      name: 'Brands',      component: () => import('./pages/brand/BrandListPage.vue') },
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },

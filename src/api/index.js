@@ -135,3 +135,28 @@ export const paymentApi = {
     timeout: 120000
   })
 }
+
+// ===== Collaboration Trackings =====
+export const collaborationApi = {
+  list:    (params) => http.get('/api/collaboration-trackings', { params }),
+  getById: (id)     => http.get(`/api/collaboration-trackings/${id}`),
+  save:    (data)   => http.post('/api/collaboration-trackings', data),
+  delete:  (id)     => http.delete(`/api/collaboration-trackings/${id}`),
+
+  exportExcel: (params) => {
+    const qs = new URLSearchParams(
+      Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    ).toString()
+    return downloadWithAuth(
+      `${BASE}/api/collaboration-trackings/export/excel${qs ? '?' + qs : ''}`,
+      '红人合作跟踪.xlsx')
+  },
+
+  downloadTemplate: () => downloadWithAuth(
+    `${BASE}/api/collaboration-trackings/template`, '红人合作跟踪导入模板.xlsx'),
+
+  importExcel: (form) => http.post('/api/collaboration-trackings/import/excel', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
+  })
+}

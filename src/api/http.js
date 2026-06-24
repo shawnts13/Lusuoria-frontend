@@ -17,11 +17,20 @@ http.interceptors.request.use(config => {
   return config
 })
 
+// 业务特殊码：需要调用方自行处理，不在拦截器里弹错误
+// 4090 - 合作跟踪订单ID变更需二次确认
+// 4091 - 合作跟踪去重命中提示
+const PASS_THROUGH_CODES = [4090, 4091]
+
 // Response interceptor - handle errors globally
 http.interceptors.response.use(
   response => {
     const data = response.data
     if (data.code && data.code !== 200) {
+      // 特殊业务码：直接把数据交给调用方处理，不弹全局错误
+      if (PASS_THROUGH_CODES.includes(data.code)) {
+        return data
+      }
       message.error(data.message || '操作失败')
       return Promise.reject(new Error(data.message))
     }
