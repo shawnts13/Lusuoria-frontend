@@ -16,13 +16,15 @@
           <a-radio-button value="USD">USD</a-radio-button>
           <a-radio-button value="RMB">RMB</a-radio-button>
         </a-radio-group>
-        <span v-if="summary.exchangeRateInfo?.isFallback" class="exchange-rate-error">
-          汇率获取失败，当前使用默认汇率 1 USD = {{ summary.exchangeRateInfo.usdToCny }} CNY
-          <a :href="summary.exchangeRateInfo.sourceUrl" target="_blank" rel="noopener">重试来源</a>
+        <span v-if="summary.exchangeRateInfo?.isMissing" class="exchange-rate-error">
+          该月份汇率未维护，金额暂按 USD 展示
+          <router-link v-if="authStore.isAdmin" to="/exchange-rates">去维护 ›</router-link>
         </span>
         <span v-else-if="summary.exchangeRateInfo?.usdToCny" class="exchange-rate-display">
-          汇率（{{ summary.exchangeRateInfo.rateDate }}）：1 USD = {{ summary.exchangeRateInfo.usdToCny }} CNY
-          <a :href="summary.exchangeRateInfo.sourceUrl" target="_blank" rel="noopener">查看来源</a>
+          汇率：1 USD = {{ summary.exchangeRateInfo.usdToCny }} CNY
+          <span class="rate-updated-by" v-if="summary.exchangeRateInfo.updatedBy">
+            （{{ summary.exchangeRateInfo.updatedBy }} 维护）
+          </span>
         </span>
       </a-space>
     </div>
@@ -134,9 +136,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { dashboardApi } from '../../api/index'
+import { useAuthStore } from '../../store/auth'
 import dayjs from 'dayjs'
 import DrilldownModal from './DrilldownModal.vue'
 
+const authStore = useAuthStore()
 const loading = ref(false)
 const selectedMonth = ref(dayjs().format('YYYYMM'))
 const currency = ref('USD')
@@ -219,12 +223,16 @@ onMounted(loadSummary)
   font-size: 13px;
   color: #666;
 }
-.exchange-rate-display a {
-  color: #1677ff;
+.exchange-rate-display a, .rate-updated-by {
+  color: #999;
   margin-left: 4px;
 }
 .exchange-rate-error {
   font-size: 13px;
   color: #ff4d4f;
+}
+.exchange-rate-error a {
+  color: #1677ff;
+  margin-left: 4px;
 }
 </style>

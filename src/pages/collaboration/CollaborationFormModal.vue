@@ -78,6 +78,18 @@
         </a-col>
       </a-row>
 
+      <a-row :gutter="16">
+        <a-col :span="8">
+          <a-form-item label="项目负责人">
+            <a-select v-model:value="form.projectManagerId" allow-clear show-search
+              :filter-option="(input, opt) => opt.label.includes(input)"
+              placeholder="选择负责人">
+              <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+      </a-row>
+
       <template v-if="canViewFinancials">
         <a-divider orientation="left" style="font-size:13px">财务信息</a-divider>
         <a-row :gutter="16">
@@ -111,7 +123,8 @@ const props = defineProps({
   record: { type: Object, default: null },
   canViewFinancials: { type: Boolean, default: false },
   brands: { type: Array, default: () => [] },
-  influencers: { type: Array, default: () => [] }
+  influencers: { type: Array, default: () => [] },
+  employees: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
@@ -125,6 +138,7 @@ const form = reactive({
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
   progress: null, clientOrderId: '', clientPaymentBatch: '',
+  projectManagerId: null,
   influencerCost: '', clientPrice: ''
 })
 
@@ -162,6 +176,7 @@ watch(() => props.visible, (v) => {
         progress:      rec.progress      || null,
         clientOrderId: rec.clientOrderId || '',
         clientPaymentBatch: rec.clientPaymentBatch || '',
+        projectManagerId: rec.projectManagerId || null,
         influencerCost: rec.influencerCost || '',
         clientPrice:    rec.clientPrice    || ''
       })
@@ -169,6 +184,7 @@ watch(() => props.visible, (v) => {
       Object.assign(form, {
         id:null, brandId:null, accountName:null, platforms:[], demandContent:'',
         publishLink:'', publishDate:null, progress:null, clientOrderId:'', clientPaymentBatch:'',
+        projectManagerId:null,
         influencerCost:'', clientPrice:''
       })
     }
@@ -208,6 +224,7 @@ async function doSave(confirmOrderIdChange) {
       progress:      form.progress || null,
       clientOrderId: form.clientOrderId || null,
       clientPaymentBatch: form.clientPaymentBatch || null,
+      projectManagerId: form.projectManagerId || null,
       influencerCost: form.influencerCost,
       clientPrice:    form.clientPrice,
       confirmOrderIdChange: !!confirmOrderIdChange

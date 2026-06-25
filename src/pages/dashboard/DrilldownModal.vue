@@ -14,9 +14,11 @@
           <a-radio-button value="USD">USD</a-radio-button>
           <a-radio-button value="RMB">RMB</a-radio-button>
         </a-radio-group>
-        <span v-if="exchangeRateInfo?.usdToCny" class="rate-hint">
+        <span v-if="exchangeRateInfo?.isMissing && currency === 'RMB'" class="rate-hint rate-missing">
+          该月份汇率未维护，金额暂按 USD 展示
+        </span>
+        <span v-else-if="exchangeRateInfo?.usdToCny" class="rate-hint">
           汇率：1 USD = {{ exchangeRateInfo.usdToCny }} CNY
-          <a :href="exchangeRateInfo.sourceUrl" target="_blank" rel="noopener">（来源）</a>
         </span>
       </template>
       <a-select v-if="dimensionOptions?.length" v-model:value="dimension"
@@ -127,6 +129,9 @@ watch(() => props.visible, (v) => {
 }
 .rate-hint a {
   color: #1677ff;
+}
+.rate-missing {
+  color: #ff4d4f;
 }
 .empty-hint {
   text-align: center;

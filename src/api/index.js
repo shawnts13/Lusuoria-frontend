@@ -184,3 +184,10 @@ export const dashboardApi = {
   drilldownCommission: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } })
 }
+
+// ===== Exchange Rates (人工维护) =====
+export const exchangeRateApi = {
+  getOne:  (yearMonth) => http.get(`/api/exchange-rates/${yearMonth}`),
+  list:    ()          => http.get('/api/exchange-rates'),
+  save:    (data)      => http.post('/api/exchange-rates', data)
+}

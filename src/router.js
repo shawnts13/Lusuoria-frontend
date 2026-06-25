@@ -25,6 +25,12 @@ const routes = [
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },
       { path: 'employees',   name: 'Employees',   component: () => import('./pages/employee/EmployeeListPage.vue') },
       {
+        path: 'exchange-rates',
+        name: 'ExchangeRates',
+        component: () => import('./pages/exchange-rate/ExchangeRateListPage.vue'),
+        meta: { adminOnly: true }
+      },
+      {
         path: 'users',
         name: 'Users',
         component: () => import('./pages/user/UserListPage.vue'),

@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.4.1'
-export const APP_VERSION_TIME = '2026-06-24 22:00'
+export const APP_VERSION = '1.6.0'
+export const APP_VERSION_TIME = '2026-06-25 11:30'
 
 const VERSION_KEY = 'lusuoria_app_version'
 

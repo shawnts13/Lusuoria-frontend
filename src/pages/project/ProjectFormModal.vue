@@ -57,9 +57,15 @@
               checked-children="是" un-checked-children="否" />
           </a-form-item>
 
+          <!--
+            汇率：
+            - ADMIN   → 可编辑
+            - 其他角色（项目负责人/执行人员等）→ 只读展示，不渲染输入框
+          -->
           <a-form-item label="汇率">
-            <a-input-number v-model:value="form.exchangeRate"
+            <a-input-number v-if="canEditCommission" v-model:value="form.exchangeRate"
               style="width:100%" :precision="4" @change="calcPreview" />
+            <span v-else>{{ form.exchangeRate ?? '—' }}</span>
           </a-form-item>
 
           <!-- 项目负责人：所有有写权限的角色都可以指定负责人 -->

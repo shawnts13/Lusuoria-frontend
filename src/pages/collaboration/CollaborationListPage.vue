@@ -54,6 +54,12 @@
         allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.clientPaymentBatch" placeholder="客户方付款批次" style="width:150px"
         allow-clear @press-enter="loadData" />
+      <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
+        style="width:130px" allow-clear show-search
+        :filter-option="(input, opt) => opt.label.includes(input)"
+        @change="loadData">
+        <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+      </a-select>
       <a-button type="primary" @click="loadData">查询</a-button>
       <a-button @click="resetFilters">重置</a-button>
     </div>
@@ -96,6 +102,10 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
+          <template v-if="column.key === 'projectManager'">
+            {{ getEmployeeName(record.projectManagerId) || '—' }}
+          </template>
+
           <template v-if="column.key === 'influencerCost'">
             <span :style="isRemark(record.influencerCost) ? 'color:#c00000;font-weight:600' : ''">
               {{ record.influencerCost || '—' }}
@@ -128,6 +138,7 @@
       :can-view-financials="authStore.canViewFinancials"
       :brands="brands"
       :influencers="influencers"
+      :employees="employees"
       @saved="loadData"
     />
 
@@ -148,7 +159,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
-import { collaborationApi, brandApi, influencerApi, influencerTeamApi } from '../../api/index'
+import { collaborationApi, brandApi, influencerApi, influencerTeamApi, employeeApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
@@ -163,6 +174,7 @@ const tableData   = ref([])
 const brands      = ref([])
 const teams       = ref([])
 const influencers = ref([])
+const employees   = ref([])
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const importResultVisible = ref(false)
@@ -192,7 +204,7 @@ const pagination = reactive({
 const filters = reactive({
   brandId: undefined, teamName: undefined, countryMarket: undefined,
   accountName: undefined, platform: undefined, progress: undefined,
-  clientOrderId: undefined, clientPaymentBatch: undefined
+  clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
 })
 
 const allColumns = [
@@ -205,6 +217,7 @@ const allColumns = [
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
   { title: '发布时间',      key: 'publishDate',    width: 110, sorter: true },
   { title: '进度',          key: 'progress',       width: 130 },
+  { title: '项目负责人',    key: 'projectManager', width: 100 },
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150 },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150 },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
@@ -221,6 +234,11 @@ function getBrandName(brandId) {
   if (!brandId) return ''
   const b = brands.value.find(b => b.id === brandId)
   return b ? b.name : ''
+}
+function getEmployeeName(employeeId) {
+  if (!employeeId) return ''
+  const e = employees.value.find(e => e.id === employeeId)
+  return e ? e.name : ''
 }
 function splitMulti(str) {
   if (!str) return []
@@ -255,6 +273,7 @@ async function loadData() {
       progress:           filters.progress,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
+      projectManagerId:   filters.projectManagerId,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -282,7 +301,7 @@ function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamName:undefined, countryMarket:undefined,
     accountName:undefined, platform:undefined, progress:undefined,
-    clientOrderId:undefined, clientPaymentBatch:undefined
+    clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
   })
   pagination.current = 1
   sortState.field = 'id'; sortState.order = 'descend'
@@ -308,12 +327,13 @@ async function handleImport(file) {
 }
 
 onMounted(async () => {
-  const [b, t, inf] = await Promise.all([
-    brandApi.list(), influencerTeamApi.list(), influencerApi.simple()
+  const [b, t, inf, emp] = await Promise.all([
+    brandApi.list(), influencerTeamApi.list(), influencerApi.simple(), employeeApi.list()
   ])
   brands.value      = b.data || []
   teams.value       = t.data || []
   influencers.value = inf.data || []
+  employees.value   = emp.data || []
   loadData()
 })
 </script>

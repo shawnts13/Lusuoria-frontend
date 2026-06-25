@@ -38,6 +38,11 @@
           <template #icon><UserOutlined /></template>员工管理
         </a-menu-item>
 
+        <!-- 汇率维护仅 ADMIN 可见 -->
+        <a-menu-item v-if="authStore.isAdmin" key="/exchange-rates">
+          <template #icon><DollarOutlined /></template>汇率维护
+        </a-menu-item>
+
         <!-- 账号管理仅 ADMIN 可见 -->
         <a-menu-item v-if="authStore.isAdmin" key="/users">
           <template #icon><SafetyOutlined /></template>账号管理
@@ -116,7 +121,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   DashboardOutlined, ProjectOutlined, PayCircleOutlined,
-  SolutionOutlined,
+  SolutionOutlined, DollarOutlined,
   ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   DownOutlined, LogoutOutlined, LockOutlined
