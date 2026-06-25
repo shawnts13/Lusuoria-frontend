@@ -42,11 +42,11 @@
           {{ o.label }}
         </a-select-option>
       </a-select>
-      <a-select v-model:value="filters.brandName" placeholder="品牌方"
+      <a-select v-model:value="filters.brandId" placeholder="品牌方"
         style="width:150px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
         @change="loadData">
-        <a-select-option v-for="b in brands" :key="b.id" :value="b.name" :label="b.name">
+        <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">
           {{ b.name }}
         </a-select-option>
       </a-select>
@@ -80,8 +80,8 @@
         <template #bodyCell="{ column, record }">
 
           <template v-if="column.key === 'brand'">
-            <template v-if="record.brands">
-              <a-tag v-for="b in splitMulti(record.brands)" :key="b" style="margin:2px">{{ b }}</a-tag>
+            <template v-if="record.brandNames && record.brandNames.length">
+              <a-tag v-for="b in record.brandNames" :key="b" style="margin:2px">{{ b }}</a-tag>
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -277,7 +277,7 @@ const pagination = reactive({
 })
 const filters = reactive({
   influencerType: undefined, platform: undefined, countryMarket: undefined,
-  brandName: undefined, teamName: undefined,
+  brandId: undefined, teamName: undefined,
   followerMin: undefined, followerMax: undefined,
   keyword: undefined
 })
@@ -331,7 +331,7 @@ async function loadData() {
       influencerType: filters.influencerType,
       platform:       filters.platform,
       countryMarket:  filters.countryMarket,
-      brandName:      filters.brandName,
+      brandId:        filters.brandId,
       teamName:       filters.teamName    || undefined,
       followerMin:    filters.followerMin || undefined,
       followerMax:    filters.followerMax || undefined,
@@ -370,7 +370,7 @@ function handleTableChange(pag, _filters, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     influencerType:undefined, platform:undefined, countryMarket:undefined,
-    brandName:undefined, teamName:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
+    brandId:undefined, teamName:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
   })
   pagination.current = 1
   sortState.field = 'accountName'

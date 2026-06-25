@@ -156,9 +156,8 @@ const snapshotInfo = computed(() => {
 const availableBrands = computed(() => {
   if (!form.accountName) return []
   const inf = props.influencers.find(i => i.accountName === form.accountName)
-  if (!inf || !inf.brands) return []
-  const names = splitMulti(inf.brands)
-  return props.brands.filter(b => names.includes(b.name))
+  if (!inf || !inf.brandIds || !inf.brandIds.length) return []
+  return props.brands.filter(b => inf.brandIds.includes(b.id))
 })
 
 watch(() => props.visible, (v) => {

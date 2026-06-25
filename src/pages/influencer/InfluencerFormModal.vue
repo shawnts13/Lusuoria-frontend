@@ -37,10 +37,10 @@
           </a-form-item>
 
           <a-form-item label="品牌方">
-            <a-select v-model:value="form.brands" mode="multiple" allow-clear show-search
+            <a-select v-model:value="form.brandIds" mode="multiple" allow-clear show-search
               placeholder="可多选"
               :filter-option="(input, opt) => opt.label.includes(input)">
-              <a-select-option v-for="b in brands" :key="b.id" :value="b.name" :label="b.name">
+              <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">
                 {{ b.name }}
               </a-select-option>
             </a-select>
@@ -220,7 +220,7 @@ const form = reactive({
   id: null,
   influencerType: 'OVERSEAS_INFLUENCER',
   teamName: '', accountName: '',
-  brands: [], countryMarket: null, platforms: [],
+  brandIds: [], countryMarket: null, platforms: [],
   domains: [],
   followerCount: null, links: [], casesLinks: [],
   contractLink: '',
@@ -303,7 +303,7 @@ watch(() => props.record, rec => {
       influencerType: rec.influencerType || 'OVERSEAS_INFLUENCER',
       teamName:       rec.teamName       || '',
       accountName:    rec.accountName    || '',
-      brands:         splitMulti(rec.brands),
+      brandIds:       rec.brandIds || [],
       countryMarket:  rec.countryMarket  || null,
       platforms:      splitMulti(rec.platform),
       domains:        (() => {
@@ -332,7 +332,7 @@ watch(() => props.record, rec => {
   } else {
     Object.assign(form, {
       id:null, influencerType:'OVERSEAS_INFLUENCER', teamName:'', accountName:'',
-      brands:[], countryMarket:null, platforms:[], domains:[],
+      brandIds:[], countryMarket:null, platforms:[], domains:[],
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', paymentCycle:null, followerPerson:null,
@@ -381,7 +381,7 @@ async function handleSave() {
       influencerType: form.influencerType,
       teamName:       form.teamName || null,
       accountName:    form.accountName,
-      brands:         form.brands,
+      brandIds:       form.brandIds,
       countryMarket:  form.countryMarket,
       platform:       form.platforms.join("\n") || null,
       domains:        form.domains,
