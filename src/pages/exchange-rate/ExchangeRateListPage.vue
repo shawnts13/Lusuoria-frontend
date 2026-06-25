@@ -15,10 +15,10 @@
     </div>
 
     <a-alert
-      type="info"
+      type="warning"
       show-icon
       style="margin-bottom:16px"
-      message="汇率改为人工维护，不再自动抓取。点击「查看中国银行汇率」跳转官网查看当月汇率，回来此页面手动填写。修改某月汇率会自动覆盖该月所有已存在项目订单的汇率字段。"
+      message="填写规则：业务月份「X月」要填的是「上一个月最后一个工作日」的汇率（如业务月份202606，要查2026年5月最后一个工作日的中行折算价）。汇率改为人工维护，不再自动抓取。点击「查看中国银行汇率」跳转官网，修改某月汇率会自动覆盖该月所有已存在项目订单的汇率字段。"
     />
 
     <div class="table-card">
@@ -41,6 +41,11 @@
     <a-modal :open="modalVisible" title="新增/修改月度汇率"
       :confirm-loading="saving" @ok="handleSave" @cancel="modalVisible = false"
       :destroy-on-close="true">
+      <div class="rate-rule-hint">
+        填写规则：业务月份 <b>{{ form.yearMonth || 'XXXX06' }}</b> 应填写
+        <b>{{ prevMonthLabel(form.yearMonth) }}最后一个工作日</b>（中国银行汇率页查询日期需对应该日）的「中行折算价」，
+        并将百元单位的报价 ÷ 100 后填入下方。
+      </div>
       <a-alert v-if="form.yearMonth && existingRate(form.yearMonth)" type="warning" show-icon
         style="margin-bottom:16px"
         :message="`该月份已有汇率 ${existingRate(form.yearMonth)}，保存后将强制覆盖该月所有已存在项目订单的汇率`" />
@@ -58,7 +63,7 @@
           <div style="font-size:12px;color:#888;margin-top:4px">
             即 1 美元 = 多少人民币，对照
             <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">中国银行官网</a>
-            填写
+            填写「中行折算价」并 ÷ 100（官网按每100美元报价）
           </div>
         </a-form-item>
       </a-form>
@@ -92,6 +97,16 @@ const columns = [
 function existingRate(yearMonth) {
   const found = list.value.find(r => r.yearMonth === yearMonth)
   return found ? found.usdToCny : null
+}
+
+/** 根据业务月份（yyyyMM）算出上一个自然月的中文标签，如 202606 -> "2026年5月" */
+function prevMonthLabel(yearMonth) {
+  if (!yearMonth || yearMonth.length !== 6) return ''
+  let year  = parseInt(yearMonth.substring(0, 4), 10)
+  let month = parseInt(yearMonth.substring(4, 6), 10)
+  month -= 1
+  if (month === 0) { month = 12; year -= 1 }
+  return `${year}年${month}月`
 }
 
 function formatDateTime(d) {
@@ -144,3 +159,16 @@ async function handleSave() {
 
 onMounted(loadList)
 </script>
+
+<style scoped>
+.rate-rule-hint {
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  color: #cf1322;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+</style>
