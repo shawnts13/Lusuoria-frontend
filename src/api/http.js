@@ -23,6 +23,8 @@ http.interceptors.request.use(config => {
 const PASS_THROUGH_CODES = [4090, 4091]
 
 // Response interceptor - handle errors globally
+let sessionExpiredHandled = false
+
 http.interceptors.response.use(
   response => {
     const data = response.data
@@ -40,9 +42,16 @@ http.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
-        localStorage.removeItem('token')
-        router.push('/login')
-        message.error('登录已过期，请重新登录')
+        // 一次页面生命周期内只处理一次，避免同时发出的多个请求都401时反复弹窗/反复跳转
+        if (!sessionExpiredHandled) {
+          sessionExpiredHandled = true
+          localStorage.removeItem('token')
+          localStorage.removeItem('username')
+          localStorage.removeItem('displayName')
+          localStorage.removeItem('role')
+          message.error('登录已过期，请重新登录')
+          router.push('/login')
+        }
       } else if (status === 403) {
         message.error('无权限执行此操作')
       } else if (status === 400) {
