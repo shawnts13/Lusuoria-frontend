@@ -9,7 +9,7 @@
 
     <div class="table-card">
       <a-table :columns="columns" :data-source="list" :loading="loading"
-        row-key="id" size="middle">
+        row-key="id" size="middle" :pagination="tablePagination">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'salaryInfo'">
             <template v-if="isCommissionRole(record.role)">
@@ -169,6 +169,13 @@ const columns = [
   { title: '备注',   dataIndex: 'notes', key: 'notes', ellipsis: true },
   { title: '操作',   key: 'action', width: 100 }
 ]
+
+const tablePagination = {
+  pageSize: 20,
+  showSizeChanger: true,
+  pageSizeOptions: ['20', '50', '100'],
+  showTotal: t => `共 ${t} 条`
+}
 
 function fmtNum(val) {
   if (val == null) return '—'
