@@ -25,6 +25,12 @@
             </a-select>
           </a-form-item>
 
+          <a-form-item label="项目视频类型">
+            <a-select v-model:value="form.videoType" allow-clear placeholder="选择视频类型">
+              <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+            </a-select>
+          </a-form-item>
+
           <a-form-item label="品牌方" name="brandId"
             :rules="[{ required: true, message: '请选择品牌方' }]">
             <a-select v-model:value="form.brandId" show-search option-filter-prop="label">
@@ -242,6 +248,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { projectApi } from '../../api/index'
+import { useOptions } from '../../composables/useOptions'
 
 const props = defineProps({
   visible:           Boolean,
@@ -255,6 +262,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
+const { getOptions } = useOptions()
 const formRef = ref()
 const saving  = ref(false)
 
@@ -288,6 +296,7 @@ const form = reactive({
   id: null,
   projectMonth: null, projectMonthVal: null,
   projectType: 'OVERSEAS_INFLUENCER',
+  videoType: null,
   brandId: null, influencerId: null, projectManagerId: null,
   clientOrderNo: '', cooperationContent: '',
   isOwnResource: false,
@@ -320,6 +329,7 @@ watch(() => props.record, rec => {
       projectMonth:         rec.projectMonth,
       projectMonthVal:      rec.projectMonth,
       projectType:          rec.projectType,
+      videoType:            rec.videoType             || null,
       brandId:              rec.brandId,
       influencerId:         rec.influencerId,
       projectManagerId:     rec.projectManagerId,
@@ -348,7 +358,7 @@ watch(() => props.record, rec => {
   } else {
     Object.assign(form, {
       id: null, projectMonth: null, projectMonthVal: null,
-      projectType: 'OVERSEAS_INFLUENCER', brandId: null,
+      projectType: 'OVERSEAS_INFLUENCER', videoType: null, brandId: null,
       influencerId: null, projectManagerId: null,
       clientOrderNo: '', cooperationContent: '',
       isOwnResource: false,

@@ -50,6 +50,10 @@
         style="width:140px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
+      <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
+        style="width:140px" allow-clear @change="loadData">
+        <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+      </a-select>
       <a-input v-model:value="filters.clientOrderId" placeholder="客户方的项目订单" style="width:150px"
         allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.clientPaymentBatch" placeholder="客户方付款批次" style="width:150px"
@@ -98,6 +102,13 @@
           <template v-if="column.key === 'progress'">
             <a-tag v-if="record.progress" :color="progressColor(record.progress)">
               {{ getLabel('collab_progress', record.progress) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+
+          <template v-if="column.key === 'videoType'">
+            <a-tag v-if="record.videoType" color="purple">
+              {{ getLabel('video_type', record.videoType) }}
             </a-tag>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -203,7 +214,7 @@ const pagination = reactive({
 })
 const filters = reactive({
   brandId: undefined, teamName: undefined, countryMarket: undefined,
-  accountName: undefined, platform: undefined, progress: undefined,
+  accountName: undefined, platform: undefined, progress: undefined, videoType: undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
 })
 
@@ -217,6 +228,7 @@ const allColumns = [
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
   { title: '发布时间',      key: 'publishDate',    width: 110, sorter: true },
   { title: '进度',          key: 'progress',       width: 130 },
+  { title: '项目视频类型',  key: 'videoType',      width: 120 },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150 },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150 },
@@ -271,6 +283,7 @@ async function loadData() {
       accountName:        filters.accountName?.trim() || undefined,
       platform:           filters.platform,
       progress:           filters.progress,
+      videoType:          filters.videoType,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
       projectManagerId:   filters.projectManagerId,
@@ -300,7 +313,7 @@ function handleTableChange(pag, _f, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamName:undefined, countryMarket:undefined,
-    accountName:undefined, platform:undefined, progress:undefined,
+    accountName:undefined, platform:undefined, progress:undefined, videoType:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
   })
   pagination.current = 1

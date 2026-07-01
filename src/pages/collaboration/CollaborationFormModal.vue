@@ -59,19 +59,26 @@
       </a-row>
 
       <a-row :gutter="16">
-        <a-col :span="8">
+        <a-col :span="6">
           <a-form-item label="进度">
             <a-select v-model:value="form.progress" allow-clear placeholder="选择进度">
               <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
             </a-select>
           </a-form-item>
         </a-col>
-        <a-col :span="8">
+        <a-col :span="6">
+          <a-form-item label="项目视频类型">
+            <a-select v-model:value="form.videoType" allow-clear placeholder="选择视频类型">
+              <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :span="6">
           <a-form-item label="客户方的项目订单">
             <a-input v-model:value="form.clientOrderId" placeholder="拿到后填写" />
           </a-form-item>
         </a-col>
-        <a-col :span="8">
+        <a-col :span="6">
           <a-form-item label="客户方付款批次">
             <a-input v-model:value="form.clientPaymentBatch" />
           </a-form-item>
@@ -137,7 +144,7 @@ const form = reactive({
   brandId: null, accountName: null,
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
-  progress: null, clientOrderId: '', clientPaymentBatch: '',
+  progress: null, videoType: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null,
   influencerCost: '', clientPrice: ''
 })
@@ -173,6 +180,7 @@ watch(() => props.visible, (v) => {
         publishLink:   rec.publishLink   || '',
         publishDate:   rec.publishDate ? formatDate(rec.publishDate) : null,
         progress:      rec.progress      || null,
+        videoType:     rec.videoType     || null,
         clientOrderId: rec.clientOrderId || '',
         clientPaymentBatch: rec.clientPaymentBatch || '',
         projectManagerId: rec.projectManagerId || null,
@@ -182,7 +190,7 @@ watch(() => props.visible, (v) => {
     } else {
       Object.assign(form, {
         id:null, brandId:null, accountName:null, platforms:[], demandContent:'',
-        publishLink:'', publishDate:null, progress:null, clientOrderId:'', clientPaymentBatch:'',
+        publishLink:'', publishDate:null, progress:null, videoType:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null,
         influencerCost:'', clientPrice:''
       })
@@ -221,6 +229,7 @@ async function doSave(confirmOrderIdChange) {
       publishLink:   form.publishLink || null,
       publishDate:   form.publishDate || null,
       progress:      form.progress || null,
+      videoType:     form.videoType || null,
       clientOrderId: form.clientOrderId || null,
       clientPaymentBatch: form.clientPaymentBatch || null,
       projectManagerId: form.projectManagerId || null,

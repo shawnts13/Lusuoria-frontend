@@ -35,6 +35,10 @@
         <a-select-option value="OVERSEAS_INFLUENCER">海外红人</a-select-option>
         <a-select-option value="CHINA_INFLUENCER">中国红人</a-select-option>
       </a-select>
+      <a-select v-model:value="filters.videoType" placeholder="项目视频类型" style="width:140px"
+        allow-clear @change="loadData">
+        <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+      </a-select>
       <a-select v-model:value="filters.clientStatus" placeholder="甲方状态" style="width:150px"
         allow-clear @change="loadData">
         <a-select-option v-for="s in clientStatuses" :key="s.value" :value="s.value">{{ s.label }}</a-select-option>
@@ -72,6 +76,13 @@
             <a-tag :color="record.projectType === 'OVERSEAS_INFLUENCER' ? 'blue' : 'green'">
               {{ record.projectTypeLabel }}
             </a-tag>
+          </template>
+
+          <template v-if="column.key === 'videoType'">
+            <a-tag v-if="record.videoType" color="purple">
+              {{ getLabel('video_type', record.videoType) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
           </template>
 
           <template v-if="column.key === 'clientPrice'">
@@ -150,10 +161,12 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { projectApi, brandApi, influencerApi, employeeApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
+import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import ProjectFormModal from './ProjectFormModal.vue'
 
 const authStore = useAuthStore()
+const { getOptions, getLabel } = useOptions()
 const loading   = ref(false)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 const tableData = ref([])
@@ -169,7 +182,7 @@ const pagination = reactive({ current:1, pageSize:20, total:0, showTotal: t => `
 const route     = useRoute()
 const filters = reactive({
   brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
-  projectType:undefined, clientStatus:undefined, internalStatus:undefined,
+  projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
   accountName:undefined, projectManagerId:undefined,
   keyword:'',
   // 从红人管理页跳转时传入
@@ -195,6 +208,7 @@ const allColumns = [
   { title:'月份',        dataIndex:'projectMonth',       key:'projectMonth',      width:80 },
   { title:'品牌方',      dataIndex:'brandName',          key:'brandName',         width:100 },
   { title:'类型',        key:'projectType',              width:100 },
+  { title:'项目视频类型', key:'videoType',                width:110 },
   { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160 },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
   { title:'甲方状态',    key:'clientStatus',             width:120 },
@@ -238,7 +252,7 @@ async function loadData() {
     const res = await projectApi.list({
       brandId:filters.brandId, projectMonth:filters.projectMonth,
       projectType:filters.projectType, clientStatus:filters.clientStatus,
-      internalStatus:filters.internalStatus,
+      internalStatus:filters.internalStatus, videoType:filters.videoType,
       influencerId:filters.influencerId || undefined,
       accountName:filters.accountName?.trim() || undefined,
       projectManagerId:filters.projectManagerId || undefined,
@@ -258,7 +272,7 @@ function handleTableChange(pag) {
 }
 function resetFilters() {
   Object.assign(filters, { brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
-    projectType:undefined, clientStatus:undefined, internalStatus:undefined,
+    projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
     accountName:undefined, projectManagerId:undefined, keyword:'' })
   pagination.current=1; loadData()
 }
