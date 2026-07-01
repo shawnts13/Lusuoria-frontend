@@ -54,6 +54,9 @@
         style="width:140px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
+      <a-date-picker v-model:value="filters.videoMonthVal" picker="month"
+        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频月份" style="width:140px"
+        @change="v => { filters.videoMonth = v; loadData() }" />
       <a-input v-model:value="filters.clientOrderId" placeholder="客户方的项目订单" style="width:150px"
         allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.clientPaymentBatch" placeholder="客户方付款批次" style="width:150px"
@@ -215,6 +218,7 @@ const pagination = reactive({
 const filters = reactive({
   brandId: undefined, teamName: undefined, countryMarket: undefined,
   accountName: undefined, platform: undefined, progress: undefined, videoType: undefined,
+  videoMonth: undefined, videoMonthVal: undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
 })
 
@@ -284,6 +288,7 @@ async function loadData() {
       platform:           filters.platform,
       progress:           filters.progress,
       videoType:          filters.videoType,
+      videoMonth:         filters.videoMonth,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
       projectManagerId:   filters.projectManagerId,
@@ -314,6 +319,7 @@ function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamName:undefined, countryMarket:undefined,
     accountName:undefined, platform:undefined, progress:undefined, videoType:undefined,
+    videoMonth:undefined, videoMonthVal:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
   })
   pagination.current = 1
