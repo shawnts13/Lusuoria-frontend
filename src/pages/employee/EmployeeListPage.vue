@@ -162,13 +162,26 @@ const emptyForm = () => ({
 const form = reactive(emptyForm())
 
 const columns = [
-  { title: '姓名',   dataIndex: 'name', key: 'name', width: 120 },
-  { title: '角色',   dataIndex: 'role', key: 'role', width: 100 },
-  { title: '邮箱',   dataIndex: 'email', key: 'email', width: 160 },
-  { title: '薪资信息', key: 'salaryInfo', width: 260 },
-  { title: '备注',   dataIndex: 'notes', key: 'notes', ellipsis: true },
+  { title: '姓名',   dataIndex: 'name', key: 'name', width: 120,
+    sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh') },
+  { title: '角色',   dataIndex: 'role', key: 'role', width: 100,
+    sorter: (a, b) => (a.role || '').localeCompare(b.role || '', 'zh') },
+  { title: '邮箱',   dataIndex: 'email', key: 'email', width: 160,
+    sorter: (a, b) => (a.email || '').localeCompare(b.email || '') },
+  { title: '薪资信息', key: 'salaryInfo', width: 260,
+    sorter: (a, b) => salaryValue(a) - salaryValue(b) },
+  { title: '备注',   dataIndex: 'notes', key: 'notes', ellipsis: true,
+    sorter: (a, b) => (a.notes || '').localeCompare(b.notes || '', 'zh') },
   { title: '操作',   key: 'action', width: 100 }
 ]
+
+/** 薪资信息排序用：按角色取对应的主要数值，便于粗略比较（不同角色量纲不同，仅供排序参考） */
+function salaryValue(record) {
+  if (isCommissionRole(record.role))  return record.defaultCommissionRate != null ? parseFloat(record.defaultCommissionRate) : -1
+  if (isFixedSalaryRole(record.role)) return record.fixedMonthlySalary   != null ? parseFloat(record.fixedMonthlySalary)   : -1
+  if (isExecutorRole(record.role))    return record.rateRealShotNew     != null ? parseFloat(record.rateRealShotNew)      : -1
+  return -1
+}
 
 const tablePagination = {
   pageSize: 20,
