@@ -21,6 +21,12 @@ const routes = [
       { path: 'projects',    name: 'Projects',    component: () => import('./pages/project/ProjectListPage.vue') },
       { path: 'collaborations', name: 'Collaborations', component: () => import('./pages/collaboration/CollaborationListPage.vue') },
       { path: 'payments',    name: 'Payments',    component: () => import('./pages/payment/PaymentListPage.vue') },
+      {
+        path: 'pending',
+        name: 'Pending',
+        component: () => import('./pages/pending/PendingListPage.vue'),
+        meta: { adminOnly: true }
+      },
       { path: 'brands',      name: 'Brands',      component: () => import('./pages/brand/BrandListPage.vue') },
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },
       { path: 'employees',   name: 'Employees',   component: () => import('./pages/employee/EmployeeListPage.vue') },

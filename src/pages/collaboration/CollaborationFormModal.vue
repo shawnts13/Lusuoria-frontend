@@ -224,7 +224,7 @@ function onInfluencerChange() {
 
 function close() { emit('update:visible', false) }
 
-async function doSave(confirmOrderIdChange) {
+async function doSave() {
   saving.value = true
   try {
     const payload = {
@@ -241,26 +241,14 @@ async function doSave(confirmOrderIdChange) {
       clientPaymentBatch: form.clientPaymentBatch || null,
       projectManagerId: form.projectManagerId || null,
       influencerCost: form.influencerCost,
-      clientPrice:    form.clientPrice,
-      confirmOrderIdChange: !!confirmOrderIdChange
+      clientPrice:    form.clientPrice
     }
     const res = await collaborationApi.save(payload)
 
-    // 后端用特殊 code 表示需要二次确认 / 去重命中
-    if (res.code === 4090) {
+    // 后端用特殊 code 表示：已有关联项目订单不让改订单号 / 去重命中
+    if (res.code === 4090 || res.code === 4091) {
       saving.value = false
-      Modal.confirm({
-        title: '订单变更确认',
-        content: res.message,
-        okText: '确认变更',
-        cancelText: '取消',
-        onOk: () => doSave(true)
-      })
-      return
-    }
-    if (res.code === 4091) {
-      saving.value = false
-      message.warning(res.message)
+      Modal.warning({ title: '无法保存', content: res.message })
       return
     }
 
@@ -276,6 +264,6 @@ async function doSave(confirmOrderIdChange) {
 
 async function handleSave() {
   try { await formRef.value.validate() } catch { return }
-  doSave(false)
+  doSave()
 }
 </script>

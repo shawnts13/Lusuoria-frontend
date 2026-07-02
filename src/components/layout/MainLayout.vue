@@ -21,6 +21,11 @@
           <template #icon><PayCircleOutlined /></template>红人结款
         </a-menu-item>
 
+        <!-- 待处理（目前只有删除审核）仅 ADMIN 可见 -->
+        <a-menu-item v-if="authStore.isAdmin" key="/pending">
+          <template #icon><ExclamationCircleOutlined /></template>待处理
+        </a-menu-item>
+
         <a-menu-divider />
 
         <!-- 审计员隐藏以下基础数据管理 -->
@@ -121,7 +126,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   DashboardOutlined, ProjectOutlined, PayCircleOutlined,
-  SolutionOutlined, DollarOutlined,
+  SolutionOutlined, DollarOutlined, ExclamationCircleOutlined,
   ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   DownOutlined, LogoutOutlined, LockOutlined
@@ -155,6 +160,7 @@ const pageTitleMap = {
   '/dashboard':   '数据看板',
   '/projects':    '项目订单管理',
   '/payments':    '红人结款管理',
+  '/pending':     '待处理',
   '/brands':      '品牌方管理',
   '/influencers': '红人管理',
   '/employees':   '员工管理',

@@ -101,7 +101,7 @@ export const projectApi = {
   list:           (params) => http.get('/api/projects', { params }),
   getById:        (id)     => http.get(`/api/projects/${id}`),
   save:           (data)   => http.post('/api/projects', data),
-  delete:         (id)     => http.delete(`/api/projects/${id}`),
+  requestDelete:  (id, reason) => http.post(`/api/projects/${id}/delete-request`, { reason }),
   monthlySummary: (month)  => http.get('/api/projects/summary/monthly', { params: { month } }),
   approve:        (id)     => http.patch(`/api/projects/${id}/approve`),
   reject:         (id)     => http.patch(`/api/projects/${id}/reject`),
@@ -138,7 +138,7 @@ export const collaborationApi = {
   list:    (params) => http.get('/api/collaboration-trackings', { params }),
   getById: (id)     => http.get(`/api/collaboration-trackings/${id}`),
   save:    (data)   => http.post('/api/collaboration-trackings', data),
-  delete:  (id)     => http.delete(`/api/collaboration-trackings/${id}`),
+  requestDelete: (id, reason) => http.post(`/api/collaboration-trackings/${id}/delete-request`, { reason }),
   updateStatus: (id, data) => http.patch(`/api/collaboration-trackings/${id}/status`, data),
 
   exportExcel: (params) => {
@@ -185,4 +185,11 @@ export const exchangeRateApi = {
   getOne:  (yearMonth) => http.get(`/api/exchange-rates/${yearMonth}`),
   list:    ()          => http.get('/api/exchange-rates'),
   save:    (data)      => http.post('/api/exchange-rates', data)
+}
+
+// ===== 待处理事项 =====
+export const pendingApprovalApi = {
+  list:    (category, page, size) => http.get('/api/pending-approvals', { params: { category, page, size } }),
+  approve: (id)         => http.post(`/api/pending-approvals/${id}/approve`),
+  reject:  (id, note)   => http.post(`/api/pending-approvals/${id}/reject`, { note })
 }

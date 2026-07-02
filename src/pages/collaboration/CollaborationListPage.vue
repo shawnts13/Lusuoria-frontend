@@ -59,6 +59,8 @@
         @change="v => { filters.videoMonth = v; loadData() }" />
       <a-input v-model:value="filters.clientOrderId" placeholder="客户方的项目订单" style="width:150px"
         allow-clear @press-enter="loadData" />
+      <a-input v-model:value="filters.internalProjectNo" placeholder="内部项目编号" style="width:180px"
+        allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.clientPaymentBatch" placeholder="客户方付款批次" style="width:150px"
         allow-clear @press-enter="loadData" />
       <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
@@ -137,9 +139,8 @@
               <a-divider type="vertical" />
               <a @click="openStatusModal(record)">状态流转</a>
               <a-divider type="vertical" />
-              <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                <a style="color:#ff4d4f">删除</a>
-              </a-popconfirm>
+              <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
+              <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
             </a-space>
             <span v-else style="color:#bbb">只读</span>
           </template>
@@ -152,6 +153,15 @@
       v-model:visible="statusModalVisible"
       :record="statusModalRecord"
       @saved="loadData" />
+
+    <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
+      <p style="color:#888;font-size:13px">删除红人合作跟踪记录需要管理员审核，请填写删除原因。</p>
+      <a-form layout="vertical">
+        <a-form-item label="删除原因" required>
+          <a-textarea v-model:value="deleteReason" :rows="3" placeholder="请说明删除原因" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
     <CollaborationFormModal
       v-model:visible="modalVisible"
@@ -178,6 +188,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { collaborationApi, brandApi, influencerApi, influencerTeamApi, employeeApi } from '../../api/index'
@@ -203,6 +214,12 @@ const statusModalVisible  = ref(false)
 const statusModalRecord   = ref(null)
 const importResultVisible = ref(false)
 const importResults       = ref([])
+const deleteReasonVisible = ref(false)
+const deleteReason        = ref('')
+const deleteTarget        = ref(null)
+const deleting            = ref(false)
+
+const route = useRoute()
 
 const importListState = reactive({ current: 1, pageSize: 10 })
 const importListPagination = computed(() => {
@@ -229,6 +246,7 @@ const filters = reactive({
   brandId: undefined, teamName: undefined, countryMarket: undefined,
   accountName: undefined, platform: undefined, progress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
+  internalProjectNo: route.query.internalProjectNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
 })
 
@@ -300,6 +318,7 @@ async function loadData() {
       progress:           filters.progress,
       videoType:          filters.videoType,
       videoMonth:         filters.videoMonth,
+      internalProjectNo:  filters.internalProjectNo?.trim() || undefined,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
       projectManagerId:   filters.projectManagerId,
@@ -330,7 +349,7 @@ function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamName:undefined, countryMarket:undefined,
     accountName:undefined, platform:undefined, progress:undefined, videoType:undefined,
-    videoMonth:undefined, videoMonthVal:undefined,
+    videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
   })
   pagination.current = 1
@@ -341,8 +360,16 @@ function resetFilters() {
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
-async function handleDelete(id) {
-  await collaborationApi.delete(id); message.success('删除成功'); loadData()
+function openDeleteReason(r) { deleteTarget.value = r; deleteReason.value = ''; deleteReasonVisible.value = true }
+async function handleDeleteConfirm() {
+  if (!deleteReason.value?.trim()) { message.warning('请填写删除原因'); return }
+  deleting.value = true
+  try {
+    await collaborationApi.requestDelete(deleteTarget.value.id, deleteReason.value.trim())
+    message.success('已提交删除申请，等待管理员审核')
+    deleteReasonVisible.value = false
+    loadData()
+  } finally { deleting.value = false }
 }
 function handleExport() { collaborationApi.exportExcel(filters) }
 async function handleImport(file) {

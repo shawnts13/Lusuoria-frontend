@@ -44,6 +44,8 @@
         @change="loadData">
         <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
       </a-select>
+      <a-input v-model:value="filters.internalProjectNo" placeholder="内部项目编号" style="width:180px"
+        allow-clear @press-enter="loadData" />
       <a-input-search v-model:value="filters.keyword" placeholder="搜索项目编号/订单号"
         style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
@@ -112,9 +114,8 @@
                 <a-divider type="vertical" />
                 <a @click="openStatusModal(record)">状态流转</a>
                 <a-divider type="vertical" />
-                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                  <a style="color:#ff4d4f">删除</a>
-                </a-popconfirm>
+                <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
+                <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
               </template>
               <template v-if="!authStore.canWrite && !authStore.canApprove">
                 <span style="color:#bbb">只读</span>
@@ -135,6 +136,15 @@
       v-model:visible="statusModalVisible"
       :record="statusModalRecord"
       @saved="loadData" />
+
+    <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
+      <p style="color:#888;font-size:13px">删除项目订单需要管理员审核，请填写删除原因。</p>
+      <a-form layout="vertical">
+        <a-form-item label="删除原因" required>
+          <a-textarea v-model:value="deleteReason" :rows="3" placeholder="请说明删除原因" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -162,6 +172,10 @@ const modalVisible       = ref(false)
 const editingRecord      = ref(null)
 const statusModalVisible = ref(false)
 const statusModalRecord  = ref(null)
+const deleteReasonVisible = ref(false)
+const deleteReason        = ref('')
+const deleteTarget        = ref(null)
+const deleting             = ref(false)
 
 const pagination = reactive({ current:1, pageSize:20, total:0, showTotal: t => `共 ${t} 条` })
 const route     = useRoute()
@@ -169,6 +183,7 @@ const filters = reactive({
   brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
   projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
   accountName:undefined, projectManagerId:undefined,
+  internalProjectNo: route.query.internalProjectNo || undefined,
   keyword:'',
   // 从红人管理页跳转时传入
   influencerId: route.query.influencerId ? Number(route.query.influencerId) : undefined
@@ -238,6 +253,7 @@ async function loadData() {
       brandId:filters.brandId, projectMonth:filters.projectMonth,
       projectType:filters.projectType, clientStatus:filters.clientStatus,
       internalStatus:filters.internalStatus, videoType:filters.videoType,
+      internalProjectNo:filters.internalProjectNo?.trim() || undefined,
       influencerId:filters.influencerId || undefined,
       accountName:filters.accountName?.trim() || undefined,
       projectManagerId:filters.projectManagerId || undefined,
@@ -258,12 +274,22 @@ function handleTableChange(pag) {
 function resetFilters() {
   Object.assign(filters, { brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
     projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
-    accountName:undefined, projectManagerId:undefined, keyword:'' })
+    accountName:undefined, projectManagerId:undefined, internalProjectNo:undefined, keyword:'' })
   pagination.current=1; loadData()
 }
 function openEdit(r)  { editingRecord.value=r;    modalVisible.value=true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
-async function handleDelete(id) { await projectApi.delete(id); message.success('删除成功'); loadData() }
+function openDeleteReason(r) { deleteTarget.value = r; deleteReason.value = ''; deleteReasonVisible.value = true }
+async function handleDeleteConfirm() {
+  if (!deleteReason.value?.trim()) { message.warning('请填写删除原因'); return }
+  deleting.value = true
+  try {
+    await projectApi.requestDelete(deleteTarget.value.id, deleteReason.value.trim())
+    message.success('已提交删除申请，等待管理员审核')
+    deleteReasonVisible.value = false
+    loadData()
+  } finally { deleting.value = false }
+}
 async function handleApprove(id) { await projectApi.approve(id); message.success('已审核通过'); loadData() }
 async function handleReject(id)  { await projectApi.reject(id);  message.success('已驳回'); loadData() }
 function handleExport() { projectApi.exportExcel(filters.projectMonth) }
