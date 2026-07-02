@@ -105,18 +105,11 @@ export const projectApi = {
   monthlySummary: (month)  => http.get('/api/projects/summary/monthly', { params: { month } }),
   approve:        (id)     => http.patch(`/api/projects/${id}/approve`),
   reject:         (id)     => http.patch(`/api/projects/${id}/reject`),
+  updateStatus:   (id, data) => http.patch(`/api/projects/${id}/status`, data),
 
   exportExcel: (projectMonth) => downloadWithAuth(
     `${BASE}/api/projects/export/excel${projectMonth ? '?projectMonth=' + projectMonth : ''}`,
-    `项目结算_${projectMonth || 'all'}.xlsx`),
-
-  downloadTemplate: () => downloadWithAuth(
-    `${BASE}/api/projects/import/template`, '项目订单导入模板.xlsx'),
-
-  importExcel: (formData) => http.post('/api/projects/import/excel', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000
-  })
+    `项目结算_${projectMonth || 'all'}.xlsx`)
 }
 
 // ===== Influencer Payments =====
@@ -125,6 +118,7 @@ export const paymentApi = {
   getById: (id)     => http.get(`/api/influencer-payments/${id}`),
   save:    (data)   => http.post('/api/influencer-payments', data),
   delete:  (id)     => http.delete(`/api/influencer-payments/${id}`),
+  updateStatus: (id, data) => http.patch(`/api/influencer-payments/${id}/status`, data),
 
   exportExcel: (settlementMonth) => downloadWithAuth(
     `${BASE}/api/influencer-payments/export/excel${settlementMonth ? '?settlementMonth=' + settlementMonth : ''}`,
@@ -145,6 +139,7 @@ export const collaborationApi = {
   getById: (id)     => http.get(`/api/collaboration-trackings/${id}`),
   save:    (data)   => http.post('/api/collaboration-trackings', data),
   delete:  (id)     => http.delete(`/api/collaboration-trackings/${id}`),
+  updateStatus: (id, data) => http.patch(`/api/collaboration-trackings/${id}/status`, data),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(

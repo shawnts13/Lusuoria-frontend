@@ -3,21 +3,10 @@
     <div class="page-header">
       <span class="page-title">项目订单管理</span>
       <a-space>
-        <a-button @click="projectApi.downloadTemplate()">
-          <template #icon><DownloadOutlined /></template>下载导入模板
-        </a-button>
         <a-button @click="handleExport">
           <template #icon><ExportOutlined /></template>
           Excel 导出
         </a-button>
-        <template v-if="authStore.canWrite">
-          <a-upload :before-upload="handleImport" :show-upload-list="false" accept=".xlsx,.xls">
-            <a-button><template #icon><UploadOutlined /></template>Excel 导入</a-button>
-          </a-upload>
-          <a-button type="primary" @click="openCreate">
-            <template #icon><PlusOutlined /></template>新建项目
-          </a-button>
-        </template>
       </a-space>
     </div>
 
@@ -121,6 +110,8 @@
               <template v-if="authStore.canWrite">
                 <a @click="openEdit(record)">编辑</a>
                 <a-divider type="vertical" />
+                <a @click="openStatusModal(record)">状态流转</a>
+                <a-divider type="vertical" />
                 <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
                   <a style="color:#ff4d4f">删除</a>
                 </a-popconfirm>
@@ -140,17 +131,10 @@
       :can-approve="authStore.canApprove" :can-view-financials="authStore.canViewFinancials" :can-edit-commission="authStore.canEditCommission"
       @saved="loadData" />
 
-    <a-modal v-model:open="importResultVisible" title="导入结果" :footer="null" width="600px">
-      <a-list :data-source="importResults" size="small"
-        :pagination="importResults.length > 10 ? { pageSize: 10 } : false">
-        <template #renderItem="{ item, index }">
-          <a-list-item>
-            <span :style="index === 0 ? 'font-weight:600;color:#1677ff'
-              : (item.includes('失败') ? 'color:#ff4d4f' : '')">{{ item }}</span>
-          </a-list-item>
-        </template>
-      </a-list>
-    </a-modal>
+    <ProjectStatusModal
+      v-model:visible="statusModalVisible"
+      :record="statusModalRecord"
+      @saved="loadData" />
   </div>
 </template>
 
@@ -158,12 +142,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { ExportOutlined } from '@ant-design/icons-vue'
 import { projectApi, brandApi, influencerApi, employeeApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import ProjectFormModal from './ProjectFormModal.vue'
+import ProjectStatusModal from './ProjectStatusModal.vue'
 
 const authStore = useAuthStore()
 const { getOptions, getLabel } = useOptions()
@@ -175,8 +160,8 @@ const influencers = ref([])
 const employees = ref([])
 const modalVisible       = ref(false)
 const editingRecord      = ref(null)
-const importResultVisible = ref(false)
-const importResults      = ref([])
+const statusModalVisible = ref(false)
+const statusModalRecord  = ref(null)
 
 const pagination = reactive({ current:1, pageSize:20, total:0, showTotal: t => `共 ${t} 条` })
 const route     = useRoute()
@@ -276,17 +261,12 @@ function resetFilters() {
     accountName:undefined, projectManagerId:undefined, keyword:'' })
   pagination.current=1; loadData()
 }
-function openCreate() { editingRecord.value=null; modalVisible.value=true }
 function openEdit(r)  { editingRecord.value=r;    modalVisible.value=true }
+function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
 async function handleDelete(id) { await projectApi.delete(id); message.success('删除成功'); loadData() }
 async function handleApprove(id) { await projectApi.approve(id); message.success('已审核通过'); loadData() }
 async function handleReject(id)  { await projectApi.reject(id);  message.success('已驳回'); loadData() }
 function handleExport() { projectApi.exportExcel(filters.projectMonth) }
-async function handleImport(file) {
-  const fd = new FormData(); fd.append('file', file)
-  try { const res = await projectApi.importExcel(fd); importResults.value=res.data||[]; importResultVisible.value=true; loadData() } catch {}
-  return false
-}
 
 function clientStatusColor(s) {
   const m={PENDING_SUBMIT:'default',SUBMITTED:'processing',CLIENT_CONFIRMED:'cyan',

@@ -4,6 +4,10 @@
     @ok="handleSave" @cancel="close" :destroy-on-close="false">
     <a-form ref="formRef" :model="form" :rules="rules" layout="vertical">
 
+      <a-form-item v-if="form.internalProjectNo" label="内部项目编号">
+        <a-input :value="form.internalProjectNo" disabled />
+      </a-form-item>
+
       <a-row :gutter="16">
         <a-col :span="12">
           <a-form-item label="红人社媒完整名字" name="accountName">
@@ -141,6 +145,7 @@ const saving  = ref(false)
 
 const form = reactive({
   id: null,
+  internalProjectNo: null,
   brandId: null, accountName: null,
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
@@ -173,6 +178,7 @@ watch(() => props.visible, (v) => {
       const rec = props.record
       Object.assign(form, {
         id:            rec.id,
+        internalProjectNo: rec.internalProjectNo || null,
         brandId:       rec.brandId      || null,
         accountName:   rec.accountName  || null,
         platforms:     splitMulti(rec.platform),
@@ -189,7 +195,7 @@ watch(() => props.visible, (v) => {
       })
     } else {
       Object.assign(form, {
-        id:null, brandId:null, accountName:null, platforms:[], demandContent:'',
+        id:null, internalProjectNo:null, brandId:null, accountName:null, platforms:[], demandContent:'',
         publishLink:'', publishDate:null, progress:null, videoType:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null,
         influencerCost:'', clientPrice:''

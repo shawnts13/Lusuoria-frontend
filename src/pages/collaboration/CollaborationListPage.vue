@@ -135,6 +135,8 @@
             <a-space v-if="authStore.canWrite">
               <a @click="openEdit(record)">编辑</a>
               <a-divider type="vertical" />
+              <a @click="openStatusModal(record)">状态流转</a>
+              <a-divider type="vertical" />
               <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
                 <a style="color:#ff4d4f">删除</a>
               </a-popconfirm>
@@ -145,6 +147,11 @@
         </template>
       </a-table>
     </div>
+
+    <CollaborationStatusModal
+      v-model:visible="statusModalVisible"
+      :record="statusModalRecord"
+      @saved="loadData" />
 
     <CollaborationFormModal
       v-model:visible="modalVisible"
@@ -178,6 +185,7 @@ import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import CollaborationFormModal from './CollaborationFormModal.vue'
+import CollaborationStatusModal from './CollaborationStatusModal.vue'
 
 const authStore = useAuthStore()
 const { getOptions, getLabel } = useOptions()
@@ -191,6 +199,8 @@ const influencers = ref([])
 const employees   = ref([])
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
+const statusModalVisible  = ref(false)
+const statusModalRecord   = ref(null)
 const importResultVisible = ref(false)
 const importResults       = ref([])
 
@@ -223,6 +233,7 @@ const filters = reactive({
 })
 
 const allColumns = [
+  { title: '内部项目编号',  dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 200 },
   { title: '品牌方',        key: 'brand',          width: 120 },
   { title: '红人团队',      dataIndex: 'teamName', key: 'teamName',      width: 120 },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120 },
@@ -329,6 +340,7 @@ function resetFilters() {
 
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
+function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
 async function handleDelete(id) {
   await collaborationApi.delete(id); message.success('删除成功'); loadData()
 }

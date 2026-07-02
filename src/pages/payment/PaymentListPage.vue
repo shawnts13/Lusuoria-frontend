@@ -63,6 +63,8 @@
             <a-space v-if="authStore.canWrite">
               <a @click="openEdit(record)">编辑</a>
               <a-divider type="vertical" />
+              <a @click="openStatusModal(record)">状态流转</a>
+              <a-divider type="vertical" />
               <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
                 <a style="color:#ff4d4f">删除</a>
               </a-popconfirm>
@@ -75,6 +77,11 @@
 
     <PaymentFormModal v-model:visible="modalVisible" :record="editingRecord"
       :influencers="influencers" @saved="loadData" />
+
+    <PaymentStatusModal
+      v-model:visible="statusModalVisible"
+      :record="statusModalRecord"
+      @saved="loadData" />
 
     <!-- 导入结果 -->
     <a-modal v-model:open="importResultVisible" title="导入结果" :footer="null" width="560px">
@@ -99,6 +106,7 @@ import { paymentApi, influencerApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import PaymentFormModal from './PaymentFormModal.vue'
+import PaymentStatusModal from './PaymentStatusModal.vue'
 
 const authStore = useAuthStore()
 const loading   = ref(false)
@@ -107,6 +115,8 @@ const tableData = ref([])
 const influencers = ref([])
 const modalVisible       = ref(false)
 const editingRecord      = ref(null)
+const statusModalVisible = ref(false)
+const statusModalRecord  = ref(null)
 const importResultVisible = ref(false)
 const importResults      = ref([])
 
@@ -204,6 +214,7 @@ function resetFilters() {
 }
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
+function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
 
 async function handleDelete(id) {
   await paymentApi.delete(id); message.success('删除成功'); loadData()
