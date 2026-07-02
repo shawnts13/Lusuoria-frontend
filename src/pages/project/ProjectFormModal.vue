@@ -196,10 +196,11 @@
           <a-divider orientation="left" style="font-size:13px">甲方状态</a-divider>
           <a-form-item label="甲方状态"
             :label-col="{ span: 7 }" :wrapper-col="{ span: 15 }">
-            <a-select v-model:value="form.clientStatus">
+            <a-select v-model:value="form.clientStatus" :disabled="!!form.id">
               <a-select-option v-for="s in clientStatuses"
                 :key="s.value" :value="s.value">{{ s.label }}</a-select-option>
             </a-select>
+            <div v-if="form.id" style="font-size:12px;color:#ff4d4f">状态请使用"状态流转"功能修改</div>
           </a-form-item>
           <a-form-item label="合同签署"
             :label-col="{ span: 7 }" :wrapper-col="{ span: 15 }">
@@ -226,13 +227,14 @@
           <a-divider orientation="left" style="font-size:13px">内部状态</a-divider>
           <a-form-item label="内部结算状态"
             :label-col="{ span: 8 }" :wrapper-col="{ span: 14 }">
-            <a-select v-model:value="form.internalStatus">
+            <a-select v-model:value="form.internalStatus" :disabled="!!form.id">
               <a-select-option
                 v-for="s in availableInternalStatuses"
                 :key="s.value" :value="s.value">
                 {{ s.label }}
               </a-select-option>
             </a-select>
+            <div v-if="form.id" style="font-size:12px;color:#ff4d4f">状态请使用"状态流转"功能修改</div>
           </a-form-item>
           <a-form-item label="备注"
             :label-col="{ span: 8 }" :wrapper-col="{ span: 14 }">

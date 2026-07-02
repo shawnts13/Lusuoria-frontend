@@ -65,9 +65,10 @@
       <a-row :gutter="16">
         <a-col :span="6">
           <a-form-item label="进度">
-            <a-select v-model:value="form.progress" allow-clear placeholder="选择进度">
+            <a-select v-model:value="form.progress" :disabled="!!form.id" allow-clear placeholder="选择进度">
               <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
             </a-select>
+            <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">进度请使用"状态流转"功能修改</div>
           </a-form-item>
         </a-col>
         <a-col :span="6">

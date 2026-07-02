@@ -74,7 +74,7 @@
       </a-form-item>
 
       <a-form-item label="付款状态" name="paymentStatus">
-        <a-select v-model:value="form.paymentStatus">
+        <a-select v-model:value="form.paymentStatus" :disabled="!!form.id">
           <a-select-option value="PENDING_RECONCILE">待对账</a-select-option>
           <a-select-option value="RECONCILED">已对账</a-select-option>
           <a-select-option value="PENDING_PAYMENT">待付款</a-select-option>
@@ -82,6 +82,7 @@
           <a-select-option value="PAID">已付款</a-select-option>
           <a-select-option value="ABNORMAL">异常</a-select-option>
         </a-select>
+        <div v-if="form.id" style="font-size:12px;color:#ff4d4f">状态请使用"状态流转"功能修改</div>
       </a-form-item>
 
       <a-form-item label="已付金额" name="paidAmount">
