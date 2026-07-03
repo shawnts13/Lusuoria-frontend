@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.15.0'
-export const APP_VERSION_TIME = '2026-07-03 16:10'
+export const APP_VERSION = '1.15.1'
+export const APP_VERSION_TIME = '2026-07-03 16:35'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -55,6 +55,9 @@ export const useAuthStore = defineStore('auth', {
     canApprove:        (state) => state.role === 'ADMIN',
     canManageUsers:    (state) => state.role === 'ADMIN',
     canViewFinancials: (state) => state.role === 'ADMIN' || state.role === 'AUDITOR',
+    // "基础"财务字段（红人成本/客户合作价格/已到账金额等）：除 GUEST 外都能看，
+    // 比 canViewFinancials 宽松——那个仍然只有 ADMIN/AUDITOR 能看利润/提成这类真正敏感的字段
+    canViewBaselineFinancials: (state) => state.role !== 'GUEST',
     canEditCommission: (state) => state.role === 'ADMIN'
   },
 

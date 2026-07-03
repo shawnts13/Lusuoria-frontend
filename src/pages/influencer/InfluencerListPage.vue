@@ -195,7 +195,7 @@
     <InfluencerFormModal
       v-model:visible="modalVisible"
       :record="editingRecord"
-      :can-view-financials="authStore.canViewFinancials"
+      :can-view-financials="authStore.canViewBaselineFinancials"
       :brands="brands"
       :domains="domains"
       :teams="teams"
@@ -309,7 +309,7 @@ const allColumns = [
 ]
 
 const visibleColumns = computed(() =>
-  allColumns.filter(col => !col.sensitive || authStore.canViewFinancials)
+  allColumns.filter(col => !col.sensitive || authStore.canViewBaselineFinancials)
 )
 const tableScrollX = computed(() =>
   visibleColumns.value.reduce((sum, c) => sum + (c.width || 120), 0)
