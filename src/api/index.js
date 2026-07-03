@@ -164,8 +164,8 @@ export const dashboardApi = {
   summary:      (yearMonth, currency) => http.get('/api/dashboard/summary', { params: { yearMonth, currency } }),
   exchangeRate: (yearMonth)           => http.get('/api/dashboard/exchange-rate', { params: { yearMonth } }),
 
-  drilldownVideoCount: (startMonth, endMonth) =>
-    http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth } }),
+  drilldownVideoCount: (startMonth, endMonth, dimension) =>
+    http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth, dimension } }),
 
   drilldownClientPrice: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency } }),

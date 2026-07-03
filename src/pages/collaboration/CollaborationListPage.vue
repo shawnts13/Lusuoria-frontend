@@ -104,6 +104,10 @@
             {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
           </template>
 
+          <template v-if="column.key === 'createdAt'">
+            {{ record.createdAt ? formatBeijingDateTime(record.createdAt) : '—' }}
+          </template>
+
           <template v-if="column.key === 'progress'">
             <a-tag v-if="record.progress" :color="progressColor(record.progress)">
               {{ getLabel('collab_progress', record.progress) }}
@@ -120,6 +124,10 @@
 
           <template v-if="column.key === 'projectManager'">
             {{ getEmployeeName(record.projectManagerId) || '—' }}
+          </template>
+
+          <template v-if="column.key === 'executor'">
+            {{ getEmployeeName(record.executorId) || '—' }}
           </template>
 
           <template v-if="column.key === 'influencerCost'">
@@ -260,9 +268,12 @@ const allColumns = [
   { title: '需求内容',      dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true },
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
   { title: '发布时间',      key: 'publishDate',    width: 110, sorter: true },
+  { title: '创建时间',      key: 'createdAt',      width: 150, sorter: true },
   { title: '进度',          key: 'progress',       width: 130 },
   { title: '项目视频类型',  key: 'videoType',      width: 120 },
+  { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
+  { title: '内部执行人员',  key: 'executor',        width: 100 },
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150 },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150 },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
@@ -293,6 +304,15 @@ function formatDate(d) {
   if (!d) return ''
   const dt = new Date(d)
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+/** 创建时间是完整时间戳，明确按北京时间（UTC+8）展示，不受访问者浏览器所在时区影响 */
+function formatBeijingDateTime(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  }).replace(/\//g, '-')
 }
 function progressColor(p) {
   const m = {

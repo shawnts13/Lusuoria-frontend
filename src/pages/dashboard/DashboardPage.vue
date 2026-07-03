@@ -82,10 +82,11 @@
     <!-- 视频项目数量下钻：品牌方 + 红人类型，无币种切换 -->
     <DrilldownModal
       v-model:visible="modals.video"
-      title="视频项目数量明细（按品牌方 / 红人类型）"
+      title="视频项目数量明细"
       metric="video"
       :default-month="selectedMonth"
       :show-currency-toggle="false"
+      :dimension-options="videoDimensionOptions"
       :fetcher="fetchVideoDrilldown"
     />
 
@@ -158,6 +159,11 @@ const dimensionOptions = [
   { value: 'type',    label: '按红人类型' }
 ]
 
+const videoDimensionOptions = [
+  { value: 'brand_type',    label: '按品牌方/红人类型' },
+  { value: 'publish_month', label: '按项目视频发布时间' }
+]
+
 function openDrilldown(metric) {
   const map = { video: 'video', 'client-price': 'clientPrice',
     'influencer-cost': 'influencerCost', 'gross-profit': 'grossProfit', commission: 'commission' }
@@ -186,8 +192,8 @@ function fmt(val) {
 }
 
 // 下钻请求函数：统一签名 (startMonth, endMonth, currency, dimension) -> Promise
-function fetchVideoDrilldown(start, end) {
-  return dashboardApi.drilldownVideoCount(start, end)
+function fetchVideoDrilldown(start, end, cur, dim) {
+  return dashboardApi.drilldownVideoCount(start, end, dim)
 }
 function fetchClientPriceDrilldown(start, end, cur) {
   return dashboardApi.drilldownClientPrice(start, end, cur)

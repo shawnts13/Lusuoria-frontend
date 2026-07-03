@@ -90,12 +90,28 @@
         </a-col>
       </a-row>
 
+      <a-form-item v-if="form.videoType === 'OLD_MATERIAL_REPOST'" label="采买旧视频的原链接">
+        <a-input v-model:value="form.oldMaterialSourceLink" placeholder="填写被采买的那条旧视频的原始链接" />
+        <div style="font-size:12px;color:#888;margin-top:2px">
+          系统会自动查重（同一视频不同链接写法也能识别），重复采买会被拒绝保存
+        </div>
+      </a-form-item>
+
       <a-row :gutter="16">
         <a-col :span="8">
           <a-form-item label="项目负责人">
             <a-select v-model:value="form.projectManagerId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
               placeholder="选择负责人">
+              <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
+          <a-form-item label="内部执行人员">
+            <a-select v-model:value="form.executorId" allow-clear show-search
+              :filter-option="(input, opt) => opt.label.includes(input)"
+              placeholder="选择执行人员">
               <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
             </a-select>
           </a-form-item>
@@ -150,8 +166,8 @@ const form = reactive({
   brandId: null, accountName: null,
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
-  progress: null, videoType: null, clientOrderId: '', clientPaymentBatch: '',
-  projectManagerId: null,
+  progress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
+  projectManagerId: null, executorId: null,
   influencerCost: '', clientPrice: ''
 })
 
@@ -188,17 +204,19 @@ watch(() => props.visible, (v) => {
         publishDate:   rec.publishDate ? formatDate(rec.publishDate) : null,
         progress:      rec.progress      || null,
         videoType:     rec.videoType     || null,
+        oldMaterialSourceLink: rec.oldMaterialSourceLink || null,
         clientOrderId: rec.clientOrderId || '',
         clientPaymentBatch: rec.clientPaymentBatch || '',
         projectManagerId: rec.projectManagerId || null,
+        executorId: rec.executorId || null,
         influencerCost: rec.influencerCost || '',
         clientPrice:    rec.clientPrice    || ''
       })
     } else {
       Object.assign(form, {
         id:null, internalProjectNo:null, brandId:null, accountName:null, platforms:[], demandContent:'',
-        publishLink:'', publishDate:null, progress:null, videoType:null, clientOrderId:'', clientPaymentBatch:'',
-        projectManagerId:null,
+        publishLink:'', publishDate:null, progress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
+        projectManagerId:null, executorId:null,
         influencerCost:'', clientPrice:''
       })
     }
@@ -237,9 +255,11 @@ async function doSave() {
       publishDate:   form.publishDate || null,
       progress:      form.progress || null,
       videoType:     form.videoType || null,
+      oldMaterialSourceLink: form.videoType === 'OLD_MATERIAL_REPOST' ? (form.oldMaterialSourceLink || null) : null,
       clientOrderId: form.clientOrderId || null,
       clientPaymentBatch: form.clientPaymentBatch || null,
       projectManagerId: form.projectManagerId || null,
+      executorId: form.executorId || null,
       influencerCost: form.influencerCost,
       clientPrice:    form.clientPrice
     }

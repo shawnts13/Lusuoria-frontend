@@ -17,7 +17,7 @@
         <a-select-option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</a-select-option>
       </a-select>
       <a-date-picker v-model:value="filters.projectMonthVal" picker="month"
-        format="YYYYMM" value-format="YYYYMM" placeholder="项目月份" style="width:140px"
+        format="YYYYMM" value-format="YYYYMM" placeholder="项目建立月份" style="width:140px"
         @change="v => { filters.projectMonth = v; loadData() }" />
       <a-select v-model:value="filters.projectType" placeholder="项目类型" style="width:140px"
         allow-clear @change="loadData">
@@ -74,6 +74,10 @@
               {{ getLabel('video_type', record.videoType) }}
             </a-tag>
             <span v-else style="color:#bbb">—</span>
+          </template>
+
+          <template v-if="column.key === 'videoPublishDate'">
+            {{ record.videoPublishDate ? formatDate(record.videoPublishDate) : '—' }}
           </template>
 
           <template v-if="column.key === 'clientPrice'">
@@ -205,12 +209,14 @@ const internalStatuses = [
 // 全部列定义，按需求指定顺序排列，sensitive:true 的列只有 canViewFinancials 才显示
 const allColumns = [
   { title:'甲方订单号',  dataIndex:'clientOrderNo',      key:'clientOrderNo',     width:140, fixed:'left' },
-  { title:'月份',        dataIndex:'projectMonth',       key:'projectMonth',      width:80 },
+  { title:'项目建立月份', dataIndex:'projectMonth',       key:'projectMonth',      width:100 },
+  { title:'项目视频发布时间', key:'videoPublishDate',      width:120 },
   { title:'品牌方',      dataIndex:'brandName',          key:'brandName',         width:100 },
   { title:'类型',        key:'projectType',              width:100 },
   { title:'项目视频类型', key:'videoType',                width:110 },
   { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160 },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
+  { title:'执行人员',    dataIndex:'executorName',       key:'executorName',      width:90 },
   { title:'甲方状态',    key:'clientStatus',             width:120 },
   { title:'内部状态',    key:'internalStatus',           width:120 },
   // 敏感列（仅 ADMIN / AUDITOR）
@@ -308,6 +314,11 @@ function internalStatusColor(s) {
 function fmtNum(val) {
   if (val==null) return '—'
   return parseFloat(val).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+}
+function formatDate(d) {
+  if (!d) return ''
+  const dt = new Date(d)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
 onMounted(async () => {
