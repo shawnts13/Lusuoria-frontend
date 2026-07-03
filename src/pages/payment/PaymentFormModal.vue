@@ -123,7 +123,11 @@ const form = reactive({
   paymentStatus: 'PENDING_RECONCILE', paidAmount: null, notes: ''
 })
 
-watch(() => props.record, rec => {
+// 同时监听 visible 和 record：只监听 record 的话，连续两次都是"新建"（record 始终是 null，
+// 值没变化）watch 不会重新触发，表单会残留上一次的内容。加上 visible 以后，
+// 每次弹窗从关到开，都会强制重新同步一次表单。
+watch(() => [props.visible, props.record], ([visible, rec]) => {
+  if (!visible) return
   if (rec) {
     Object.assign(form, {
       id: rec.id,
