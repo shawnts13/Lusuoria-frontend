@@ -189,7 +189,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import { influencerApi, employeeApi, domainApi, influencerTeamApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
@@ -263,8 +263,10 @@ watch(() => [...form.links], (newLinks) => {
   if (detected.length > 0) form.platforms = detected
 })
 
-// 当红人类型切换为中国红人时，自动补齐默认领域
+// 只有用户自己在表单里手动切换"红人类型"时才自动补默认领域（新建，或编辑时主动把
+// 海外红人改成中国红人）；填充已有记录数据的过程中不触发，见 populatingFromRecord
 watch(() => form.influencerType, (newType) => {
+  if (populatingFromRecord) return
   if (newType === 'CHINA_INFLUENCER') {
     const current = new Set(form.domains)
     CHINA_DEFAULT_DOMAINS.forEach(d => current.add(d))
@@ -299,8 +301,10 @@ function contactsToJson(obj) {
 // 同时监听 visible 和 record：只监听 record 的话，连续两次都是"新建"（record 始终是 null，
 // 值没变化）watch 不会重新触发，表单会残留上一次的内容。加上 visible 以后，
 // 每次弹窗从关到开，不管 record 是不是跟上次一样，都会强制重新同步一次表单。
+let populatingFromRecord = false
 watch(() => [props.visible, props.record], ([visible, rec]) => {
   if (!visible) return
+  populatingFromRecord = true   // 期间 form.influencerType 的 watch 不会顺带注入默认领域
   if (rec) {
     Object.assign(form, {
       id:             rec.id,
@@ -310,15 +314,9 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       brandIds:       rec.brandIds || [],
       countryMarket:  rec.countryMarket  || null,
       platforms:      splitMulti(rec.platform),
-      domains:        (() => {
-        const dList = splitMulti(rec.domains)
-        if (rec.influencerType === 'CHINA_INFLUENCER') {
-          const dSet = new Set(dList)
-          CHINA_DEFAULT_DOMAINS.forEach(d => dSet.add(d))
-          return Array.from(dSet)
-        }
-        return dList
-      })(),
+      // 编辑已有记录：只展示这条记录本来就有的领域，不再自动叠加"中国红人"的默认领域，
+      // 避免你只是打开看一眼、没注意到领域被悄悄加了默认值就点了保存
+      domains:        splitMulti(rec.domains),
       followerCount:  rec.followerCount  || null,
       links:          splitMulti(rec.links),
       casesLinks:     splitMulti(rec.casesLinks),
@@ -344,6 +342,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       adSpendCost:'', copyrightCost:''
     })
   }
+  nextTick(() => { populatingFromRecord = false })
 }, { immediate: true })
 
 async function handleAddDomain() {
@@ -377,6 +376,7 @@ function isRemark(value) {
 }
 
 async function handleSave() {
+  if (saving.value) return   // 防止表单校验期间（还没到 saving=true）被连续点击导致重复提交
   try { await formRef.value.validate() } catch { return }
   saving.value = true
   try {

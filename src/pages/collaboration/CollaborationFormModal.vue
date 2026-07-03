@@ -240,6 +240,7 @@ function onInfluencerChange() {
 function close() { emit('update:visible', false) }
 
 async function doSave() {
+  if (saving.value) return   // 防止连续点击导致重复提交
   saving.value = true
   try {
     const payload = {

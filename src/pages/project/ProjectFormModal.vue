@@ -420,6 +420,7 @@ function calcPreview() {
 }
 
 async function handleSave() {
+  if (saving.value) return   // 防止表单校验期间被连续点击导致重复提交
   try { await formRef.value.validate() } catch { return }
   saving.value = true
   try {
