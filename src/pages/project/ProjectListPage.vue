@@ -161,6 +161,7 @@ import { projectApi, brandApi, influencerApi, employeeApi } from '../../api/inde
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { formatDate } from '../../utils/dateFormat'
 import ProjectFormModal from './ProjectFormModal.vue'
 import ProjectStatusModal from './ProjectStatusModal.vue'
 
@@ -314,11 +315,6 @@ function internalStatusColor(s) {
 function fmtNum(val) {
   if (val==null) return '—'
   return parseFloat(val).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
-}
-function formatDate(d) {
-  if (!d) return ''
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 
 onMounted(async () => {

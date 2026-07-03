@@ -62,15 +62,15 @@
       </a-form-item>
 
       <a-form-item label="对账日期" name="reconcileDate">
-        <a-date-picker v-model:value="form.reconcileDate" style="width:100%" />
+        <a-date-picker v-model:value="form.reconcileDate" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
 
       <a-form-item label="预计付款日" name="expectedPaymentDate">
-        <a-date-picker v-model:value="form.expectedPaymentDate" style="width:100%" />
+        <a-date-picker v-model:value="form.expectedPaymentDate" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
 
       <a-form-item label="实际付款日" name="actualPaymentDate">
-        <a-date-picker v-model:value="form.actualPaymentDate" style="width:100%" />
+        <a-date-picker v-model:value="form.actualPaymentDate" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
 
       <a-form-item label="付款状态" name="paymentStatus">
@@ -100,6 +100,7 @@
 import { ref, reactive, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { paymentApi } from '../../api/index'
+import { formatDate } from '../../utils/dateFormat'
 
 const props = defineProps({
   visible: Boolean,
@@ -133,9 +134,9 @@ watch(() => props.record, rec => {
       influencerUnitPrice: rec.influencerUnitPrice, payableAmount: rec.payableAmount,
       currency: rec.currency || 'RMB', exchangeRate: rec.exchangeRate,
       rmbAmount: rec.rmbAmount,
-      reconcileDate: rec.reconcileDate ? new Date(rec.reconcileDate) : null,
-      expectedPaymentDate: rec.expectedPaymentDate ? new Date(rec.expectedPaymentDate) : null,
-      actualPaymentDate:   rec.actualPaymentDate   ? new Date(rec.actualPaymentDate)   : null,
+      reconcileDate: rec.reconcileDate ? formatDate(rec.reconcileDate) : null,
+      expectedPaymentDate: rec.expectedPaymentDate ? formatDate(rec.expectedPaymentDate) : null,
+      actualPaymentDate:   rec.actualPaymentDate   ? formatDate(rec.actualPaymentDate)   : null,
       paymentStatus: rec.paymentStatus || 'PENDING_RECONCILE',
       paidAmount: rec.paidAmount, notes: rec.notes || ''
     })

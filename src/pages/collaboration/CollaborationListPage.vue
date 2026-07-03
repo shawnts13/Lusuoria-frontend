@@ -105,7 +105,7 @@
           </template>
 
           <template v-if="column.key === 'createdAt'">
-            {{ record.createdAt ? formatBeijingDateTime(record.createdAt) : '—' }}
+            {{ record.createdAt ? formatDateTime(record.createdAt) : '—' }}
           </template>
 
           <template v-if="column.key === 'progress'">
@@ -203,6 +203,7 @@ import { collaborationApi, brandApi, influencerApi, influencerTeamApi, employeeA
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
 
@@ -299,20 +300,6 @@ function getEmployeeName(employeeId) {
 function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
-}
-function formatDate(d) {
-  if (!d) return ''
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
-}
-/** 创建时间是完整时间戳，明确按北京时间（UTC+8）展示，不受访问者浏览器所在时区影响 */
-function formatBeijingDateTime(d) {
-  if (!d) return ''
-  return new Date(d).toLocaleString('zh-CN', {
-    timeZone: 'Asia/Shanghai', hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit'
-  }).replace(/\//g, '-')
 }
 function progressColor(p) {
   const m = {

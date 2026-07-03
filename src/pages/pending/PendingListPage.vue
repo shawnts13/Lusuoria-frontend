@@ -52,6 +52,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { pendingApprovalApi } from '../../api/index'
+import { formatDateTime } from '../../utils/dateFormat'
 
 const loading = ref(false)
 const list = ref([])
@@ -71,7 +72,7 @@ const columns = [
   { title: '删除原因',   dataIndex: 'reason', key: 'reason', ellipsis: true },
   { title: '发起人',     dataIndex: 'requestedBy', key: 'requestedBy', width: 100 },
   { title: '发起时间',   dataIndex: 'createdAt', key: 'createdAt', width: 160,
-    customRender: ({ text }) => text ? new Date(text).toLocaleString('zh-CN', { hour12: false }) : '—' },
+    customRender: ({ text }) => text ? formatDateTime(text) : '—' },
   { title: '查看详情',   key: 'detail', width: 90 },
   { title: '操作',       key: 'action', width: 120 }
 ]

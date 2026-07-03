@@ -114,6 +114,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { userApi, employeeApi } from '../../api/index'
+import { formatDateTime } from '../../utils/dateFormat'
 
 const loading      = ref(false)
 const list         = ref([])
@@ -135,7 +136,7 @@ const columns = [
     customRender: ({ text }) => text || '—' },
   { title: '状态',     key: 'enabled',            width: 90 },
   { title: '创建时间', dataIndex: 'createdAt',    key: 'createdAt', width: 170,
-    customRender: ({ text }) => text ? new Date(text).toLocaleString('zh-CN') : '—' },
+    customRender: ({ text }) => text ? formatDateTime(text) : '—' },
   { title: '操作',     key: 'action',             width: 160 }
 ]
 

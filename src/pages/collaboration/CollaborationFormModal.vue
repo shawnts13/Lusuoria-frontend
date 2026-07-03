@@ -145,6 +145,7 @@ import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { formatDate } from '../../utils/dateFormat'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -226,10 +227,6 @@ watch(() => props.visible, (v) => {
 function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
-}
-function formatDate(d) {
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }
 function isRemark(value) {
   if (!value || !value.trim()) return false

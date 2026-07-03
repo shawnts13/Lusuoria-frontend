@@ -105,6 +105,7 @@ import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '
 import { paymentApi, influencerApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { formatDate } from '../../utils/dateFormat'
 import PaymentFormModal from './PaymentFormModal.vue'
 import PaymentStatusModal from './PaymentStatusModal.vue'
 
@@ -155,9 +156,12 @@ const allColumns = [
     customRender: ({ text }) => text || '—' },
   { title: '人民币金额', dataIndex: 'rmbAmount', key: 'rmbAmount', width: 110,
     customRender: ({ text }) => text ? '¥' + fmtNum(text) : '—' },
-  { title: '对账日期',   dataIndex: 'reconcileDate',       key: 'reconcileDate',       width: 110 },
-  { title: '预计付款日', dataIndex: 'expectedPaymentDate', key: 'expectedPaymentDate', width: 110 },
-  { title: '实际付款日', dataIndex: 'actualPaymentDate',   key: 'actualPaymentDate',   width: 110 },
+  { title: '对账日期',   dataIndex: 'reconcileDate',       key: 'reconcileDate',       width: 110,
+    customRender: ({ text }) => text ? formatDate(text) : '—' },
+  { title: '预计付款日', dataIndex: 'expectedPaymentDate', key: 'expectedPaymentDate', width: 110,
+    customRender: ({ text }) => text ? formatDate(text) : '—' },
+  { title: '实际付款日', dataIndex: 'actualPaymentDate',   key: 'actualPaymentDate',   width: 110,
+    customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '付款状态',   key: 'paymentStatus',             width: 100 },
   { title: '已付金额',   dataIndex: 'paidAmount', key: 'paidAmount', width: 110,
     customRender: ({ text }) => fmtNum(text) },

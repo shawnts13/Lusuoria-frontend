@@ -76,6 +76,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, LinkOutlined } from '@ant-design/icons-vue'
 import { exchangeRateApi } from '../../api/index'
+import { formatDateTime } from '../../utils/dateFormat'
 
 const loading = ref(false)
 const saving  = ref(false)
@@ -107,13 +108,6 @@ function prevMonthLabel(yearMonth) {
   month -= 1
   if (month === 0) { month = 12; year -= 1 }
   return `${year}年${month}月`
-}
-
-function formatDateTime(d) {
-  if (!d) return ''
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} `
-       + `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
 }
 
 async function loadList() {

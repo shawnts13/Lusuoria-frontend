@@ -10,8 +10,8 @@
         <a-col :span="12">
           <a-divider orientation="left" style="font-size:13px">基本信息</a-divider>
 
-          <a-form-item label="项目月份" name="projectMonth"
-            :rules="[{ required: true, message: '请选择项目月份' }]">
+          <a-form-item label="项目建立月份" name="projectMonth"
+            :rules="[{ required: true, message: '请选择项目建立月份' }]">
             <a-date-picker v-model:value="form.projectMonthVal" picker="month"
               format="YYYYMM" value-format="YYYYMM" style="width:100%"
               @change="v => form.projectMonth = v" />
@@ -209,11 +209,11 @@
           </a-form-item>
           <a-form-item label="预计到账日"
             :label-col="{ span: 7 }" :wrapper-col="{ span: 15 }">
-            <a-date-picker v-model:value="form.expectedReceiptDate" style="width:100%" />
+            <a-date-picker v-model:value="form.expectedReceiptDate" value-format="YYYY-MM-DD" style="width:100%" />
           </a-form-item>
           <a-form-item label="实际到账日"
             :label-col="{ span: 7 }" :wrapper-col="{ span: 15 }">
-            <a-date-picker v-model:value="form.actualReceiptDate" style="width:100%" />
+            <a-date-picker v-model:value="form.actualReceiptDate" value-format="YYYY-MM-DD" style="width:100%" />
           </a-form-item>
           <!-- 已到账金额：所有有写权限的角色均可填写 -->
           <a-form-item label="已到账金额"
@@ -251,6 +251,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { projectApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { formatDate } from '../../utils/dateFormat'
 
 const props = defineProps({
   visible:           Boolean,
@@ -350,9 +351,9 @@ watch(() => props.record, rec => {
       internalStatus:       rec.internalStatus        || 'PENDING_CALC',
       contractSigned:       rec.contractSigned        || false,
       expectedReceiptDate:  rec.expectedReceiptDate
-                              ? new Date(rec.expectedReceiptDate) : null,
+                              ? formatDate(rec.expectedReceiptDate) : null,
       actualReceiptDate:    rec.actualReceiptDate
-                              ? new Date(rec.actualReceiptDate)   : null,
+                              ? formatDate(rec.actualReceiptDate)   : null,
       receivedAmount:       rec.receivedAmount,
       notes:                rec.notes                 || ''
     })
