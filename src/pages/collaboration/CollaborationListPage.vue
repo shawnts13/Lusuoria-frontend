@@ -100,6 +100,10 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
+          <template v-if="column.key === 'accountName'">
+            {{ getInfluencerName(record.influencerId) || '—' }}
+          </template>
+
           <template v-if="column.key === 'publishDate'">
             {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
           </template>
@@ -264,7 +268,7 @@ const allColumns = [
   { title: '品牌方',        key: 'brand',          width: 120 },
   { title: '红人团队',      dataIndex: 'teamName', key: 'teamName',      width: 120 },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120 },
-  { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
+  { title: '红人社媒完整名字', key: 'accountName', width: 160 },
   { title: '合作平台',      key: 'platform',       width: 120 },
   { title: '需求内容',      dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true },
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
@@ -296,6 +300,11 @@ function getEmployeeName(employeeId) {
   if (!employeeId) return ''
   const e = employees.value.find(e => e.id === employeeId)
   return e ? e.name : ''
+}
+function getInfluencerName(influencerId) {
+  if (!influencerId) return ''
+  const inf = influencers.value.find(i => i.id === influencerId)
+  return inf ? inf.accountName : ''
 }
 function splitMulti(str) {
   if (!str) return []
@@ -366,7 +375,10 @@ function resetFilters() {
 
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
-function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
+function openStatusModal(r) {
+  statusModalRecord.value = { ...r, accountName: getInfluencerName(r.influencerId) }
+  statusModalVisible.value = true
+}
 function openDeleteReason(r) { deleteTarget.value = r; deleteReason.value = ''; deleteReasonVisible.value = true }
 async function handleDeleteConfirm() {
   if (!deleteReason.value?.trim()) { message.warning('请填写删除原因'); return }

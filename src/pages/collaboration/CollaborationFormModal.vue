@@ -10,11 +10,11 @@
 
       <a-row :gutter="16">
         <a-col :span="12">
-          <a-form-item label="红人社媒完整名字" name="accountName">
-            <a-select v-model:value="form.accountName" allow-clear show-search
-              :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
+          <a-form-item label="红人社媒完整名字" name="influencerId">
+            <a-select v-model:value="form.influencerId" allow-clear show-search
+              :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
               placeholder="从红人库选择" @change="onInfluencerChange">
-              <a-select-option v-for="inf in influencers" :key="inf.accountName" :value="inf.accountName">
+              <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.id" :label="inf.accountName">
                 {{ inf.accountName }}
               </a-select-option>
             </a-select>
@@ -27,11 +27,11 @@
           <a-form-item label="品牌方" name="brandId">
             <a-select v-model:value="form.brandId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
-              :placeholder="form.accountName ? '选择品牌方' : '请先选择红人'"
-              :disabled="!form.accountName">
+              :placeholder="form.influencerId ? '选择品牌方' : '请先选择红人'"
+              :disabled="!form.influencerId">
               <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
             </a-select>
-            <div v-if="form.accountName && availableBrands.length === 0"
+            <div v-if="form.influencerId && availableBrands.length === 0"
               style="font-size:12px;color:#c00000;margin-top:2px">
               该红人尚未在红人模块关联任何品牌方，请先去红人模块维护
             </div>
@@ -164,7 +164,7 @@ const saving  = ref(false)
 const form = reactive({
   id: null,
   internalProjectNo: null,
-  brandId: null, accountName: null,
+  brandId: null, influencerId: null,
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
   progress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
@@ -173,19 +173,19 @@ const form = reactive({
 })
 
 const rules = {
-  accountName: [{ required: true, message: '请选择红人社媒完整名字', trigger: 'change' }]
+  influencerId: [{ required: true, message: '请选择红人社媒完整名字', trigger: 'change' }]
 }
 
 const snapshotInfo = computed(() => {
-  if (!form.accountName) return null
-  const inf = props.influencers.find(i => i.accountName === form.accountName)
+  if (!form.influencerId) return null
+  const inf = props.influencers.find(i => i.id === form.influencerId)
   return inf ? { teamName: inf.teamName, countryMarket: inf.countryMarket } : null
 })
 
 // 品牌方下拉只显示当前选中红人在红人模块里已关联的品牌方
 const availableBrands = computed(() => {
-  if (!form.accountName) return []
-  const inf = props.influencers.find(i => i.accountName === form.accountName)
+  if (!form.influencerId) return []
+  const inf = props.influencers.find(i => i.id === form.influencerId)
   if (!inf || !inf.brandIds || !inf.brandIds.length) return []
   return props.brands.filter(b => inf.brandIds.includes(b.id))
 })
@@ -198,7 +198,7 @@ watch(() => props.visible, (v) => {
         id:            rec.id,
         internalProjectNo: rec.internalProjectNo || null,
         brandId:       rec.brandId      || null,
-        accountName:   rec.accountName  || null,
+        influencerId:  rec.influencerId || null,
         platforms:     splitMulti(rec.platform),
         demandContent: rec.demandContent || '',
         publishLink:   rec.publishLink   || '',
@@ -215,7 +215,7 @@ watch(() => props.visible, (v) => {
       })
     } else {
       Object.assign(form, {
-        id:null, internalProjectNo:null, brandId:null, accountName:null, platforms:[], demandContent:'',
+        id:null, internalProjectNo:null, brandId:null, influencerId:null, platforms:[], demandContent:'',
         publishLink:'', publishDate:null, progress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
         influencerCost:'', clientPrice:''
@@ -246,7 +246,7 @@ async function doSave() {
     const payload = {
       id:            form.id,
       brandId:       form.brandId,
-      accountName:   form.accountName,
+      influencerId:  form.influencerId,
       platform:      form.platforms.join('\n') || null,
       demandContent: form.demandContent || null,
       publishLink:   form.publishLink || null,
