@@ -125,7 +125,7 @@
             <a-select v-model:value="form.projectManagerId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
               placeholder="选择负责人">
-              <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+              <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
             </a-select>
           </a-form-item>
         </a-col>
@@ -134,7 +134,7 @@
             <a-select v-model:value="form.executorId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
               placeholder="选择执行人员">
-              <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+              <a-select-option v-for="e in executorCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
             </a-select>
           </a-form-item>
         </a-col>
@@ -225,6 +225,12 @@ const availableTeams = computed(() => {
   if (!inf || !inf.brandTeamPairs) return []
   return inf.brandTeamPairs.filter(p => p.brandId === form.brandId)
 })
+
+// 项目负责人只能选"项目负责人"或"管理层"角色；内部执行人员只能选"执行人员"角色
+const projectManagerCandidates = computed(() =>
+  props.employees.filter(e => e.role === '项目负责人' || e.role === '管理层'))
+const executorCandidates = computed(() =>
+  props.employees.filter(e => e.role === '执行人员'))
 
 watch(() => props.visible, (v) => {
   if (v) {
