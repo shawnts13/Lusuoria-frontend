@@ -183,6 +183,7 @@ const deleteTarget        = ref(null)
 const deleting             = ref(false)
 
 const pagination = reactive({ current:1, pageSize:20, total:0, showTotal: t => `共 ${t} 条` })
+const sortState = reactive({ field: 'createdAt', order: 'descend' })
 const route     = useRoute()
 const filters = reactive({
   brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
@@ -209,16 +210,16 @@ const internalStatuses = [
 
 // 全部列定义，按需求指定顺序排列，sensitive:true 的列只有 canViewFinancials 才显示
 const allColumns = [
-  { title:'甲方订单号',  dataIndex:'clientOrderNo',      key:'clientOrderNo',     width:140, fixed:'left' },
-  { title:'项目建立月份', dataIndex:'projectMonth',       key:'projectMonth',      width:100 },
-  { title:'项目视频发布时间', key:'videoPublishDate',      width:120 },
+  { title:'甲方订单号',  dataIndex:'clientOrderNo',      key:'clientOrderNo',     width:140, fixed:'left', sorter: true },
+  { title:'项目建立月份', dataIndex:'projectMonth',       key:'projectMonth',      width:100, sorter: true },
+  { title:'项目视频发布时间', key:'videoPublishDate',      width:120, sorter: true },
   { title:'品牌方',      dataIndex:'brandName',          key:'brandName',         width:100 },
+  { title:'红人团队',    dataIndex:'teamName',           key:'teamName',          width:90 },
   { title:'类型',        key:'projectType',              width:100 },
   { title:'项目视频类型', key:'videoType',                width:110 },
-  { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160 },
+  { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160, sorter: true },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
   { title:'执行人员',    dataIndex:'executorName',       key:'executorName',      width:90 },
-  { title:'红人团队',    dataIndex:'teamName',           key:'teamName',          width:90 },
   { title:'甲方状态',    key:'clientStatus',             width:120 },
   { title:'内部状态',    key:'internalStatus',           width:120 },
   // 敏感列（仅 ADMIN / AUDITOR）
@@ -266,6 +267,7 @@ async function loadData() {
       accountName:filters.accountName?.trim() || undefined,
       projectManagerId:filters.projectManagerId || undefined,
       keyword:filters.keyword||undefined,
+      sortBy: sortState.field, sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page:pagination.current-1, size:pagination.pageSize
     })
     tableData.value  = res.data.content || []
@@ -276,14 +278,21 @@ async function loadData() {
   }
 }
 
-function handleTableChange(pag) {
-  pagination.current=pag.current; pagination.pageSize=pag.pageSize; loadData()
+function handleTableChange(pag, _f, sorter) {
+  pagination.current=pag.current; pagination.pageSize=pag.pageSize
+  if (sorter && sorter.field) {
+    sortState.field = sorter.field
+    sortState.order = sorter.order || 'descend'
+  }
+  loadData()
 }
 function resetFilters() {
   Object.assign(filters, { brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
     projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
     accountName:undefined, projectManagerId:undefined, internalProjectNo:undefined, keyword:'' })
-  pagination.current=1; loadData()
+  pagination.current=1
+  sortState.field = 'createdAt'; sortState.order = 'descend'
+  loadData()
 }
 function openEdit(r)  { editingRecord.value=r;    modalVisible.value=true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }

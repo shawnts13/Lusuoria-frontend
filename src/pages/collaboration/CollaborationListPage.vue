@@ -28,11 +28,11 @@
         @change="loadData">
         <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.teamName" placeholder="红人团队"
+      <a-select v-model:value="filters.teamId" placeholder="红人团队"
         style="width:150px" allow-clear show-search
-        :filter-option="(input, opt) => opt.value.includes(input)"
+        :filter-option="(input, opt) => opt.label.includes(input)"
         @change="loadData">
-        <a-select-option v-for="t in teams" :key="t.name" :value="t.name">{{ t.name }}</a-select-option>
+        <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
       </a-select>
       <a-select v-model:value="filters.countryMarket" placeholder="服务国家/市场"
         style="width:150px" allow-clear show-search
@@ -260,7 +260,7 @@ const pagination = reactive({
   pageSizeOptions: ['20', '50', '100']
 })
 const filters = reactive({
-  brandId: undefined, teamName: undefined, countryMarket: undefined,
+  brandId: undefined, teamId: undefined, countryMarket: undefined,
   accountName: undefined, platform: undefined, progress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
@@ -268,25 +268,24 @@ const filters = reactive({
 })
 
 const allColumns = [
-  { title: '内部项目编号',  dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 200 },
+  { title: '内部项目编号',  dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 200, sorter: true },
   { title: '品牌方',        key: 'brand',          width: 120 },
-  { title: '红人团队',      dataIndex: 'teamName', key: 'teamName',      width: 120 },
-  { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120 },
-  { title: '红人社媒完整名字', key: 'accountName', width: 160 },
+  { title: '红人团队',      key: 'team',            width: 100 },
+  { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
+  { title: '红人社媒完整名字', key: 'accountName', width: 160, sorter: true },
   { title: '合作平台',      key: 'platform',       width: 120 },
   { title: '需求内容',      dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true },
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
   { title: '发布时间',      key: 'publishDate',    width: 110, sorter: true },
   { title: '创建时间',      key: 'createdAt',      width: 150, sorter: true },
-  { title: '进度',          key: 'progress',       width: 130 },
-  { title: '项目视频类型',  key: 'videoType',      width: 120 },
+  { title: '进度',          key: 'progress',       width: 130, sorter: true },
+  { title: '项目视频类型',  key: 'videoType',      width: 120, sorter: true },
   { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
   { title: '内部执行人员',  key: 'executor',        width: 100 },
-  { title: '红人团队',      key: 'team',            width: 100 },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',      width: 160, ellipsis: true },
-  { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150 },
-  { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150 },
+  { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150, sorter: true },
+  { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150, sorter: true },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
   { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, sensitive: true },
   { title: '操作', key: 'action', width: 120, fixed: 'right' }
@@ -338,7 +337,7 @@ async function loadData() {
   try {
     const res = await collaborationApi.list({
       brandId:            filters.brandId,
-      teamName:           filters.teamName    || undefined,
+      teamId:             filters.teamId      || undefined,
       countryMarket:      filters.countryMarket,
       accountName:        filters.accountName?.trim() || undefined,
       platform:           filters.platform,
@@ -374,7 +373,7 @@ function handleTableChange(pag, _f, sorter) {
 
 function resetFilters() {
   Object.assign(filters, {
-    brandId:undefined, teamName:undefined, countryMarket:undefined,
+    brandId:undefined, teamId:undefined, countryMarket:undefined,
     accountName:undefined, platform:undefined, progress:undefined, videoType:undefined,
     videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
