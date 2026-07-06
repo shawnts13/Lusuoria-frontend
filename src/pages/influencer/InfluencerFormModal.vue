@@ -22,28 +22,28 @@
             <a-input v-model:value="form.accountName" />
           </a-form-item>
 
-          <a-form-item label="红人团队">
-            <a-select v-model:value="form.teamName" allow-clear show-search
-              :filter-option="(input, opt) => opt.value.includes(input)"
-              placeholder="选择或搜索团队">
-              <a-select-option v-for="t in teams" :key="t.name" :value="t.name">
-                {{ t.name }}
-              </a-select-option>
-            </a-select>
+          <a-form-item label="品牌方-团队">
+            <div v-for="(pair, idx) in form.brandTeamPairs" :key="idx"
+              style="display:flex;gap:8px;margin-bottom:8px">
+              <a-select v-model:value="pair.brandId" placeholder="品牌方" style="flex:1" allow-clear show-search
+                :filter-option="(input, opt) => opt.label.includes(input)">
+                <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+              </a-select>
+              <a-select v-model:value="pair.teamId" placeholder="团队（可不选）" style="flex:1" allow-clear show-search
+                :filter-option="(input, opt) => opt.label.includes(input)">
+                <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+              </a-select>
+              <a-button danger @click="form.brandTeamPairs.splice(idx, 1)">删除</a-button>
+            </div>
+            <a-button type="dashed" block @click="form.brandTeamPairs.push({ brandId: null, teamId: null })">
+              + 添加品牌方-团队关联
+            </a-button>
+            <div style="font-size:12px;color:#888;margin-top:4px">
+              一个红人可以关联多个"品牌方-团队"对，同一品牌方下也可以配多个不同团队；团队可以不选（表示这个品牌方下暂时没配团队）
+            </div>
             <a-input-search v-if="authStore.canWrite" v-model:value="newTeamName"
-              placeholder="输入新团队名称后回车添加"
-              enter-button="添加团队" style="margin-top:6px"
+              placeholder="输入新团队名称后回车添加" enter-button="添加团队" style="margin-top:8px"
               @search="handleAddTeam" />
-          </a-form-item>
-
-          <a-form-item label="品牌方">
-            <a-select v-model:value="form.brandIds" mode="multiple" allow-clear show-search
-              placeholder="可多选"
-              :filter-option="(input, opt) => opt.label.includes(input)">
-              <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">
-                {{ b.name }}
-              </a-select-option>
-            </a-select>
           </a-form-item>
 
           <a-form-item label="服务国家/市场">
@@ -219,8 +219,8 @@ const EMPTY_CONTACTS = () => ({ phone: '', whatsapp: '', line: '', telegram: '' 
 const form = reactive({
   id: null,
   influencerType: 'OVERSEAS_INFLUENCER',
-  teamName: '', accountName: '',
-  brandIds: [], countryMarket: null, platforms: [],
+  accountName: '',
+  brandTeamPairs: [], countryMarket: null, platforms: [],
   domains: [],
   followerCount: null, links: [], casesLinks: [],
   contractLink: '',
@@ -309,9 +309,8 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
     Object.assign(form, {
       id:             rec.id,
       influencerType: rec.influencerType || 'OVERSEAS_INFLUENCER',
-      teamName:       rec.teamName       || '',
       accountName:    rec.accountName    || '',
-      brandIds:       rec.brandIds || [],
+      brandTeamPairs: (rec.brandTeamPairs || []).map(p => ({ brandId: p.brandId, teamId: p.teamId })),
       countryMarket:  rec.countryMarket  || null,
       platforms:      splitMulti(rec.platform),
       // 编辑已有记录：只展示这条记录本来就有的领域，不再自动叠加"中国红人"的默认领域，
@@ -333,8 +332,8 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
     })
   } else {
     Object.assign(form, {
-      id:null, influencerType:'OVERSEAS_INFLUENCER', teamName:'', accountName:'',
-      brandIds:[], countryMarket:null, platforms:[], domains:[],
+      id:null, influencerType:'OVERSEAS_INFLUENCER', accountName:'',
+      brandTeamPairs:[], countryMarket:null, platforms:[], domains:[],
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', paymentCycle:null, followerPerson:null,
@@ -362,7 +361,6 @@ async function handleAddTeam() {
   try {
     await influencerTeamApi.add(newTeamName.value.trim())
     message.success('团队添加成功')
-    form.teamName = newTeamName.value.trim()  // 自动选中刚添加的团队
     newTeamName.value = ''
     emit('team-added')
   } catch (e) {
@@ -383,9 +381,8 @@ async function handleSave() {
     await influencerApi.save({
       id:             form.id,
       influencerType: form.influencerType,
-      teamName:       form.teamName || null,
       accountName:    form.accountName,
-      brandIds:       form.brandIds,
+      brandTeamPairs: form.brandTeamPairs.filter(p => p.brandId != null),
       countryMarket:  form.countryMarket,
       platform:       form.platforms.join("\n") || null,
       domains:        form.domains,

@@ -104,6 +104,10 @@
             {{ getInfluencerName(record.influencerId) || '—' }}
           </template>
 
+          <template v-if="column.key === 'team'">
+            {{ getTeamName(record.teamId) || '—' }}
+          </template>
+
           <template v-if="column.key === 'publishDate'">
             {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
           </template>
@@ -279,6 +283,8 @@ const allColumns = [
   { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
   { title: '内部执行人员',  key: 'executor',        width: 100 },
+  { title: '红人团队',      key: 'team',            width: 100 },
+  { title: '备注',          dataIndex: 'notes',     key: 'notes',      width: 160, ellipsis: true },
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150 },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150 },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
@@ -305,6 +311,11 @@ function getInfluencerName(influencerId) {
   if (!influencerId) return ''
   const inf = influencers.value.find(i => i.id === influencerId)
   return inf ? inf.accountName : ''
+}
+function getTeamName(teamId) {
+  if (!teamId) return ''
+  const t = teams.value.find(t => t.id === teamId)
+  return t ? t.name : ''
 }
 function splitMulti(str) {
   if (!str) return []

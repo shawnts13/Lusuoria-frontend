@@ -19,7 +19,7 @@
               </a-select-option>
             </a-select>
             <div v-if="snapshotInfo" style="font-size:12px;color:#888;margin-top:2px">
-              团队：{{ snapshotInfo.teamName || '—' }}　国家/市场：{{ snapshotInfo.countryMarket || '—' }}
+              国家/市场：{{ snapshotInfo.countryMarket || '—' }}
             </div>
           </a-form-item>
         </a-col>
@@ -28,7 +28,8 @@
             <a-select v-model:value="form.brandId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
               :placeholder="form.influencerId ? '选择品牌方' : '请先选择红人'"
-              :disabled="!form.influencerId">
+              :disabled="!form.influencerId"
+              @change="onBrandChange">
               <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
             </a-select>
             <div v-if="form.influencerId && availableBrands.length === 0"
@@ -38,6 +39,27 @@
           </a-form-item>
         </a-col>
       </a-row>
+
+      <a-row :gutter="16" v-if="form.brandId">
+        <a-col :span="12">
+          <a-form-item label="红人团队">
+            <a-select v-model:value="form.teamId" allow-clear show-search
+              :filter-option="(input, opt) => opt.label.includes(input)"
+              :disabled="availableTeams.length <= 1"
+              :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '选择团队'">
+              <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不选团队）'">
+                {{ t.teamName || '（不选团队）' }}
+              </a-select-option>
+            </a-select>
+            <div v-if="availableTeams.length > 1" style="font-size:12px;color:#888;margin-top:2px">
+              该红人在此品牌方下关联了多个团队，请明确选择其中一个
+            </div>
+          </a-form-item>
+        </a-col>
+      </a-row>
+      <div v-else-if="form.influencerId" style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
+        请先选择品牌方，才能选择红人团队
+      </div>
 
       <a-form-item label="合作平台">
         <a-select v-model:value="form.platforms" mode="multiple" allow-clear placeholder="可多选">
@@ -136,6 +158,10 @@
         </a-row>
       </template>
 
+      <a-form-item label="备注">
+        <a-textarea v-model:value="form.notes" :rows="2" placeholder="记录一些特殊情况" />
+      </a-form-item>
+
     </a-form>
   </a-modal>
 </template>
@@ -164,12 +190,12 @@ const saving  = ref(false)
 const form = reactive({
   id: null,
   internalProjectNo: null,
-  brandId: null, influencerId: null,
+  brandId: null, influencerId: null, teamId: null,
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
   progress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null, executorId: null,
-  influencerCost: '', clientPrice: ''
+  influencerCost: '', clientPrice: '', notes: ''
 })
 
 const rules = {
@@ -179,15 +205,25 @@ const rules = {
 const snapshotInfo = computed(() => {
   if (!form.influencerId) return null
   const inf = props.influencers.find(i => i.id === form.influencerId)
-  return inf ? { teamName: inf.teamName, countryMarket: inf.countryMarket } : null
+  return inf ? { countryMarket: inf.countryMarket } : null
 })
 
-// 品牌方下拉只显示当前选中红人在红人模块里已关联的品牌方
+// 品牌方下拉只显示当前选中红人在红人模块里已关联过的品牌方（不管那个品牌方下有没有配团队）
 const availableBrands = computed(() => {
   if (!form.influencerId) return []
   const inf = props.influencers.find(i => i.id === form.influencerId)
-  if (!inf || !inf.brandIds || !inf.brandIds.length) return []
-  return props.brands.filter(b => inf.brandIds.includes(b.id))
+  if (!inf || !inf.brandTeamPairs || !inf.brandTeamPairs.length) return []
+  const brandIds = [...new Set(inf.brandTeamPairs.map(p => p.brandId))]
+  return props.brands.filter(b => brandIds.includes(b.id))
+})
+
+// 团队选项：跟着选中的品牌方走。0个选项时不允许选；1个选项时自动带入且禁用选择框；
+// 多个选项时列出来让用户明确选择其中一个（可能包含"不选团队"这个选项）
+const availableTeams = computed(() => {
+  if (!form.influencerId || !form.brandId) return []
+  const inf = props.influencers.find(i => i.id === form.influencerId)
+  if (!inf || !inf.brandTeamPairs) return []
+  return inf.brandTeamPairs.filter(p => p.brandId === form.brandId)
 })
 
 watch(() => props.visible, (v) => {
@@ -198,6 +234,7 @@ watch(() => props.visible, (v) => {
         id:            rec.id,
         internalProjectNo: rec.internalProjectNo || null,
         brandId:       rec.brandId      || null,
+        teamId:        rec.teamId       || null,
         influencerId:  rec.influencerId || null,
         platforms:     splitMulti(rec.platform),
         demandContent: rec.demandContent || '',
@@ -211,14 +248,15 @@ watch(() => props.visible, (v) => {
         projectManagerId: rec.projectManagerId || null,
         executorId: rec.executorId || null,
         influencerCost: rec.influencerCost || '',
-        clientPrice:    rec.clientPrice    || ''
+        clientPrice:    rec.clientPrice    || '',
+        notes:          rec.notes          || ''
       })
     } else {
       Object.assign(form, {
-        id:null, internalProjectNo:null, brandId:null, influencerId:null, platforms:[], demandContent:'',
+        id:null, internalProjectNo:null, brandId:null, influencerId:null, teamId:null, platforms:[], demandContent:'',
         publishLink:'', publishDate:null, progress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
-        influencerCost:'', clientPrice:''
+        influencerCost:'', clientPrice:'', notes:''
       })
     }
   }
@@ -235,7 +273,19 @@ function isRemark(value) {
 function onInfluencerChange() {
   // 切换红人后，原选中的品牌方可能不再适用，清空让用户重新选
   form.brandId = null
+  form.teamId = null
 }
+
+function onBrandChange() {
+  form.teamId = null
+}
+
+// 团队只有1个选项时自动带入（不管是不是"不选团队"这个唯一选项）；0个或多个都不自动填
+watch(availableTeams, (opts) => {
+  if (opts.length === 1) {
+    form.teamId = opts[0].teamId ?? null
+  }
+})
 
 function close() { emit('update:visible', false) }
 
@@ -246,6 +296,7 @@ async function doSave() {
     const payload = {
       id:            form.id,
       brandId:       form.brandId,
+      teamId:        form.teamId,
       influencerId:  form.influencerId,
       platform:      form.platforms.join('\n') || null,
       demandContent: form.demandContent || null,
@@ -259,7 +310,8 @@ async function doSave() {
       projectManagerId: form.projectManagerId || null,
       executorId: form.executorId || null,
       influencerCost: form.influencerCost,
-      clientPrice:    form.clientPrice
+      clientPrice:    form.clientPrice,
+      notes:          form.notes
     }
     const res = await collaborationApi.save(payload)
 

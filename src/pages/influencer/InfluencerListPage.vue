@@ -50,11 +50,11 @@
           {{ b.name }}
         </a-select-option>
       </a-select>
-      <a-select v-model:value="filters.teamName" placeholder="红人团队"
+      <a-select v-model:value="filters.teamId" placeholder="红人团队"
         style="width:150px" allow-clear show-search
-        :filter-option="(input, opt) => opt.value.includes(input)"
+        :filter-option="(input, opt) => opt.label.includes(input)"
         @change="loadData">
-        <a-select-option v-for="t in teams" :key="t.name" :value="t.name">{{ t.name }}</a-select-option>
+        <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
       </a-select>
       <!-- 粉丝量区间 -->
       <a-input-number v-model:value="filters.followerMin" placeholder="粉丝量下限"
@@ -79,9 +79,11 @@
         @change="handleTableChange">
         <template #bodyCell="{ column, record }">
 
-          <template v-if="column.key === 'brand'">
-            <template v-if="record.brandNames && record.brandNames.length">
-              <a-tag v-for="b in record.brandNames" :key="b" style="margin:2px">{{ b }}</a-tag>
+          <template v-if="column.key === 'brandTeamPairs'">
+            <template v-if="record.brandTeamPairs && record.brandTeamPairs.length">
+              <a-tag v-for="(p, idx) in record.brandTeamPairs" :key="idx" style="margin:2px">
+                {{ p.brandName }}{{ p.teamName ? '/' + p.teamName : '' }}
+              </a-tag>
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -277,15 +279,14 @@ const pagination = reactive({
 })
 const filters = reactive({
   influencerType: undefined, platform: undefined, countryMarket: undefined,
-  brandId: undefined, teamName: undefined,
+  brandId: undefined, teamId: undefined,
   followerMin: undefined, followerMax: undefined,
   keyword: undefined
 })
 
 // 列定义（按新顺序）
 const allColumns = [
-  { title: '品牌方',        key: 'brand',           width: 150 },
-  { title: '红人团队',      dataIndex: 'teamName',  key: 'teamName',      width: 120, sorter: true },
+  { title: '品牌方-团队',   key: 'brandTeamPairs',  width: 220 },
   { title: '红人类型',      key: 'influencerType',  width: 130 },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
@@ -332,7 +333,7 @@ async function loadData() {
       platform:       filters.platform,
       countryMarket:  filters.countryMarket,
       brandId:        filters.brandId,
-      teamName:       filters.teamName    || undefined,
+      teamId:         filters.teamId      || undefined,
       followerMin:    filters.followerMin || undefined,
       followerMax:    filters.followerMax || undefined,
       keyword:        filters.keyword?.trim() || undefined,
@@ -370,7 +371,7 @@ function handleTableChange(pag, _filters, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     influencerType:undefined, platform:undefined, countryMarket:undefined,
-    brandId:undefined, teamName:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
+    brandId:undefined, teamId:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
   })
   pagination.current = 1
   sortState.field = 'accountName'

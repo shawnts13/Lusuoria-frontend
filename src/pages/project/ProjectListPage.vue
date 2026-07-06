@@ -218,6 +218,7 @@ const allColumns = [
   { title:'红人社媒完整名字', dataIndex:'influencerAccount',  key:'influencerAccount', width:160 },
   { title:'负责人',      dataIndex:'projectManagerName', key:'projectManagerName',width:90 },
   { title:'执行人员',    dataIndex:'executorName',       key:'executorName',      width:90 },
+  { title:'红人团队',    dataIndex:'teamName',           key:'teamName',          width:90 },
   { title:'甲方状态',    key:'clientStatus',             width:120 },
   { title:'内部状态',    key:'internalStatus',           width:120 },
   // 敏感列（仅 ADMIN / AUDITOR）
