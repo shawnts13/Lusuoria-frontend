@@ -184,6 +184,7 @@ const dimensionOptions = [
 
 const executionCostDimensionOptions = [
   { value: 'manager',            label: '按项目负责人' },
+  { value: 'manager_executor',   label: '按项目负责人/执行人员' },
   { value: 'manager_brand_team', label: '按项目负责人/品牌方/红人团队' }
 ]
 

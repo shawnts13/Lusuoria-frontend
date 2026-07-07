@@ -13,7 +13,7 @@
           <a-upload :before-upload="handleImport" :show-upload-list="false" accept=".xlsx,.xls">
             <a-button><template #icon><UploadOutlined /></template>Excel 导入</a-button>
           </a-upload>
-          <a-button @click="router.push('/import-batches')">
+          <a-button @click="router.push('/import-batches')" style="color:#fa8c16;border-color:#fa8c16">
             <template #icon><HistoryOutlined /></template>导入历史
           </a-button>
           <a-button type="primary" @click="openCreate">
@@ -70,7 +70,7 @@
         style="width:130px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
         @change="loadData">
-        <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+        <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
       </a-select>
       <a-button type="primary" @click="loadData">查询</a-button>
       <a-button @click="resetFilters">重置</a-button>
@@ -229,6 +229,9 @@ const brands      = ref([])
 const teams       = ref([])
 const influencers = ref([])
 const employees   = ref([])
+// 负责人筛选只能选"项目负责人"或"管理层"角色的员工（跟表单里的规则一致）
+const projectManagerCandidates = computed(() =>
+  employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const statusModalVisible  = ref(false)

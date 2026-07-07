@@ -14,7 +14,7 @@
           <a-input-number v-model:value="amount" :min="0" :precision="2" style="width:100%" />
         </a-form-item>
       </a-form>
-      <div style="font-size:12px; color:#999">
+      <div v-if="rateBasedSuggestion" style="font-size:12px; color:#999">
         以上是根据该执行人员在员工管理里维护的费率档位自动算出的建议金额，可以手动修改后再保存。
       </div>
     </a-spin>
@@ -34,6 +34,7 @@ const emit = defineEmits(['update:visible', 'saved'])
 
 const amount = ref(null)
 const breakdown = ref('')
+const rateBasedSuggestion = ref(false)
 const saving = ref(false)
 const loadingSuggestion = ref(false)
 
@@ -41,11 +42,13 @@ watch(() => props.visible, async v => {
   if (v && props.record) {
     amount.value = null
     breakdown.value = ''
+    rateBasedSuggestion.value = false
     loadingSuggestion.value = true
     try {
       const res = await projectApi.suggestExecutorCost(props.record.id)
       amount.value = res.data.suggestedAmount
       breakdown.value = res.data.breakdown
+      rateBasedSuggestion.value = !!res.data.rateBasedSuggestion
     } finally {
       loadingSuggestion.value = false
     }

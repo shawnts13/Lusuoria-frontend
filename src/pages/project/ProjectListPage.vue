@@ -45,7 +45,7 @@
         allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
         @change="loadData">
-        <a-select-option v-for="e in employees" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+        <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
       </a-select>
       <a-input v-model:value="filters.internalProjectNo" placeholder="内部项目编号" style="width:180px"
         allow-clear @press-enter="loadData" />
@@ -192,6 +192,9 @@ const tableData = ref([])
 const brands    = ref([])
 const influencers = ref([])
 const employees = ref([])
+// 负责人筛选只能选"项目负责人"或"管理层"角色的员工（跟表单里的规则一致）
+const projectManagerCandidates = computed(() =>
+  employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
 const modalVisible       = ref(false)
 const editingRecord      = ref(null)
 const statusModalVisible = ref(false)
