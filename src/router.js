@@ -20,6 +20,7 @@ const routes = [
       },
       { path: 'projects',    name: 'Projects',    component: () => import('./pages/project/ProjectListPage.vue') },
       { path: 'collaborations', name: 'Collaborations', component: () => import('./pages/collaboration/CollaborationListPage.vue') },
+      { path: 'import-batches', name: 'ImportBatches', component: () => import('./pages/collaboration/ImportBatchListPage.vue') },
       { path: 'payments',    name: 'Payments',    component: () => import('./pages/payment/PaymentListPage.vue') },
       {
         path: 'pending',
