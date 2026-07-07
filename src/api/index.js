@@ -106,6 +106,8 @@ export const projectApi = {
   approve:        (id)     => http.patch(`/api/projects/${id}/approve`),
   reject:         (id)     => http.patch(`/api/projects/${id}/reject`),
   updateStatus:   (id, data) => http.patch(`/api/projects/${id}/status`, data),
+  suggestExecutorCost: (id) => http.get(`/api/projects/${id}/executor-cost-suggestion`),
+  setExecutorCost:     (id, amount) => http.patch(`/api/projects/${id}/executor-cost`, { amount }),
 
   exportExcel: (projectMonth) => downloadWithAuth(
     `${BASE}/api/projects/export/excel${projectMonth ? '?projectMonth=' + projectMonth : ''}`,

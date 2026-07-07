@@ -31,7 +31,7 @@ const props = defineProps({
   visible: Boolean,
   record: Object
 })
-const emit = defineEmits(['update:visible', 'saved'])
+const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
 const clientStatus = ref(null)
 const internalStatus = ref(null)
@@ -73,15 +73,25 @@ watch(() => props.visible, v => {
 function close() { emit('update:visible', false) }
 
 async function handleSave() {
+  if (saving.value) return
   saving.value = true
   try {
-    await projectApi.updateStatus(props.record.id, {
+    const res = await projectApi.updateStatus(props.record.id, {
       clientStatus: clientStatus.value,
       internalStatus: internalStatus.value
     })
     message.success('状态已更新')
     emit('saved')
     close()
+
+    // 甲方状态流转成"待提交"以外的状态，或者内部状态流转成"待核算"以外的状态时，
+    // 如果这个订单有执行人员、且还没设置过内部执行成本，弹出设置弹窗；
+    // 已经设置过的不会再弹（那种情况改去列表里直接编辑内部执行成本）
+    const order = res.data
+    const triggered = (order.clientStatus !== 'PENDING_SUBMIT' || order.internalStatus !== 'PENDING_CALC')
+    if (triggered && order.executorId && (order.internalExecutionCost === null || order.internalExecutionCost === undefined)) {
+      emit('need-executor-cost', order)
+    }
   } finally { saving.value = false }
 }
 </script>

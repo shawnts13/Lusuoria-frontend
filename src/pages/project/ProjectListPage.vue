@@ -19,6 +19,9 @@
       <a-date-picker v-model:value="filters.projectMonthVal" picker="month"
         format="YYYYMM" value-format="YYYYMM" placeholder="项目建立月份" style="width:140px"
         @change="v => { filters.projectMonth = v; loadData() }" />
+      <a-date-picker v-model:value="filters.videoPublishMonthVal" picker="month"
+        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布时间" style="width:150px"
+        @change="v => { filters.videoPublishMonth = v; loadData() }" />
       <a-select v-model:value="filters.projectType" placeholder="项目类型" style="width:140px"
         allow-clear @change="loadData">
         <a-select-option value="OVERSEAS_INFLUENCER">海外红人</a-select-option>
@@ -81,7 +84,7 @@
           </template>
 
           <template v-if="column.key === 'clientPrice'">
-            {{ record.currency }} {{ fmtNum(record.clientPrice) }}
+            {{ fmtNum(record.clientPrice) }}
           </template>
           <template v-if="column.key === 'rmbRevenue'">¥{{ fmtNum(record.rmbRevenue) }}</template>
           <template v-if="column.key === 'grossProfit'">
@@ -139,6 +142,12 @@
     <ProjectStatusModal
       v-model:visible="statusModalVisible"
       :record="statusModalRecord"
+      @saved="loadData"
+      @need-executor-cost="openExecutorCostModal" />
+
+    <ExecutorCostModal
+      v-model:visible="executorCostModalVisible"
+      :record="executorCostModalRecord"
       @saved="loadData" />
 
     <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
@@ -164,6 +173,7 @@ import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate } from '../../utils/dateFormat'
 import ProjectFormModal from './ProjectFormModal.vue'
 import ProjectStatusModal from './ProjectStatusModal.vue'
+import ExecutorCostModal from './ExecutorCostModal.vue'
 
 const authStore = useAuthStore()
 const { getOptions, getLabel } = useOptions()
@@ -177,6 +187,8 @@ const modalVisible       = ref(false)
 const editingRecord      = ref(null)
 const statusModalVisible = ref(false)
 const statusModalRecord  = ref(null)
+const executorCostModalVisible = ref(false)
+const executorCostModalRecord  = ref(null)
 const deleteReasonVisible = ref(false)
 const deleteReason        = ref('')
 const deleteTarget        = ref(null)
@@ -187,6 +199,7 @@ const sortState = reactive({ field: 'createdAt', order: 'descend' })
 const route     = useRoute()
 const filters = reactive({
   brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
+  videoPublishMonth:undefined, videoPublishMonthVal:undefined,
   projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
   accountName:undefined, projectManagerId:undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
@@ -260,6 +273,7 @@ async function loadData() {
   try {
     const res = await projectApi.list({
       brandId:filters.brandId, projectMonth:filters.projectMonth,
+      videoPublishMonth:filters.videoPublishMonth,
       projectType:filters.projectType, clientStatus:filters.clientStatus,
       internalStatus:filters.internalStatus, videoType:filters.videoType,
       internalProjectNo:filters.internalProjectNo?.trim() || undefined,
@@ -288,6 +302,7 @@ function handleTableChange(pag, _f, sorter) {
 }
 function resetFilters() {
   Object.assign(filters, { brandId:undefined, projectMonth:undefined, projectMonthVal:undefined,
+    videoPublishMonth:undefined, videoPublishMonthVal:undefined,
     projectType:undefined, videoType:undefined, clientStatus:undefined, internalStatus:undefined,
     accountName:undefined, projectManagerId:undefined, internalProjectNo:undefined, keyword:'' })
   pagination.current=1
@@ -296,6 +311,7 @@ function resetFilters() {
 }
 function openEdit(r)  { editingRecord.value=r;    modalVisible.value=true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
+function openExecutorCostModal(order) { executorCostModalRecord.value = order; executorCostModalVisible.value = true }
 function openDeleteReason(r) { deleteTarget.value = r; deleteReason.value = ''; deleteReasonVisible.value = true }
 async function handleDeleteConfirm() {
   if (!deleteReason.value?.trim()) { message.warning('请填写删除原因'); return }

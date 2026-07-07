@@ -58,11 +58,6 @@
             <a-input v-model:value="form.cooperationContent" />
           </a-form-item>
 
-          <a-form-item label="自带资源/供应商">
-            <a-switch v-model:checked="form.isOwnResource"
-              checked-children="是" un-checked-children="否" />
-          </a-form-item>
-
           <!--
             汇率：
             - ADMIN   → 可编辑
@@ -302,7 +297,6 @@ const form = reactive({
   videoType: null,
   brandId: null, influencerId: null, projectManagerId: null,
   clientOrderNo: '', cooperationContent: '',
-  isOwnResource: false,
   clientPrice: null,
   exchangeRate: 7.25,
   influencerCost: null,
@@ -338,7 +332,6 @@ watch(() => props.record, rec => {
       projectManagerId:     rec.projectManagerId,
       clientOrderNo:        rec.clientOrderNo        || '',
       cooperationContent:   rec.cooperationContent   || '',
-      isOwnResource:        rec.isOwnResource         || false,
       clientPrice:          rec.clientPrice,
       exchangeRate:         rec.exchangeRate          || 7.25,
       influencerCost:       rec.influencerCost,
@@ -364,7 +357,6 @@ watch(() => props.record, rec => {
       projectType: 'OVERSEAS_INFLUENCER', videoType: null, brandId: null,
       influencerId: null, projectManagerId: null,
       clientOrderNo: '', cooperationContent: '',
-      isOwnResource: false,
       clientPrice: null,
       exchangeRate: 7.25,
       influencerCost: null,
