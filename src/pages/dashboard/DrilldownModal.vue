@@ -21,10 +21,12 @@
           汇率：1 USD = {{ exchangeRateInfo.usdToCny }} CNY
         </span>
       </template>
-      <a-select v-if="dimensionOptions?.length" v-model:value="dimension"
-        style="width:120px" size="small" @change="reload">
-        <a-select-option v-for="d in dimensionOptions" :key="d.value" :value="d.value">{{ d.label }}</a-select-option>
-      </a-select>
+      <a-tooltip v-if="dimensionOptions?.length" :title="currentDimensionLabel">
+        <a-select v-model:value="dimension"
+          style="width:220px" size="small" @change="reload">
+          <a-select-option v-for="d in dimensionOptions" :key="d.value" :value="d.value">{{ d.label }}</a-select-option>
+        </a-select>
+      </a-tooltip>
     </div>
 
     <a-spin :spinning="loading">
@@ -71,6 +73,10 @@ const rows = ref([])
 const exchangeRateInfo = ref(null)
 const currency = ref('USD')
 const dimension = ref(props.dimensionOptions?.[0]?.value || 'brand')
+const currentDimensionLabel = computed(() => {
+  const opt = props.dimensionOptions?.find(d => d.value === dimension.value)
+  return opt ? opt.label : ''
+})
 const monthRange = ref([props.defaultMonth, props.defaultMonth])
 
 const columns = computed(() => {

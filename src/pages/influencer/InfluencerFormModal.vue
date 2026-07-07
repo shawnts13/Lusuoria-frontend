@@ -22,17 +22,21 @@
             <a-input v-model:value="form.accountName" />
           </a-form-item>
 
-          <a-form-item label="品牌方-团队">
+          <a-form-item label="品牌方-团队" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
             <div v-for="(pair, idx) in form.brandTeamPairs" :key="idx"
               style="display:flex;gap:8px;margin-bottom:8px">
-              <a-select v-model:value="pair.brandId" placeholder="品牌方" style="flex:1" allow-clear show-search
-                :filter-option="(input, opt) => opt.label.includes(input)">
-                <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
-              </a-select>
-              <a-select v-model:value="pair.teamId" placeholder="团队（可不选）" style="flex:1" allow-clear show-search
-                :filter-option="(input, opt) => opt.label.includes(input)">
-                <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
-              </a-select>
+              <a-tooltip :title="brandNameById(pair.brandId)">
+                <a-select v-model:value="pair.brandId" placeholder="品牌方" style="flex:1;min-width:0" allow-clear show-search
+                  :filter-option="(input, opt) => opt.label.includes(input)">
+                  <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+                </a-select>
+              </a-tooltip>
+              <a-tooltip :title="teamNameById(pair.teamId)">
+                <a-select v-model:value="pair.teamId" placeholder="团队（可不选）" style="flex:1;min-width:0" allow-clear show-search
+                  :filter-option="(input, opt) => opt.label.includes(input)">
+                  <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+                </a-select>
+              </a-tooltip>
               <a-button danger @click="form.brandTeamPairs.splice(idx, 1)">删除</a-button>
             </div>
             <a-button type="dashed" block @click="form.brandTeamPairs.push({ brandId: null, teamId: null })">
@@ -343,6 +347,17 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
   }
   nextTick(() => { populatingFromRecord = false })
 }, { immediate: true })
+
+function brandNameById(id) {
+  if (!id) return ''
+  const b = props.brands.find(b => b.id === id)
+  return b ? b.name : ''
+}
+function teamNameById(id) {
+  if (!id) return ''
+  const t = props.teams.find(t => t.id === id)
+  return t ? t.name : ''
+}
 
 async function handleAddDomain() {
   if (!newDomainName.value.trim()) return
