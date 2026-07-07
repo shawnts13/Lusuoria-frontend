@@ -67,9 +67,17 @@
         <template #bodyCell="{ column, record }">
 
           <template v-if="column.key === 'projectType'">
-            <a-tag :color="record.projectType === 'OVERSEAS_INFLUENCER' ? 'blue' : 'green'">
-              {{ record.projectTypeLabel }}
-            </a-tag>
+            {{ record.projectTypeLabel }}
+          </template>
+
+          <template v-if="column.key === 'brandName'">
+            <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+            <span v-else>—</span>
+          </template>
+
+          <template v-if="column.key === 'teamName'">
+            <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+            <span v-else>—</span>
           </template>
 
           <template v-if="column.key === 'videoType'">
@@ -171,6 +179,7 @@ import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
 import ProjectFormModal from './ProjectFormModal.vue'
 import ProjectStatusModal from './ProjectStatusModal.vue'
 import ExecutorCostModal from './ExecutorCostModal.vue'

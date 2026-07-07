@@ -87,12 +87,15 @@
         <template #bodyCell="{ column, record }">
 
           <template v-if="column.key === 'brand'">
-            {{ getBrandName(record.brandId) || '—' }}
+            <a-tag v-if="getBrandName(record.brandId)" :color="colorForValue(getBrandName(record.brandId))">
+              {{ getBrandName(record.brandId) }}
+            </a-tag>
+            <span v-else>—</span>
           </template>
 
           <template v-if="column.key === 'platform'">
             <template v-if="record.platform">
-              <a-tag v-for="p in splitMulti(record.platform)" :key="p" style="margin:2px">{{ p }}</a-tag>
+              <a-tag v-for="p in splitMulti(record.platform)" :key="p" :color="colorForValue(p)" style="margin:2px">{{ p }}</a-tag>
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -108,7 +111,15 @@
           </template>
 
           <template v-if="column.key === 'team'">
-            {{ getTeamName(record.teamId) || '—' }}
+            <a-tag v-if="getTeamName(record.teamId)" :color="colorForValue(getTeamName(record.teamId))">
+              {{ getTeamName(record.teamId) }}
+            </a-tag>
+            <span v-else>—</span>
+          </template>
+
+          <template v-if="column.key === 'notes'">
+            <span v-if="record.notes" style="color:#ff4d4f">{{ record.notes }}</span>
+            <span v-else style="color:#bbb">—</span>
           </template>
 
           <template v-if="column.key === 'publishDate'">
@@ -204,6 +215,7 @@ import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate, formatDateTime } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
 import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
 

@@ -81,7 +81,8 @@
 
           <template v-if="column.key === 'brandTeamPairs'">
             <template v-if="record.brandTeamPairs && record.brandTeamPairs.length">
-              <a-tag v-for="(p, idx) in record.brandTeamPairs" :key="idx" style="margin:2px">
+              <a-tag v-for="(p, idx) in record.brandTeamPairs" :key="idx"
+                :color="colorForValue(p.brandName + '|' + (p.teamName || ''))" style="margin:2px">
                 {{ p.brandName }}{{ p.teamName ? '/' + p.teamName : '' }}
               </a-tag>
             </template>
@@ -89,14 +90,12 @@
           </template>
 
           <template v-if="column.key === 'influencerType'">
-            <a-tag :color="typeColor(record.influencerType)">
-              {{ getLabel('influencer_type', record.influencerType) }}
-            </a-tag>
+            {{ getLabel('influencer_type', record.influencerType) }}
           </template>
 
           <template v-if="column.key === 'platform'">
             <template v-if="record.platform">
-              <a-tag v-for="p in splitMulti(record.platform)" :key="p" style="margin:2px">{{ p }}</a-tag>
+              <a-tag v-for="p in splitMulti(record.platform)" :key="p" :color="colorForValue(p)" style="margin:2px">{{ p }}</a-tag>
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -229,6 +228,7 @@ import { influencerApi, brandApi, domainApi, influencerTeamApi } from '../../api
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { colorForValue } from '../../utils/tagColor'
 import InfluencerFormModal from './InfluencerFormModal.vue'
 
 const authStore = useAuthStore()
@@ -412,9 +412,6 @@ function goToProjects(influencerId) {
 function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
-}
-function typeColor(t) {
-  return { OVERSEAS_INFLUENCER:'blue', CHINA_INFLUENCER:'green', FOREIGN_IN_CHINA:'orange' }[t] || 'default'
 }
 function contactColor(s) {
   const m = { UNDEVELOPED:'default', REPLIED:'processing', INTERESTED:'cyan', COOPERATING:'blue', COOPERATED:'green' }
