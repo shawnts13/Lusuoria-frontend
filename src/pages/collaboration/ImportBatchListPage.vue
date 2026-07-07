@@ -17,7 +17,14 @@
           <a-tag v-else-if="record.status === 'FAILED'" color="error">失败</a-tag>
         </template>
         <template v-if="column.key === 'summary'">
-          <span v-if="record.status === 'PROCESSING'" style="color:#999">—</span>
+          <div v-if="record.status === 'PROCESSING'">
+            <a-progress v-if="record.totalRows"
+              :percent="Math.round((record.processedCount || 0) / record.totalRows * 100)"
+              size="small" style="max-width:220px" />
+            <span style="color:#1677ff; font-size:12px">
+              {{ record.totalRows ? `${record.processedCount ?? 0} / ${record.totalRows} 行` : '正在读取文件…' }}
+            </span>
+          </div>
           <span v-else-if="record.status === 'FAILED'" style="color:#ff4d4f">{{ record.errorMessage || '导入失败' }}</span>
           <span v-else>
             新增 {{ record.successCount ?? 0 }}，更新 {{ record.updateCount ?? 0 }}，

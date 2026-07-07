@@ -235,10 +235,10 @@ const allColumns = [
   { title:'执行人员',    dataIndex:'executorName',       key:'executorName',      width:90 },
   { title:'甲方状态',    key:'clientStatus',             width:120 },
   { title:'内部状态',    key:'internalStatus',           width:120 },
-  // 敏感列（仅 ADMIN / AUDITOR）
-  { title:'客户合作价格（$）', dataIndex:'clientPrice',   key:'clientPrice',       width:140, sensitive:true,
+  // 基础字段（除 GUEST 外都能看，不是 ADMIN/AUDITOR 专属——这两列之前标了 sensitive 是错的，已修正）
+  { title:'客户合作价格（$）', dataIndex:'clientPrice',   key:'clientPrice',       width:140,
     customRender: ({ text }) => fmtNum(text) },
-  { title:'红人成本',    dataIndex:'influencerCost',     key:'influencerCost',    width:110, sensitive:true,
+  { title:'红人成本',    dataIndex:'influencerCost',     key:'influencerCost',    width:110,
     customRender: ({ text }) => fmtNum(text) },
   // 非敏感
   { title:'币种',        dataIndex:'currency',           key:'currency',          width:70 },
@@ -246,6 +246,12 @@ const allColumns = [
     customRender: ({ text }) => text || '—' },
   // 敏感
   { title:'项目毛利',    key:'grossProfit',              width:120,  sensitive:true },
+  // 按行脱敏（不是角色整体限制）：项目负责人/执行人员只能看到自己负责/执行的行，
+  // 所以这两列不标 sensitive，是否显示真实值由后端按行返回决定，前端拿到什么就显示什么
+  { title:'其他外部成本（人民币）', dataIndex:'otherExternalCost', key:'otherExternalCost', width:150,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title:'内部执行成本（人民币）', dataIndex:'internalExecutionCost', key:'internalExecutionCost', width:150,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
   { title:'公司利润（美金）', key:'companyNetProfit',     width:140,  sensitive:true },
   { title:'公司利润（人民币）', key:'rmbRevenue',         width:140,  sensitive:true },
   { title:'负责人提成',  dataIndex:'commissionAmount',   key:'commissionAmount',  width:110, sensitive:true,

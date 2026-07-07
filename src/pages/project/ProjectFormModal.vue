@@ -100,12 +100,12 @@
               <div style="font-size:12px;color:#888;margin-top:2px">中国红人按客户合作价格 65% 自动计算</div>
             </a-form-item>
 
-            <a-form-item label="其他外部成本">
+            <a-form-item label="其他外部成本（人民币）">
               <a-input-number v-model:value="form.otherExternalCost"
                 style="width:100%" :precision="2" @change="calcPreview" />
             </a-form-item>
 
-            <a-form-item label="内部执行成本">
+            <a-form-item label="内部执行成本（人民币）">
               <a-input-number v-model:value="form.internalExecutionCost"
                 style="width:100%" :precision="2" @change="calcPreview" />
             </a-form-item>
@@ -387,10 +387,14 @@ function onManagerChange(id) {
 
 function calcPreview() {
   const price = +form.clientPrice         || 0
-  const other = +form.otherExternalCost   || 0
-  const exec  = +form.internalExecutionCost || 0
+  const otherRmb = +form.otherExternalCost   || 0
+  const execRmb  = +form.internalExecutionCost || 0
   const rate  = +form.commissionRate      || 0
   const rate2 = +form.exchangeRate        || 0
+  // 其他外部成本、内部执行成本填的是人民币，客户合作价格是美元计价，
+  // 参与下面的利润预览计算前先按汇率换算成美元，跟后端 ProfitCalculator 保持一致
+  const other = rate2 > 0 ? +(otherRmb / rate2).toFixed(2) : 0
+  const exec  = rate2 > 0 ? +(execRmb / rate2).toFixed(2) : 0
   let infCost = 0, gross = 0, distrib = 0
 
   if (form.projectType === 'CHINA_INFLUENCER') {
