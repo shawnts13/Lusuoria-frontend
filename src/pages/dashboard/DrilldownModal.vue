@@ -46,6 +46,18 @@
             {{ record.videoCount }}
           </template>
         </template>
+        <template #summary>
+          <a-table-summary-row v-if="rows.length">
+            <a-table-summary-cell>汇总</a-table-summary-cell>
+            <a-table-summary-cell v-if="metric === 'video'">
+              <b>{{ totalVideoCount }}</b>
+            </a-table-summary-cell>
+            <template v-else>
+              <a-table-summary-cell><b>{{ totalVideoCount }}</b></a-table-summary-cell>
+              <a-table-summary-cell><b>{{ fmtAmount(totalAmount) }}</b></a-table-summary-cell>
+            </template>
+          </a-table-summary-row>
+        </template>
       </a-table>
       <div v-if="!loading && rows.length === 0" class="empty-hint">该时间范围内暂无数据</div>
     </a-spin>
@@ -84,8 +96,13 @@ const columns = computed(() => {
   if (props.metric === 'video') {
     return [dimCol, { title: '视频数量', key: 'videoCount', dataIndex: 'videoCount' }]
   }
-  return [dimCol, { title: '金额', key: 'amount', dataIndex: 'amount' }]
+  // 金额类下钻也把对应的订单笔数列出来，方便核对
+  return [dimCol, { title: '笔数', key: 'videoCount', dataIndex: 'videoCount', width: 90 },
+    { title: '金额', key: 'amount', dataIndex: 'amount' }]
 })
+
+const totalVideoCount = computed(() => rows.value.reduce((sum, r) => sum + (Number(r.videoCount) || 0), 0))
+const totalAmount = computed(() => rows.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0))
 
 function close() { emit('update:visible', false) }
 
