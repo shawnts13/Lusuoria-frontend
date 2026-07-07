@@ -52,8 +52,8 @@
           <div class="value">{{ fmt(summary.totalOtherExternalCost) }}</div>
         </div>
 
-        <div class="summary-card">
-          <div class="label">内部执行人力成本</div>
+        <div class="summary-card clickable" @click="openDrilldown('execution-cost')">
+          <div class="label">内部执行人力成本 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalInternalExecutionCost) }}</div>
         </div>
 
@@ -72,8 +72,8 @@
           <div class="value">{{ fmt(summary.totalCommissionAmount) }}</div>
         </div>
 
-        <div class="summary-card highlight">
-          <div class="label">公司利润</div>
+        <div class="summary-card highlight clickable" @click="openDrilldown('company-profit')">
+          <div class="label">公司利润 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalCompanyProfit) }}</div>
         </div>
       </div>
@@ -111,7 +111,7 @@
       :fetcher="fetchInfluencerCostDrilldown"
     />
 
-    <!-- 项目毛利下钻：品牌方/团队/账号/类型 可切换 -->
+    <!-- 项目毛利下钻：品牌方/团队/品牌方-团队/账号/类型 可切换 -->
     <DrilldownModal
       v-model:visible="modals.grossProfit"
       title="项目毛利明细"
@@ -120,6 +120,28 @@
       :show-currency-toggle="true"
       :dimension-options="dimensionOptions"
       :fetcher="fetchGrossProfitDrilldown"
+    />
+
+    <!-- 公司利润下钻：品牌方/团队/品牌方-团队/账号/类型 可切换 -->
+    <DrilldownModal
+      v-model:visible="modals.companyProfit"
+      title="公司利润明细"
+      metric="company-profit"
+      :default-month="selectedMonth"
+      :show-currency-toggle="true"
+      :dimension-options="dimensionOptions"
+      :fetcher="fetchCompanyProfitDrilldown"
+    />
+
+    <!-- 内部执行人力成本下钻：按项目负责人，或项目负责人/品牌方/红人团队 可切换 -->
+    <DrilldownModal
+      v-model:visible="modals.executionCost"
+      title="内部执行人力成本明细"
+      metric="execution-cost"
+      :default-month="selectedMonth"
+      :show-currency-toggle="true"
+      :dimension-options="executionCostDimensionOptions"
+      :fetcher="fetchExecutionCostDrilldown"
     />
 
     <!-- 负责人提成下钻：仅负责人维度 -->
@@ -149,14 +171,20 @@ const summary = ref({})
 
 const modals = reactive({
   video: false, clientPrice: false, influencerCost: false,
-  grossProfit: false, commission: false
+  grossProfit: false, companyProfit: false, executionCost: false, commission: false
 })
 
 const dimensionOptions = [
-  { value: 'brand',   label: '按品牌方' },
-  { value: 'team',    label: '按红人团队' },
-  { value: 'account',  label: '按红人账号' },
-  { value: 'type',    label: '按红人类型' }
+  { value: 'brand',      label: '按品牌方' },
+  { value: 'team',       label: '按红人团队' },
+  { value: 'brand_team', label: '按品牌方/红人团队' },
+  { value: 'account',    label: '按红人账号' },
+  { value: 'type',       label: '按红人类型' }
+]
+
+const executionCostDimensionOptions = [
+  { value: 'manager',            label: '按项目负责人' },
+  { value: 'manager_brand_team', label: '按项目负责人/品牌方/红人团队' }
 ]
 
 const videoDimensionOptions = [
@@ -166,7 +194,8 @@ const videoDimensionOptions = [
 
 function openDrilldown(metric) {
   const map = { video: 'video', 'client-price': 'clientPrice',
-    'influencer-cost': 'influencerCost', 'gross-profit': 'grossProfit', commission: 'commission' }
+    'influencer-cost': 'influencerCost', 'gross-profit': 'grossProfit',
+    'company-profit': 'companyProfit', 'execution-cost': 'executionCost', commission: 'commission' }
   modals[map[metric]] = true
 }
 
@@ -203,6 +232,12 @@ function fetchInfluencerCostDrilldown(start, end, cur, dim) {
 }
 function fetchGrossProfitDrilldown(start, end, cur, dim) {
   return dashboardApi.drilldownGrossProfit(start, end, cur, dim)
+}
+function fetchCompanyProfitDrilldown(start, end, cur, dim) {
+  return dashboardApi.drilldownCompanyProfit(start, end, cur, dim)
+}
+function fetchExecutionCostDrilldown(start, end, cur, dim) {
+  return dashboardApi.drilldownExecutionCost(start, end, cur, dim)
 }
 function fetchCommissionDrilldown(start, end, cur) {
   return dashboardApi.drilldownCommission(start, end, cur)
