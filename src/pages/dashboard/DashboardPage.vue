@@ -79,7 +79,7 @@
       </div>
     </a-spin>
 
-    <!-- 视频项目数量下钻：品牌方 + 红人类型，无币种切换 -->
+    <!-- 视频项目数量下钻：品牌方 + 红人团队，无币种切换 -->
     <DrilldownModal
       v-model:visible="modals.video"
       title="视频项目数量明细"
@@ -90,10 +90,10 @@
       :fetcher="fetchVideoDrilldown"
     />
 
-    <!-- 客户合作价格下钻：品牌方 + 红人类型 -->
+    <!-- 客户合作价格下钻：品牌方 + 红人团队 -->
     <DrilldownModal
       v-model:visible="modals.clientPrice"
-      title="客户合作价格明细（按品牌方 / 红人类型）"
+      title="客户合作价格明细（按品牌方 / 红人团队）"
       metric="client-price"
       :default-month="selectedMonth"
       :show-currency-toggle="true"
@@ -160,7 +160,7 @@ const dimensionOptions = [
 ]
 
 const videoDimensionOptions = [
-  { value: 'brand_type',    label: '按品牌方/红人类型' },
+  { value: 'brand_team',    label: '按品牌方/红人团队' },
   { value: 'publish_month', label: '按项目视频发布时间' }
 ]
 
