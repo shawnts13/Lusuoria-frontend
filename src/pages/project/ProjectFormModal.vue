@@ -91,13 +91,9 @@
                 style="width:100%" :precision="2" @change="calcPreview" />
             </a-form-item>
 
-            <a-form-item label="红人成本" v-if="form.projectType !== 'CHINA_INFLUENCER'">
+            <a-form-item label="红人成本">
               <a-input-number v-model:value="form.influencerCost"
                 style="width:100%" :precision="2" @change="calcPreview" />
-            </a-form-item>
-            <a-form-item label="红人成本" v-else>
-              <a-input-number :value="autoInfluencerCost" disabled style="width:100%" :precision="2" />
-              <div style="font-size:12px;color:#888;margin-top:2px">中国红人按客户合作价格 65% 自动计算</div>
             </a-form-item>
 
             <a-form-item label="其他外部成本（人民币）">
@@ -308,12 +304,6 @@ const form = reactive({
   receivedAmount: null, notes: ''
 })
 
-// 中国红人模式下，红人成本由客户合作价格自动算出（只读展示）
-const autoInfluencerCost = computed(() => {
-  if (form.projectType !== 'CHINA_INFLUENCER') return form.influencerCost
-  return +((+form.clientPrice || 0) * 0.65).toFixed(2)
-})
-
 const preview = reactive({
   grossProfit: 0, distributableProfit: 0,
   commissionAmount: 0, companyNetProfit: 0, rmbRevenue: 0
@@ -373,7 +363,11 @@ watch(() => props.record, rec => {
   }
 }, { immediate: true })
 
-function onTypeChange() { form.influencerCost = null; calcPreview() }
+function onTypeChange() {
+  // 红人成本、其他外部成本现在都以实际录入值为准，红人类型不再影响任何金额计算，
+  // 切换类型时不清空任何字段，仅重新跑一遍预览
+  calcPreview()
+}
 
 function onManagerChange(id) {
   if (!id || !props.canEditCommission) return
@@ -393,19 +387,15 @@ function calcPreview() {
   const rate2 = +form.exchangeRate        || 0
   // 其他外部成本、内部执行成本填的是人民币，客户合作价格是美元计价，
   // 参与下面的利润预览计算前先按汇率换算成美元，跟后端 ProfitCalculator 保持一致
+  // （不分红人类型，其他外部成本都按实际录入值参与）
   const other = rate2 > 0 ? +(otherRmb / rate2).toFixed(2) : 0
   const exec  = rate2 > 0 ? +(execRmb / rate2).toFixed(2) : 0
-  let infCost = 0, gross = 0, distrib = 0
 
-  if (form.projectType === 'CHINA_INFLUENCER') {
-    infCost = +(price * 0.65).toFixed(2)
-    gross   = +(price * 0.35).toFixed(2)
-    distrib = +(gross - other - exec).toFixed(2)
-  } else {
-    infCost = +form.influencerCost || 0
-    gross   = +(price - infCost - other).toFixed(2)
-    distrib = +(gross - exec).toFixed(2)
-  }
+  // 红人成本一律取实际录入值（不再按类型强制 65% 自动计算）
+  // 项目毛利 = 客户价 - 红人成本 - 其他外部成本；可分配利润 = 毛利 - 内部执行成本
+  const infCost = +form.influencerCost || 0
+  const gross   = +(price - infCost - other).toFixed(2)
+  const distrib = +(gross - exec).toFixed(2)
   const commission = +(distrib * rate).toFixed(2)
   const companyUsd  = +(distrib - commission).toFixed(2)
   preview.grossProfit          = gross
