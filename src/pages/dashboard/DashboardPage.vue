@@ -57,6 +57,11 @@
           <div class="value">{{ fmt(summary.totalInternalExecutionCost) }}</div>
         </div>
 
+        <div class="summary-card clickable" @click="openDrilldown('other-staff-cost')">
+          <div class="label">内部其他员工成本 <span class="drill-hint">点击查看明细 ›</span></div>
+          <div class="value">{{ fmt(summary.totalOtherStaffCost) }}</div>
+        </div>
+
         <div class="summary-card success clickable" @click="openDrilldown('gross-profit')">
           <div class="label">项目毛利 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalGrossProfit) }}</div>
@@ -144,6 +149,17 @@
       :fetcher="fetchExecutionCostDrilldown"
     />
 
+    <!-- 内部其他员工成本下钻：财务/IT后勤的固定月薪，按"员工角色-姓名"展示 -->
+    <DrilldownModal
+      v-model:visible="modals.otherStaffCost"
+      title="内部其他员工成本明细"
+      metric="other-staff-cost"
+      :default-month="selectedMonth"
+      :show-currency-toggle="true"
+      :count-label="'人数'"
+      :fetcher="fetchOtherStaffCostDrilldown"
+    />
+
     <!-- 负责人提成下钻：仅负责人维度 -->
     <DrilldownModal
       v-model:visible="modals.commission"
@@ -171,7 +187,7 @@ const summary = ref({})
 
 const modals = reactive({
   video: false, clientPrice: false, influencerCost: false,
-  grossProfit: false, companyProfit: false, executionCost: false, commission: false
+  grossProfit: false, companyProfit: false, executionCost: false, otherStaffCost: false, commission: false
 })
 
 const dimensionOptions = [
@@ -196,7 +212,8 @@ const videoDimensionOptions = [
 function openDrilldown(metric) {
   const map = { video: 'video', 'client-price': 'clientPrice',
     'influencer-cost': 'influencerCost', 'gross-profit': 'grossProfit',
-    'company-profit': 'companyProfit', 'execution-cost': 'executionCost', commission: 'commission' }
+    'company-profit': 'companyProfit', 'execution-cost': 'executionCost',
+    'other-staff-cost': 'otherStaffCost', commission: 'commission' }
   modals[map[metric]] = true
 }
 
@@ -239,6 +256,9 @@ function fetchCompanyProfitDrilldown(start, end, cur, dim) {
 }
 function fetchExecutionCostDrilldown(start, end, cur, dim) {
   return dashboardApi.drilldownExecutionCost(start, end, cur, dim)
+}
+function fetchOtherStaffCostDrilldown(start, end, cur) {
+  return dashboardApi.drilldownOtherStaffCost(start, end, cur)
 }
 function fetchCommissionDrilldown(start, end, cur) {
   return dashboardApi.drilldownCommission(start, end, cur)

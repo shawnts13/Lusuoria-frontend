@@ -190,6 +190,9 @@ export const dashboardApi = {
   drilldownExecutionCost: (startMonth, endMonth, currency, dimension) =>
     http.get('/api/dashboard/drilldown/execution-cost', { params: { startMonth, endMonth, currency, dimension } }),
 
+  drilldownOtherStaffCost: (startMonth, endMonth, currency) =>
+    http.get('/api/dashboard/drilldown/other-staff-cost', { params: { startMonth, endMonth, currency } }),
+
   drilldownCommission: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } })
 }

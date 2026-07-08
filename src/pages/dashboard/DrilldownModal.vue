@@ -76,6 +76,7 @@ const props = defineProps({
   defaultMonth: { type: String, default: '' },
   showCurrencyToggle: { type: Boolean, default: false },
   dimensionOptions: { type: Array, default: null }, // null = 不显示维度切换
+  countLabel: { type: String, default: '笔数' }, // 计数列的标签文字，大部分是"笔数"，员工成本这类是"人数"
   fetcher: { type: Function, required: true } // 注入具体的请求函数，便于复用
 })
 const emit = defineEmits(['update:visible'])
@@ -96,8 +97,8 @@ const columns = computed(() => {
   if (props.metric === 'video') {
     return [dimCol, { title: '视频数量', key: 'videoCount', dataIndex: 'videoCount' }]
   }
-  // 金额类下钻也把对应的订单笔数列出来，方便核对
-  return [dimCol, { title: '笔数', key: 'videoCount', dataIndex: 'videoCount', width: 90 },
+  // 金额类下钻也把对应的订单笔数（或人数）列出来，方便核对
+  return [dimCol, { title: props.countLabel, key: 'videoCount', dataIndex: 'videoCount', width: 90 },
     { title: '金额', key: 'amount', dataIndex: 'amount' }]
 })
 
