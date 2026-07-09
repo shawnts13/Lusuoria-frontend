@@ -96,24 +96,6 @@ export const employeeApi = {
   delete:  (id)   => http.delete(`/api/employees/${id}`)
 }
 
-// ===== Project Orders =====
-export const projectApi = {
-  list:           (params) => http.get('/api/projects', { params }),
-  getById:        (id)     => http.get(`/api/projects/${id}`),
-  save:           (data)   => http.post('/api/projects', data),
-  requestDelete:  (id, reason) => http.post(`/api/projects/${id}/delete-request`, { reason }),
-  monthlySummary: (month)  => http.get('/api/projects/summary/monthly', { params: { month } }),
-  approve:        (id)     => http.patch(`/api/projects/${id}/approve`),
-  reject:         (id)     => http.patch(`/api/projects/${id}/reject`),
-  updateStatus:   (id, data) => http.patch(`/api/projects/${id}/status`, data),
-  suggestExecutorCost: (id) => http.get(`/api/projects/${id}/executor-cost-suggestion`),
-  setExecutorCost:     (id, amount) => http.patch(`/api/projects/${id}/executor-cost`, { amount }),
-
-  exportExcel: (projectMonth) => downloadWithAuth(
-    `${BASE}/api/projects/export/excel${projectMonth ? '?projectMonth=' + projectMonth : ''}`,
-    `项目结算_${projectMonth || 'all'}.xlsx`)
-}
-
 // ===== Influencer Payments =====
 export const paymentApi = {
   list:    (params) => http.get('/api/influencer-payments', { params }),
@@ -142,6 +124,10 @@ export const collaborationApi = {
   save:    (data)   => http.post('/api/collaboration-trackings', data),
   requestDelete: (id, reason) => http.post(`/api/collaboration-trackings/${id}/delete-request`, { reason }),
   updateStatus: (id, data) => http.patch(`/api/collaboration-trackings/${id}/status`, data),
+
+  // 2026-07 从项目订单模块迁移过来："设置内部执行成本"流程
+  suggestExecutorCost: (id) => http.get(`/api/collaboration-trackings/${id}/executor-cost-suggestion`),
+  setExecutorCost:     (id, amount) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, { amount }),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(

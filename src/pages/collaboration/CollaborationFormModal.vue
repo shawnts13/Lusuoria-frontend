@@ -136,7 +136,7 @@
           <a-form-item label="项目负责人">
             <a-select v-model:value="form.projectManagerId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
-              placeholder="选择负责人">
+              placeholder="选择负责人" @change="onManagerChange">
               <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
             </a-select>
           </a-form-item>
@@ -163,9 +163,103 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="客户合作价格（美金）">
-              <a-input v-model:value="form.clientPrice" placeholder="金额或备注" />
+              <a-input v-model:value="form.clientPrice" placeholder="金额或备注" @change="calcPreview" />
               <div v-if="isRemark(form.clientPrice)" style="font-size:12px;color:#c00000">备注，将以红色展示</div>
             </a-form-item>
+          </a-col>
+        </a-row>
+
+        <!--
+          以下字段 2026-07 从"项目订单"模块迁移过来：
+          - 汇率：仅 ADMIN 可编辑，其他角色（AUDITOR/项目负责人/执行人员）只读展示
+          - 其他外部成本/内部执行成本：写权限由后端按 ProjectFieldVisibility 分级校验，
+            前端这里不满足条件时后端会忽略提交的值，不强行在前端隐藏输入框（跟原项目订单一致）
+          - 提成比例：仅 ADMIN 可编辑
+        -->
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <a-form-item label="汇率">
+              <a-input-number v-if="canEditCommission" v-model:value="form.exchangeRate"
+                style="width:100%" :precision="4" @change="calcPreview" />
+              <span v-else>{{ form.exchangeRate ?? '—' }}</span>
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="其他外部成本（人民币）">
+              <a-input-number v-model:value="form.otherExternalCost"
+                style="width:100%" :precision="2" @change="calcPreview" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="内部执行成本（人民币）">
+              <a-input-number v-model:value="form.internalExecutionCost"
+                style="width:100%" :precision="2" @change="calcPreview" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-divider orientation="left" style="font-size:13px">提成</a-divider>
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <a-form-item label="提成比例">
+              <template v-if="canEditCommission">
+                <a-input-number
+                  v-model:value="form.commissionRateDisplay"
+                  style="width:100%" :min="0" :max="100" :precision="0"
+                  :formatter="v => v + '%'" :parser="v => v.replace('%', '')"
+                  @change="v => { form.commissionRate = v / 100; calcPreview() }"
+                />
+              </template>
+              <template v-else>
+                <span style="font-size:15px; font-weight:600; color:#1677ff">
+                  {{ form.commissionRateDisplay }}%
+                </span>
+              </template>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-divider>利润预览（实时计算）</a-divider>
+        <a-row :gutter="16" class="profit-preview">
+          <a-col :span="6">
+            <div class="pv-item">
+              <div class="pv-label">项目毛利</div>
+              <div class="pv-val" :class="preview.grossProfit >= 0 ? 'pos' : 'neg'">
+                {{ fmtNum(preview.grossProfit) }}
+              </div>
+            </div>
+          </a-col>
+          <a-col :span="6">
+            <div class="pv-item">
+              <div class="pv-label">可分配利润</div>
+              <div class="pv-val" :class="preview.distributableProfit >= 0 ? 'pos' : 'neg'">
+                {{ fmtNum(preview.distributableProfit) }}
+              </div>
+            </div>
+          </a-col>
+          <a-col :span="6">
+            <div class="pv-item">
+              <div class="pv-label">负责人提成</div>
+              <div class="pv-val warn">{{ fmtNum(preview.commissionAmount) }}</div>
+            </div>
+          </a-col>
+          <a-col :span="6">
+            <div class="pv-item">
+              <div class="pv-label">公司利润（美金）</div>
+              <div class="pv-val" :class="preview.companyNetProfit >= 0 ? 'pos' : 'neg'">
+                {{ fmtNum(preview.companyNetProfit) }}
+              </div>
+            </div>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16" class="profit-preview" style="margin-top:8px">
+          <a-col :span="6" :offset="9">
+            <div class="pv-item">
+              <div class="pv-label">公司利润（人民币）</div>
+              <div class="pv-val" :class="preview.rmbRevenue >= 0 ? 'pos' : 'neg'">
+                ¥{{ fmtNum(preview.rmbRevenue) }}
+              </div>
+            </div>
           </a-col>
         </a-row>
       </template>
@@ -189,6 +283,7 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   record: { type: Object, default: null },
   canViewFinancials: { type: Boolean, default: false },
+  canEditCommission: { type: Boolean, default: false },
   brands: { type: Array, default: () => [] },
   influencers: { type: Array, default: () => [] },
   employees: { type: Array, default: () => [] }
@@ -207,7 +302,14 @@ const form = reactive({
   publishLink: '', publishDate: null,
   progress: null, influencerPaymentProgress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null, executorId: null,
-  influencerCost: '', clientPrice: '', notes: ''
+  influencerCost: '', clientPrice: '', notes: '',
+  exchangeRate: null, otherExternalCost: 0, internalExecutionCost: 0,
+  commissionRate: 0, commissionRateDisplay: 0
+})
+
+const preview = reactive({
+  grossProfit: 0, distributableProfit: 0,
+  commissionAmount: 0, companyNetProfit: 0, rmbRevenue: 0
 })
 
 const rules = {
@@ -276,14 +378,27 @@ watch(() => props.visible, (v) => {
         executorId: rec.executorId || null,
         influencerCost: rec.influencerCost || '',
         clientPrice:    rec.clientPrice    || '',
-        notes:          rec.notes          || ''
+        notes:          rec.notes          || '',
+        exchangeRate:   rec.exchangeRate   ?? null,
+        otherExternalCost:     rec.otherExternalCost     || 0,
+        internalExecutionCost: rec.internalExecutionCost || 0,
+        commissionRate:        rec.commissionRate        || 0,
+        commissionRateDisplay: rec.commissionRate
+                                  ? +(rec.commissionRate * 100).toFixed(0) : 0
       })
+      calcPreview()
     } else {
       Object.assign(form, {
         id:null, internalProjectNo:null, brandId:null, influencerId:null, teamId:null, platforms:[], demandContent:'',
         publishLink:'', publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
-        influencerCost:'', clientPrice:'', notes:''
+        influencerCost:'', clientPrice:'', notes:'',
+        exchangeRate:null, otherExternalCost:0, internalExecutionCost:0,
+        commissionRate:0, commissionRateDisplay:0
+      })
+      Object.assign(preview, {
+        grossProfit: 0, distributableProfit: 0,
+        commissionAmount: 0, companyNetProfit: 0, rmbRevenue: 0
       })
     }
   }
@@ -301,6 +416,45 @@ function onInfluencerChange() {
   // 切换红人后，原选中的品牌方可能不再适用，清空让用户重新选
   form.brandId = null
   form.teamId = null
+}
+
+function onManagerChange(id) {
+  if (!id || !props.canEditCommission) return
+  const emp = props.employees?.find(e => e.id === id)
+  if (emp?.defaultCommissionRate) {
+    form.commissionRate        = emp.defaultCommissionRate
+    form.commissionRateDisplay = +(emp.defaultCommissionRate * 100).toFixed(0)
+    calcPreview()
+  }
+}
+
+// 利润预览：跟后端 ProfitCalculator 保持一致的计算口径（2026-07 从"项目订单"模块迁移过来）
+function calcPreview() {
+  const price = parseFloat(form.clientPrice) || 0
+  const otherRmb = +form.otherExternalCost      || 0
+  const execRmb  = +form.internalExecutionCost  || 0
+  const rate  = +form.commissionRate            || 0
+  const rate2 = +form.exchangeRate              || 0
+  const other = rate2 > 0 ? +(otherRmb / rate2).toFixed(2) : 0
+  const exec  = rate2 > 0 ? +(execRmb / rate2).toFixed(2) : 0
+
+  const infCost = parseFloat(form.influencerCost) || 0
+  const gross   = +(price - infCost - other).toFixed(2)
+  const distrib = +(gross - exec).toFixed(2)
+  const commission = +(distrib * rate).toFixed(2)
+  const companyUsd  = +(distrib - commission).toFixed(2)
+  preview.grossProfit          = gross
+  preview.distributableProfit  = distrib
+  preview.commissionAmount     = commission
+  preview.companyNetProfit     = companyUsd
+  preview.rmbRevenue           = rate2 > 0 ? +(companyUsd * rate2).toFixed(2) : 0
+}
+
+function fmtNum(val) {
+  if (val == null) return '—'
+  return parseFloat(val).toLocaleString('en-US', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  })
 }
 
 function onBrandChange() {
@@ -339,12 +493,16 @@ async function doSave() {
       executorId: form.executorId || null,
       influencerCost: form.influencerCost,
       clientPrice:    form.clientPrice,
+      exchangeRate:   form.exchangeRate,
+      otherExternalCost:     form.otherExternalCost,
+      internalExecutionCost: form.internalExecutionCost,
+      commissionRate:        form.commissionRate,
       notes:          form.notes
     }
     const res = await collaborationApi.save(payload)
 
-    // 后端用特殊 code 表示：已有关联项目订单不让改订单号 / 去重命中
-    if (res.code === 4090 || res.code === 4091) {
+    // 后端用特殊 code 表示：去重命中
+    if (res.code === 4091) {
       saving.value = false
       Modal.warning({ title: '无法保存', content: res.message })
       return
@@ -365,3 +523,18 @@ async function handleSave() {
   doSave()
 }
 </script>
+
+<style scoped>
+.profit-preview {
+  background: #f8faff;
+  border-radius: 8px;
+  padding: 16px 8px;
+  border: 1px solid #e6f0ff;
+}
+.pv-item  { text-align: center; }
+.pv-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.pv-val   { font-size: 18px; font-weight: 700; }
+.pos  { color: #52c41a; }
+.neg  { color: #ff4d4f; }
+.warn { color: #faad14; }
+</style>

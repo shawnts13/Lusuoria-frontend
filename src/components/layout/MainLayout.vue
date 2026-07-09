@@ -11,9 +11,6 @@
         <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
           <template #icon><DashboardOutlined /></template>数据看板
         </a-menu-item>
-        <a-menu-item key="/projects">
-          <template #icon><ProjectOutlined /></template>项目订单
-        </a-menu-item>
         <a-menu-item key="/collaborations">
           <template #icon><SolutionOutlined /></template>红人合作跟踪
         </a-menu-item>
@@ -125,7 +122,7 @@ import { ref, reactive, computed, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
-  DashboardOutlined, ProjectOutlined, PayCircleOutlined,
+  DashboardOutlined, PayCircleOutlined,
   SolutionOutlined, DollarOutlined, ExclamationCircleOutlined,
   ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
@@ -158,7 +155,6 @@ const currentRoute = computed(() => '/' + route.path.split('/')[1])
 
 const pageTitleMap = {
   '/dashboard':   '数据看板',
-  '/projects':    '项目订单管理',
   '/payments':    '红人结款管理',
   '/pending':     '待处理',
   '/brands':      '品牌方管理',

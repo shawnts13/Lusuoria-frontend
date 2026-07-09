@@ -24,7 +24,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { projectApi } from '../../api/index'
+import { collaborationApi } from '../../api/index'
 
 const props = defineProps({
   visible: Boolean,
@@ -45,7 +45,7 @@ watch(() => props.visible, async v => {
     rateBasedSuggestion.value = false
     loadingSuggestion.value = true
     try {
-      const res = await projectApi.suggestExecutorCost(props.record.id)
+      const res = await collaborationApi.suggestExecutorCost(props.record.id)
       amount.value = res.data.suggestedAmount
       breakdown.value = res.data.breakdown
       rateBasedSuggestion.value = !!res.data.rateBasedSuggestion
@@ -61,7 +61,7 @@ async function handleSave() {
   if (saving.value) return
   saving.value = true
   try {
-    await projectApi.setExecutorCost(props.record.id, amount.value)
+    await collaborationApi.setExecutorCost(props.record.id, amount.value)
     message.success('内部执行成本已保存')
     emit('saved')
     close()

@@ -176,6 +176,8 @@
               <a-divider type="vertical" />
               <a @click="openStatusModal(record)">状态流转</a>
               <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
+              <a-divider type="vertical" v-if="authStore.canViewFinancials" />
+              <a v-if="authStore.canViewFinancials" @click="openExecutorCostModal(record)">内部执行成本</a>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
@@ -190,6 +192,12 @@
     <CollaborationStatusModal
       v-model:visible="statusModalVisible"
       :record="statusModalRecord"
+      @saved="loadData"
+      @need-executor-cost="openExecutorCostModal" />
+
+    <CollaborationExecutorCostModal
+      v-model:visible="executorCostModalVisible"
+      :record="executorCostModalRecord"
       @saved="loadData" />
 
     <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
@@ -205,6 +213,7 @@
       v-model:visible="modalVisible"
       :record="editingRecord"
       :can-view-financials="authStore.canViewFinancials"
+      :can-edit-commission="authStore.canEditCommission"
       :brands="brands"
       :influencers="influencers"
       :employees="employees"
@@ -226,6 +235,7 @@ import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
 import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
+import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
 
 const authStore = useAuthStore()
 const { getOptions, getLabel } = useOptions()
@@ -244,6 +254,8 @@ const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const statusModalVisible  = ref(false)
 const statusModalRecord   = ref(null)
+const executorCostModalVisible = ref(false)
+const executorCostModalRecord  = ref(null)
 const deleteReasonVisible = ref(false)
 const deleteReason        = ref('')
 const deleteTarget        = ref(null)
@@ -261,7 +273,8 @@ const pagination = reactive({
 })
 const filters = reactive({
   brandId: undefined, teamId: undefined, countryMarket: undefined,
-  accountName: undefined, platform: undefined, progress: undefined, videoType: undefined,
+  accountName: route.query.accountName || undefined,
+  platform: undefined, progress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
@@ -289,8 +302,34 @@ const allColumns = [
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150, sorter: true },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
   { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, sensitive: true },
+  // 以下列 2026-07 从"项目订单"模块迁移过来。汇率/其他外部成本/内部执行成本不标 sensitive
+  // （按行脱敏：项目负责人/执行人员只能看到自己相关的行，其余显示"—"，由后端按行返回决定，
+  // 不是角色整体限制，所以不能靠前端 sensitive 整列隐藏，拿到什么就显示什么，跟原项目订单列表一致）
+  { title: '汇率', dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80,
+    customRender: ({ text }) => text || '—' },
+  { title: '其他外部成本（人民币）', dataIndex: 'otherExternalCost', key: 'otherExternalCost', width: 160,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '内部执行成本（人民币）', dataIndex: 'internalExecutionCost', key: 'internalExecutionCost', width: 160,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '项目毛利',        dataIndex: 'grossProfit', key: 'grossProfit', width: 120, sensitive: true,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '可分配利润',      dataIndex: 'distributableProfit', key: 'distributableProfit', width: 120, sensitive: true,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '提成比例',        dataIndex: 'commissionRate', key: 'commissionRate', width: 90, sensitive: true,
+    customRender: ({ text }) => text ? (parseFloat(text) * 100).toFixed(0) + '%' : '—' },
+  { title: '负责人提成',      dataIndex: 'commissionAmount', key: 'commissionAmount', width: 120, sensitive: true,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '公司利润（美金）', dataIndex: 'companyNetProfit', key: 'companyNetProfit', width: 140, sensitive: true,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '公司利润（人民币）', dataIndex: 'rmbRevenue', key: 'rmbRevenue', width: 140, sensitive: true,
+    customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
   { title: '操作', key: 'action', width: 120, fixed: 'right' }
 ]
+
+function fmtNum(val) {
+  if (val == null) return '—'
+  return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 const visibleColumns = computed(() =>
   allColumns.filter(col => !col.sensitive || authStore.canViewFinancials))
@@ -389,8 +428,20 @@ function resetFilters() {
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 function openStatusModal(r) {
-  statusModalRecord.value = { ...r, accountName: getInfluencerName(r.influencerId) }
+  statusModalRecord.value = {
+    ...r,
+    accountName: getInfluencerName(r.influencerId),
+    executorName: getEmployeeName(r.executorId)
+  }
   statusModalVisible.value = true
+}
+function openExecutorCostModal(r) {
+  executorCostModalRecord.value = {
+    ...r,
+    accountName: getInfluencerName(r.influencerId),
+    executorName: getEmployeeName(r.executorId)
+  }
+  executorCostModalVisible.value = true
 }
 function openDeleteReason(r) { deleteTarget.value = r; deleteReason.value = ''; deleteReasonVisible.value = true }
 async function handleDeleteConfirm() {

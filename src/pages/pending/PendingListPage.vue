@@ -94,7 +94,7 @@ function categoryLabel(c) {
   if (c === 'PROGRESS_ROLLBACK') return '视频项目进度倒退审核'
   return c
 }
-function moduleLabel(m) { return m === 'PROJECT_ORDER' ? '项目订单' : m === 'COLLABORATION_TRACKING' ? '红人合作跟踪' : m }
+function moduleLabel(m) { return m === 'COLLABORATION_TRACKING' ? '红人合作跟踪' : m }
 
 function approveConfirmText(record) {
   return record.category === 'PROGRESS_ROLLBACK'
@@ -103,8 +103,8 @@ function approveConfirmText(record) {
 }
 
 function detailLink(record) {
-  const path = record.targetModule === 'PROJECT_ORDER' ? '/projects' : '/collaborations'
-  return `${path}?internalProjectNo=${encodeURIComponent(record.targetInternalProjectNo || '')}`
+  // "项目订单"模块已废弃，待处理事项现在只会来自红人合作跟踪
+  return `/collaborations?internalProjectNo=${encodeURIComponent(record.targetInternalProjectNo || '')}`
 }
 
 async function loadData() {

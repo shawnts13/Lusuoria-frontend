@@ -11,14 +11,13 @@ const routes = [
     path: '/',
     component: () => import('./components/layout/MainLayout.vue'),
     children: [
-      { path: '', redirect: '/projects' },  // 默认落地页改为项目列表，所有角色都能看
+      { path: '', redirect: '/collaborations' },  // 默认落地页改为红人合作跟踪（项目订单模块已废弃）
       {
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('./pages/dashboard/DashboardPage.vue'),
         meta: { financialOnly: true }       // 仅 ADMIN / AUDITOR
       },
-      { path: 'projects',    name: 'Projects',    component: () => import('./pages/project/ProjectListPage.vue') },
       { path: 'collaborations', name: 'Collaborations', component: () => import('./pages/collaboration/CollaborationListPage.vue') },
       { path: 'import-batches', name: 'ImportBatches', component: () => import('./pages/collaboration/ImportBatchListPage.vue') },
       { path: 'payments',    name: 'Payments',    component: () => import('./pages/payment/PaymentListPage.vue') },
@@ -45,7 +44,7 @@ const routes = [
       }
     ]
   },
-  { path: '/:pathMatch(.*)*', redirect: '/projects' }
+  { path: '/:pathMatch(.*)*', redirect: '/collaborations' }
 ]
 
 const router = createRouter({
@@ -62,17 +61,17 @@ router.beforeEach((to, from, next) => {
     return
   }
   if (to.path === '/login' && token) {
-    next('/projects')
+    next('/collaborations')
     return
   }
   // 数据看板：仅 ADMIN / AUDITOR
   if (to.meta.financialOnly && role !== 'ADMIN' && role !== 'AUDITOR') {
-    next('/projects')
+    next('/collaborations')
     return
   }
   // 账号管理：仅 ADMIN
   if (to.meta.adminOnly && role !== 'ADMIN') {
-    next('/projects')
+    next('/collaborations')
     return
   }
   next()

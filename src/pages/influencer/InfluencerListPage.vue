@@ -145,7 +145,7 @@
           </template>
 
           <template v-if="column.key === 'projects'">
-            <a v-if="projectCounts[record.id] > 0" @click="goToProjects(record.id)">
+            <a v-if="projectCounts[record.id] > 0" @click="goToProjects(record.accountName)">
               查看（{{ projectCounts[record.id] }}个）
             </a>
             <span v-else style="color:#bbb">—</span>
@@ -405,8 +405,10 @@ async function handleImport(file) {
   } catch {}
   return false
 }
-function goToProjects(influencerId) {
-  router.push({ path: '/projects', query: { influencerId } })
+function goToProjects(accountName) {
+  // "项目订单"模块已废弃，改为跳转到红人合作跟踪列表；那边的筛选只支持"红人社媒完整名字"
+  // 文本搜索（没有按 influencerId 精确筛选的参数），所以这里传账号名而不是 id
+  router.push({ path: '/collaborations', query: { accountName } })
 }
 
 function splitMulti(str) {

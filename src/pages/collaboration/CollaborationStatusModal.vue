@@ -47,7 +47,7 @@ const props = defineProps({
   visible: Boolean,
   record: Object
 })
-const emit = defineEmits(['update:visible', 'saved'])
+const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
 // 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
@@ -111,6 +111,12 @@ async function handleSave() {
     }
     emit('saved')
     close()
+
+    // 内部执行成本设置流程触发：后端已经判断过条件（视频项目进度达到前置条件，或红人结款进度
+    // 被设置了值，且这条记录有执行人员、还没设置过内部执行成本），这里直接按标记弹出即可
+    if (res.data?.needExecutorCost) {
+      emit('need-executor-cost', props.record)
+    }
   } finally { saving.value = false }
 }
 </script>
