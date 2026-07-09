@@ -213,6 +213,7 @@
       :record="editingRecord"
       :can-view-financials="authStore.canViewFinancials"
       :can-edit-commission="authStore.canEditCommission"
+      :can-edit-publish-date="authStore.isAdmin"
       :brands="brands"
       :influencers="influencers"
       :employees="employees"
@@ -289,7 +290,7 @@ const allColumns = [
   { title: '合作平台',      key: 'platform',       width: 120 },
   { title: '需求内容',      dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true },
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
-  { title: '发布时间',      key: 'publishDate',    width: 110, sorter: true },
+  { title: '视频发布时间',  key: 'publishDate',    width: 110, sorter: true },
   { title: '创建时间',      key: 'createdAt',      width: 150, sorter: true },
   { title: '视频项目进度',  key: 'progress',       width: 150, sorter: true },
   { title: '红人结款进度',  key: 'influencerPaymentProgress', width: 150 },

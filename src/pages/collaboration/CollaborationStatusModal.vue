@@ -24,6 +24,9 @@
           仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
         </div>
       </a-form-item>
+      <div v-if="willAutoFillPublishDate" style="margin-bottom:12px;color:#1677ff;font-size:12px">
+        该记录尚未填写"视频发布时间"，保存后系统将自动填上今天的日期
+      </div>
       <a-form-item label="倒退原因" v-if="isRollback" required>
         <p style="color:#888;font-size:13px;margin-bottom:8px">
           该记录"红人结款进度"已有值，视频项目进度要改回不满足前置条件的状态，不会立即生效，
@@ -73,6 +76,12 @@ watch(() => props.visible, v => {
 })
 
 const paymentProgressEnabled = computed(() => qualifies(progress.value))
+
+// 视频发布时间自动填写提示：跟后端 updateStatus() 的规则保持一致——首次从不满足前置条件
+// 流转到满足前置条件的状态、且当前还没有视频发布时间时，系统才会自动填今天的日期
+const willAutoFillPublishDate = computed(() =>
+  qualifies(progress.value) && !qualifies(original.progress) && !props.record?.publishDate
+)
 
 // 视频项目进度改成不满足条件的状态时，红人结款进度选项跟着禁用，
 // 界面上不应该继续显示一个"选中但禁用"的值造成误解，这里同步清空

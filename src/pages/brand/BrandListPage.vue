@@ -62,9 +62,28 @@
             <a-select-option value="EUR">EUR</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="付款周期">
-          <a-input v-model:value="form.paymentCycle" placeholder="如：月结30天" />
+        <a-form-item label="付款周期类型">
+          <a-select v-model:value="form.paymentCycleType" allow-clear placeholder="尚未配置">
+            <a-select-option value="COST_THRESHOLD">按红人成本阈值分档</a-select-option>
+            <a-select-option value="MONTH_END">月底对账日后N天结款</a-select-option>
+          </a-select>
         </a-form-item>
+        <template v-if="form.paymentCycleType === 'COST_THRESHOLD'">
+          <a-form-item label="成本阈值" extra="单笔「红人视频制作与发布成本」金额阈值，单位为上面选择的结算币种">
+            <a-input-number v-model:value="form.costThresholdAmount" style="width:100%" :precision="2" :min="0" />
+          </a-form-item>
+          <a-form-item label="≤ 阈值，几天内结款（天）">
+            <a-input-number v-model:value="form.daysWithinThreshold" style="width:100%" :precision="0" :min="0" />
+          </a-form-item>
+          <a-form-item label="> 阈值，几天内结款（天）">
+            <a-input-number v-model:value="form.daysAboveThreshold" style="width:100%" :precision="0" :min="0" />
+          </a-form-item>
+        </template>
+        <template v-if="form.paymentCycleType === 'MONTH_END'">
+          <a-form-item label="月底对账日后几天内结款（天）">
+            <a-input-number v-model:value="form.daysAfterMonthEnd" style="width:100%" :precision="0" :min="0" />
+          </a-form-item>
+        </template>
         <a-form-item label="备注">
           <a-textarea v-model:value="form.notes" :rows="3" />
         </a-form-item>
@@ -105,8 +124,26 @@ const importResults      = ref([])
 
 const form = reactive({
   id: null, name: '', countryMarket: '', cooperationType: '',
-  contactPerson: '', settlementCurrency: 'USD', paymentCycle: '', notes: ''
+  contactPerson: '', settlementCurrency: 'USD',
+  paymentCycleType: null, costThresholdAmount: null,
+  daysWithinThreshold: null, daysAboveThreshold: null, daysAfterMonthEnd: null,
+  notes: ''
 })
+
+// 付款周期：按品牌方结算币种拼出可读的一行描述，尚未配置时显示"—"
+function formatPaymentCycle(record) {
+  if (record.paymentCycleType === 'COST_THRESHOLD') {
+    const cur = record.settlementCurrency || ''
+    const threshold = record.costThresholdAmount ?? '—'
+    const within = record.daysWithinThreshold ?? '—'
+    const above  = record.daysAboveThreshold  ?? '—'
+    return `≤${threshold}${cur}：${within}天内；>${threshold}${cur}：${above}天内`
+  }
+  if (record.paymentCycleType === 'MONTH_END') {
+    return `月结，对账日后${record.daysAfterMonthEnd ?? '—'}天内`
+  }
+  return '—'
+}
 
 const columns = [
   { title: '品牌方名称', dataIndex: 'name',              key: 'name' },
@@ -114,7 +151,8 @@ const columns = [
   { title: '合作类型',   dataIndex: 'cooperationType',   key: 'cooperationType' },
   { title: '联系人',     dataIndex: 'contactPerson',     key: 'contactPerson' },
   { title: '结算币种',   dataIndex: 'settlementCurrency', key: 'settlementCurrency' },
-  { title: '付款周期',   dataIndex: 'paymentCycle',      key: 'paymentCycle' },
+  { title: '付款周期',   key: 'paymentCycle',
+    customRender: ({ record }) => formatPaymentCycle(record) },
   { title: '备注',       dataIndex: 'notes',             key: 'notes', ellipsis: true },
   { title: '操作',       key: 'action',                  width: 120 }
 ]
@@ -128,7 +166,10 @@ async function loadData() {
 function openCreate() {
   editing.value = null
   Object.assign(form, { id:null, name:'', countryMarket:'', cooperationType:'',
-    contactPerson:'', settlementCurrency:'USD', paymentCycle:'', notes:'' })
+    contactPerson:'', settlementCurrency:'USD',
+    paymentCycleType:null, costThresholdAmount:null,
+    daysWithinThreshold:null, daysAboveThreshold:null, daysAfterMonthEnd:null,
+    notes:'' })
   modalVisible.value = true
 }
 

@@ -78,8 +78,13 @@
           </a-form-item>
         </a-col>
         <a-col :span="8">
-          <a-form-item label="发布时间">
-            <a-date-picker v-model:value="form.publishDate" style="width:100%" value-format="YYYY-MM-DD" />
+          <a-form-item label="视频发布时间">
+            <a-date-picker v-if="canEditPublishDate" v-model:value="form.publishDate"
+              style="width:100%" value-format="YYYY-MM-DD" />
+            <span v-else>{{ form.publishDate || '—' }}</span>
+            <div v-if="!canEditPublishDate" style="font-size:12px;color:#888;margin-top:2px">
+              仅管理员可编辑，视频项目进度流转至已发布相关状态时系统会自动填写
+            </div>
           </a-form-item>
         </a-col>
       </a-row>
@@ -284,6 +289,7 @@ const props = defineProps({
   record: { type: Object, default: null },
   canViewFinancials: { type: Boolean, default: false },
   canEditCommission: { type: Boolean, default: false },
+  canEditPublishDate: { type: Boolean, default: false },
   brands: { type: Array, default: () => [] },
   influencers: { type: Array, default: () => [] },
   employees: { type: Array, default: () => [] }
