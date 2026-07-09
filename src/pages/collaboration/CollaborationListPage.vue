@@ -49,7 +49,7 @@
         style="width:120px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.progress" placeholder="进度"
+      <a-select v-model:value="filters.progress" placeholder="视频项目进度"
         style="width:140px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
@@ -137,6 +137,13 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
+          <template v-if="column.key === 'influencerPaymentProgress'">
+            <a-tag v-if="record.influencerPaymentProgress" color="cyan">
+              {{ getLabel('influencer_payment_progress', record.influencerPaymentProgress) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+
           <template v-if="column.key === 'videoType'">
             <a-tag v-if="record.videoType" color="purple">
               {{ getLabel('video_type', record.videoType) }}
@@ -168,6 +175,7 @@
               <a @click="openEdit(record)">编辑</a>
               <a-divider type="vertical" />
               <a @click="openStatusModal(record)">状态流转</a>
+              <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
@@ -270,7 +278,8 @@ const allColumns = [
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
   { title: '发布时间',      key: 'publishDate',    width: 110, sorter: true },
   { title: '创建时间',      key: 'createdAt',      width: 150, sorter: true },
-  { title: '进度',          key: 'progress',       width: 130, sorter: true },
+  { title: '视频项目进度',  key: 'progress',       width: 150, sorter: true },
+  { title: '红人结款进度',  key: 'influencerPaymentProgress', width: 150 },
   { title: '项目视频类型',  key: 'videoType',      width: 120, sorter: true },
   { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
@@ -314,6 +323,8 @@ function splitMulti(str) {
 }
 function progressColor(p) {
   const m = {
+    PENDING_CLIENT_BRIEF: 'default', CONTRACT_SENT: 'default', INFLUENCER_ORDERED: 'purple',
+    SHOOTING_GUIDE_SENT: 'purple',
     PENDING_DRAFT: 'default', PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
     PUBLISHED_UNSETTLED: 'blue', DELAYED: 'red', SETTLED: 'green'
   }

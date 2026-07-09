@@ -5,9 +5,10 @@
     </div>
 
     <div class="filter-bar">
-      <a-select v-model:value="filters.category" placeholder="类别" style="width:160px"
+      <a-select v-model:value="filters.category" placeholder="类别" style="width:180px"
         allow-clear @change="loadData">
         <a-select-option value="DELETE_REQUEST">删除审核</a-select-option>
+        <a-select-option value="PROGRESS_ROLLBACK">视频项目进度倒退审核</a-select-option>
       </a-select>
       <a-button @click="loadData">刷新</a-button>
     </div>
@@ -22,12 +23,19 @@
           <template v-if="column.key === 'targetModule'">
             {{ moduleLabel(record.targetModule) }}
           </template>
+          <template v-if="column.key === 'requestedChange'">
+            <span v-if="record.category === 'PROGRESS_ROLLBACK'">
+              视频项目进度 → {{ getLabel('collab_progress', record.requestedProgress) }}
+              <span style="color:#888">（红人结款进度将清空）</span>
+            </span>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'detail'">
             <a :href="detailLink(record)" target="_blank" rel="noopener">查看详情</a>
           </template>
           <template v-if="column.key === 'action'">
             <a-space>
-              <a-popconfirm title="确认同意这条删除申请？同意后将真正执行删除。" @confirm="handleApprove(record)">
+              <a-popconfirm :title="approveConfirmText(record)" @confirm="handleApprove(record)">
                 <a style="color:#52c41a">同意</a>
               </a-popconfirm>
               <a-divider type="vertical" />
@@ -38,7 +46,7 @@
       </a-table>
     </div>
 
-    <a-modal v-model:open="rejectVisible" title="拒绝删除申请" @ok="handleReject" :confirm-loading="rejecting">
+    <a-modal v-model:open="rejectVisible" title="拒绝申请" @ok="handleReject" :confirm-loading="rejecting">
       <a-form layout="vertical">
         <a-form-item label="拒绝原因（选填）">
           <a-textarea v-model:value="rejectNote" :rows="3" placeholder="可以说明一下为什么拒绝" />
@@ -53,6 +61,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { pendingApprovalApi } from '../../api/index'
 import { formatDateTime } from '../../utils/dateFormat'
+import { useOptions } from '../../composables/useOptions'
+
+const { getLabel } = useOptions()
 
 const loading = ref(false)
 const list = ref([])
@@ -65,11 +76,12 @@ const rejectNote = ref('')
 const rejectTarget = ref(null)
 
 const columns = [
-  { title: '类别',       key: 'category',   width: 100 },
+  { title: '类别',       key: 'category',   width: 140 },
   { title: '所属模块',   key: 'targetModule', width: 120 },
   { title: '摘要',       dataIndex: 'targetSummary', key: 'targetSummary', width: 200 },
   { title: '内部项目编号', dataIndex: 'targetInternalProjectNo', key: 'targetInternalProjectNo', width: 200 },
-  { title: '删除原因',   dataIndex: 'reason', key: 'reason', ellipsis: true },
+  { title: '申请改为',   key: 'requestedChange', width: 220 },
+  { title: '原因',       dataIndex: 'reason', key: 'reason', ellipsis: true },
   { title: '发起人',     dataIndex: 'requestedBy', key: 'requestedBy', width: 100 },
   { title: '发起时间',   dataIndex: 'createdAt', key: 'createdAt', width: 160,
     customRender: ({ text }) => text ? formatDateTime(text) : '—' },
@@ -77,8 +89,18 @@ const columns = [
   { title: '操作',       key: 'action', width: 120 }
 ]
 
-function categoryLabel(c) { return c === 'DELETE_REQUEST' ? '删除审核' : c }
+function categoryLabel(c) {
+  if (c === 'DELETE_REQUEST') return '删除审核'
+  if (c === 'PROGRESS_ROLLBACK') return '视频项目进度倒退审核'
+  return c
+}
 function moduleLabel(m) { return m === 'PROJECT_ORDER' ? '项目订单' : m === 'COLLABORATION_TRACKING' ? '红人合作跟踪' : m }
+
+function approveConfirmText(record) {
+  return record.category === 'PROGRESS_ROLLBACK'
+    ? '确认同意这条视频项目进度倒退申请？同意后视频项目进度将改为申请时的状态，红人结款进度会一并清空。'
+    : '确认同意这条删除申请？同意后将真正执行删除。'
+}
 
 function detailLink(record) {
   const path = record.targetModule === 'PROJECT_ORDER' ? '/projects' : '/collaborations'
@@ -102,7 +124,7 @@ function onTableChange(p) {
 
 async function handleApprove(record) {
   await pendingApprovalApi.approve(record.id)
-  message.success('已同意，删除已执行')
+  message.success(record.category === 'PROGRESS_ROLLBACK' ? '已同意，视频项目进度已更新' : '已同意，删除已执行')
   loadData()
 }
 

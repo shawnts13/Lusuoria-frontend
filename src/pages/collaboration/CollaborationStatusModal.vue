@@ -1,22 +1,42 @@
 <template>
-  <a-modal :open="visible" title="状态流转" width="420px"
+  <a-modal :open="visible" title="状态流转" width="460px"
     :confirm-loading="saving" @ok="handleSave" @cancel="close">
     <div style="margin-bottom:16px; color:#666; font-size:13px">
       {{ record?.accountName }}
       <span v-if="record?.internalProjectNo">（{{ record.internalProjectNo }}）</span>
     </div>
+    <div v-if="record?.hasPendingRollbackRequest"
+      style="margin-bottom:12px;color:#faad14;font-size:13px">
+      该记录当前已有一条待审核的"视频项目进度倒退"申请，等待管理员处理中。
+    </div>
     <a-form layout="vertical">
-      <a-form-item label="进度">
-        <a-select v-model:value="progress" placeholder="选择进度">
+      <a-form-item label="视频项目进度">
+        <a-select v-model:value="progress" placeholder="选择视频项目进度">
           <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
+      </a-form-item>
+      <a-form-item label="红人结款进度">
+        <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
+          allow-clear :disabled="!paymentProgressEnabled">
+          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+        <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+          仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
+        </div>
+      </a-form-item>
+      <a-form-item label="倒退原因" v-if="isRollback" required>
+        <p style="color:#888;font-size:13px;margin-bottom:8px">
+          该记录"红人结款进度"已有值，视频项目进度要改回不满足前置条件的状态，不会立即生效，
+          需要提交管理员审核，请说明原因。
+        </p>
+        <a-textarea v-model:value="reason" :rows="3" placeholder="请说明原因" />
       </a-form-item>
     </a-form>
   </a-modal>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
@@ -29,20 +49,66 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
+// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致
+const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+function qualifies(v) { return !!v && QUALIFYING_PROGRESS.includes(v) }
+
 const progress = ref(null)
+const paymentProgress = ref(null)
+const reason = ref('')
 const saving = ref(false)
 
+// 弹窗打开那一刻的原始值，用来判断这次改动算不算"倒退"（不随下面 progress/paymentProgress 的
+// 实时编辑而变化，保证即使中途改来改去，isRollback 判断的始终是"跟数据库原值相比"）
+const original = reactive({ progress: null, paymentProgress: null })
+
 watch(() => props.visible, v => {
-  if (v && props.record) progress.value = props.record.progress || null
+  if (v && props.record) {
+    progress.value = props.record.progress || null
+    paymentProgress.value = props.record.influencerPaymentProgress || null
+    reason.value = ''
+    original.progress = props.record.progress || null
+    original.paymentProgress = props.record.influencerPaymentProgress || null
+  }
 })
+
+const paymentProgressEnabled = computed(() => qualifies(progress.value))
+
+// 视频项目进度改成不满足条件的状态时，红人结款进度选项跟着禁用，
+// 界面上不应该继续显示一个"选中但禁用"的值造成误解，这里同步清空
+watch(progress, () => {
+  if (!paymentProgressEnabled.value) paymentProgress.value = null
+})
+
+// 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
+// 这次要改成不符合条件的另一个状态，就是"倒退"，需要走审核
+const isRollback = computed(() =>
+  !!original.paymentProgress
+  && qualifies(original.progress)
+  && !!progress.value
+  && !qualifies(progress.value)
+  && progress.value !== original.progress
+)
 
 function close() { emit('update:visible', false) }
 
 async function handleSave() {
+  if (isRollback.value && !reason.value?.trim()) {
+    message.warning('请填写倒退原因')
+    return
+  }
   saving.value = true
   try {
-    await collaborationApi.updateStatus(props.record.id, { progress: progress.value })
-    message.success('状态已更新')
+    const res = await collaborationApi.updateStatus(props.record.id, {
+      progress: progress.value,
+      influencerPaymentProgress: paymentProgressEnabled.value ? paymentProgress.value : null,
+      reason: isRollback.value ? reason.value.trim() : null
+    })
+    if (res.data?.pendingApproval) {
+      message.success('已提交审核，待管理员同意后生效')
+    } else {
+      message.success('状态已更新')
+    }
     emit('saved')
     close()
   } finally { saving.value = false }

@@ -85,27 +85,39 @@
       </a-row>
 
       <a-row :gutter="16">
-        <a-col :span="6">
-          <a-form-item label="进度">
-            <a-select v-model:value="form.progress" :disabled="!!form.id" allow-clear placeholder="选择进度">
+        <a-col :span="8">
+          <a-form-item label="视频项目进度">
+            <a-select v-model:value="form.progress" :disabled="!!form.id" allow-clear placeholder="选择视频项目进度">
               <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
             </a-select>
-            <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">进度请使用"状态流转"功能修改</div>
+            <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">视频项目进度请使用"状态流转"功能修改</div>
           </a-form-item>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="8">
+          <a-form-item label="红人结款进度">
+            <a-select v-model:value="form.influencerPaymentProgress" allow-clear placeholder="选择红人结款进度"
+              :disabled="!!form.id || !paymentProgressEnabled">
+              <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+            </a-select>
+            <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">红人结款进度请使用"状态流转"功能修改</div>
+            <div v-else-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+              仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
+            </div>
+          </a-form-item>
+        </a-col>
+        <a-col :span="8">
           <a-form-item label="项目视频类型">
             <a-select v-model:value="form.videoType" allow-clear placeholder="选择视频类型">
               <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
             </a-select>
           </a-form-item>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="12">
           <a-form-item label="客户方的项目订单">
             <a-input v-model:value="form.clientOrderId" placeholder="拿到后填写" />
           </a-form-item>
         </a-col>
-        <a-col :span="6">
+        <a-col :span="12">
           <a-form-item label="客户方付款批次">
             <a-input v-model:value="form.clientPaymentBatch" />
           </a-form-item>
@@ -193,7 +205,7 @@ const form = reactive({
   brandId: null, influencerId: null, teamId: null,
   platforms: [], demandContent: '',
   publishLink: '', publishDate: null,
-  progress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
+  progress: null, influencerPaymentProgress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null, executorId: null,
   influencerCost: '', clientPrice: '', notes: ''
 })
@@ -232,6 +244,14 @@ const projectManagerCandidates = computed(() =>
 const executorCandidates = computed(() =>
   props.employees.filter(e => e.role === '执行人员'))
 
+// 红人结款进度只有在视频项目进度达到前置条件时才能设置（新建表单里跟"状态流转"弹窗规则一致），
+// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致
+const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+const paymentProgressEnabled = computed(() => !!form.progress && QUALIFYING_PROGRESS.includes(form.progress))
+watch(() => form.progress, () => {
+  if (!paymentProgressEnabled.value) form.influencerPaymentProgress = null
+})
+
 watch(() => props.visible, (v) => {
   if (v) {
     if (props.record) {
@@ -247,6 +267,7 @@ watch(() => props.visible, (v) => {
         publishLink:   rec.publishLink   || '',
         publishDate:   rec.publishDate ? formatDate(rec.publishDate) : null,
         progress:      rec.progress      || null,
+        influencerPaymentProgress: rec.influencerPaymentProgress || null,
         videoType:     rec.videoType     || null,
         oldMaterialSourceLink: rec.oldMaterialSourceLink || null,
         clientOrderId: rec.clientOrderId || '',
@@ -260,7 +281,7 @@ watch(() => props.visible, (v) => {
     } else {
       Object.assign(form, {
         id:null, internalProjectNo:null, brandId:null, influencerId:null, teamId:null, platforms:[], demandContent:'',
-        publishLink:'', publishDate:null, progress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
+        publishLink:'', publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
         influencerCost:'', clientPrice:'', notes:''
       })
@@ -309,6 +330,7 @@ async function doSave() {
       publishLink:   form.publishLink || null,
       publishDate:   form.publishDate || null,
       progress:      form.progress || null,
+      influencerPaymentProgress: paymentProgressEnabled.value ? (form.influencerPaymentProgress || null) : null,
       videoType:     form.videoType || null,
       oldMaterialSourceLink: form.videoType === 'OLD_MATERIAL_REPOST' ? (form.oldMaterialSourceLink || null) : null,
       clientOrderId: form.clientOrderId || null,
