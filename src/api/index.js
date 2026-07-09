@@ -128,6 +128,7 @@ export const collaborationApi = {
   // 2026-07 从项目订单模块迁移过来："设置内部执行成本"流程
   suggestExecutorCost: (id) => http.get(`/api/collaboration-trackings/${id}/executor-cost-suggestion`),
   setExecutorCost:     (id, amount) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, { amount }),
+  recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(

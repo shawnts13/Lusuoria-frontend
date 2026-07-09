@@ -157,14 +157,14 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="红人视频制作与发布成本（美金）">
-              <a-input v-model:value="form.influencerCost" placeholder="金额或备注" />
-              <div v-if="isRemark(form.influencerCost)" style="font-size:12px;color:#c00000">备注，将以红色展示</div>
+              <a-input-number v-model:value="form.influencerCost"
+                style="width:100%" :precision="2" placeholder="金额" @change="calcPreview" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item label="客户合作价格（美金）">
-              <a-input v-model:value="form.clientPrice" placeholder="金额或备注" @change="calcPreview" />
-              <div v-if="isRemark(form.clientPrice)" style="font-size:12px;color:#c00000">备注，将以红色展示</div>
+              <a-input-number v-model:value="form.clientPrice"
+                style="width:100%" :precision="2" placeholder="金额" @change="calcPreview" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -302,7 +302,7 @@ const form = reactive({
   publishLink: '', publishDate: null,
   progress: null, influencerPaymentProgress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null, executorId: null,
-  influencerCost: '', clientPrice: '', notes: '',
+  influencerCost: null, clientPrice: null, notes: '',
   exchangeRate: null, otherExternalCost: 0, internalExecutionCost: 0,
   commissionRate: 0, commissionRateDisplay: 0
 })
@@ -376,8 +376,8 @@ watch(() => props.visible, (v) => {
         clientPaymentBatch: rec.clientPaymentBatch || '',
         projectManagerId: rec.projectManagerId || null,
         executorId: rec.executorId || null,
-        influencerCost: rec.influencerCost || '',
-        clientPrice:    rec.clientPrice    || '',
+        influencerCost: rec.influencerCost ?? null,
+        clientPrice:    rec.clientPrice    ?? null,
         notes:          rec.notes          || '',
         exchangeRate:   rec.exchangeRate   ?? null,
         otherExternalCost:     rec.otherExternalCost     || 0,
@@ -392,7 +392,7 @@ watch(() => props.visible, (v) => {
         id:null, internalProjectNo:null, brandId:null, influencerId:null, teamId:null, platforms:[], demandContent:'',
         publishLink:'', publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
-        influencerCost:'', clientPrice:'', notes:'',
+        influencerCost:null, clientPrice:null, notes:'',
         exchangeRate:null, otherExternalCost:0, internalExecutionCost:0,
         commissionRate:0, commissionRateDisplay:0
       })
@@ -407,10 +407,6 @@ watch(() => props.visible, (v) => {
 function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
-}
-function isRemark(value) {
-  if (!value || !value.trim()) return false
-  return isNaN(parseFloat(value.trim()))
 }
 function onInfluencerChange() {
   // 切换红人后，原选中的品牌方可能不再适用，清空让用户重新选
@@ -430,7 +426,7 @@ function onManagerChange(id) {
 
 // 利润预览：跟后端 ProfitCalculator 保持一致的计算口径（2026-07 从"项目订单"模块迁移过来）
 function calcPreview() {
-  const price = parseFloat(form.clientPrice) || 0
+  const price = +form.clientPrice || 0
   const otherRmb = +form.otherExternalCost      || 0
   const execRmb  = +form.internalExecutionCost  || 0
   const rate  = +form.commissionRate            || 0
@@ -438,7 +434,7 @@ function calcPreview() {
   const other = rate2 > 0 ? +(otherRmb / rate2).toFixed(2) : 0
   const exec  = rate2 > 0 ? +(execRmb / rate2).toFixed(2) : 0
 
-  const infCost = parseFloat(form.influencerCost) || 0
+  const infCost = +form.influencerCost || 0
   const gross   = +(price - infCost - other).toFixed(2)
   const distrib = +(gross - exec).toFixed(2)
   const commission = +(distrib * rate).toFixed(2)

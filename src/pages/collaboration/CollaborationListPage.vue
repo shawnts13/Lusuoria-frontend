@@ -20,6 +20,11 @@
             <template #icon><PlusOutlined /></template>新建跟踪
           </a-button>
         </template>
+        <a-popconfirm v-if="authStore.isAdmin"
+          title="重新计算所有记录的项目毛利/可分配利润/提成/公司利润？用于数据库里的原始金额被绕过系统直接改动后的善后，正常使用不需要点这个。"
+          @confirm="handleRecomputeProfits">
+          <a-button :loading="recomputing">重新计算利润</a-button>
+        </a-popconfirm>
       </a-space>
     </div>
 
@@ -160,14 +165,10 @@
           </template>
 
           <template v-if="column.key === 'influencerCost'">
-            <span :style="isRemark(record.influencerCost) ? 'color:#c00000;font-weight:600' : ''">
-              {{ record.influencerCost || '—' }}
-            </span>
+            {{ record.influencerCost != null ? fmtNum(record.influencerCost) : '—' }}
           </template>
           <template v-if="column.key === 'clientPrice'">
-            <span :style="isRemark(record.clientPrice) ? 'color:#c00000;font-weight:600' : ''">
-              {{ record.clientPrice || '—' }}
-            </span>
+            {{ record.clientPrice != null ? fmtNum(record.clientPrice) : '—' }}
           </template>
 
           <template v-if="column.key === 'action'">
@@ -176,8 +177,6 @@
               <a-divider type="vertical" />
               <a @click="openStatusModal(record)">状态流转</a>
               <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
-              <a-divider type="vertical" v-if="authStore.canViewFinancials" />
-              <a v-if="authStore.canViewFinancials" @click="openExecutorCostModal(record)">内部执行成本</a>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
@@ -260,6 +259,7 @@ const deleteReasonVisible = ref(false)
 const deleteReason        = ref('')
 const deleteTarget        = ref(null)
 const deleting            = ref(false)
+const recomputing         = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -369,10 +369,6 @@ function progressColor(p) {
   }
   return m[p] || 'default'
 }
-function isRemark(value) {
-  if (!value || !value.trim()) return false
-  return isNaN(parseFloat(value.trim()))
-}
 
 async function loadData() {
   loading.value = true
@@ -455,6 +451,15 @@ async function handleDeleteConfirm() {
   } finally { deleting.value = false }
 }
 function handleExport() { collaborationApi.exportExcel(filters) }
+
+async function handleRecomputeProfits() {
+  recomputing.value = true
+  try {
+    const res = await collaborationApi.recomputeProfits()
+    message.success(res.data || '重新计算完成')
+    loadData()
+  } finally { recomputing.value = false }
+}
 async function handleImport(file) {
   const fd = new FormData(); fd.append('file', file)
   try {
