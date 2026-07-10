@@ -90,7 +90,10 @@
           </template>
 
           <template v-if="column.key === 'influencerType'">
-            {{ getLabel('influencer_type', record.influencerType) }}
+            <a-tag v-if="record.influencerType" :color="influencerTypeColor(record.influencerType)">
+              {{ getLabel('influencer_type', record.influencerType) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
           </template>
 
           <template v-if="column.key === 'platform'">
@@ -420,6 +423,11 @@ function splitMulti(str) {
 function contactColor(s) {
   const m = { UNDEVELOPED:'default', REPLIED:'processing', INTERESTED:'cyan', COOPERATING:'blue', COOPERATED:'green' }
   return m[s] || 'default'
+}
+// 红人类型是分类，不是状态，随便挑几个能区分开的颜色
+function influencerTypeColor(t) {
+  const m = { OVERSEAS_INFLUENCER: 'blue', CHINA_INFLUENCER: 'volcano', FOREIGN_IN_CHINA: 'purple' }
+  return m[t] || 'default'
 }
 function fmtFollower(v) {
   if (!v) return '—'

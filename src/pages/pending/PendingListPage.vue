@@ -22,7 +22,7 @@
           row-key="id" size="middle" :pagination="pagination" @change="onTableChange">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'category'">
-              <a-tag color="orange">{{ categoryLabel(record.category) }}</a-tag>
+              <a-tag :color="categoryColor(record.category)">{{ categoryLabel(record.category) }}</a-tag>
             </template>
             <template v-if="column.key === 'targetModule'">
               {{ moduleLabel(record.targetModule) }}
@@ -102,6 +102,11 @@ function categoryLabel(c) {
   if (c === 'DELETE_REQUEST') return '删除审核'
   if (c === 'PROGRESS_ROLLBACK') return '视频项目进度倒退审核'
   return c
+}
+// 两种申请类别，不是进度状态；删除是破坏性操作用红色区分，倒退是纠正性操作用金色
+function categoryColor(c) {
+  const m = { DELETE_REQUEST: 'red', PROGRESS_ROLLBACK: 'gold' }
+  return m[c] || 'orange'
 }
 function moduleLabel(m) { return m === 'COLLABORATION_TRACKING' ? '红人合作跟踪' : m }
 

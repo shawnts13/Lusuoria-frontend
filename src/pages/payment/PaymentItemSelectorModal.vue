@@ -22,9 +22,15 @@
         <template v-if="column.key === 'paymentProgressLabel'">
           <span v-if="record.invoiceWarning" class="invoice-warning-cell"
             title="该视频项目未提供invoice，为方便后续审计，需提醒相关负责人催促对应红人">
-            <ExclamationCircleFilled /> {{ record.paymentProgressLabel || '—' }}
+            <ExclamationCircleFilled />
+            <a-tag :color="paymentProgressColor(record.paymentProgress)" style="margin:0 0 0 4px">
+              {{ record.paymentProgressLabel || '—' }}
+            </a-tag>
           </span>
-          <span v-else>{{ record.paymentProgressLabel || '—' }}</span>
+          <a-tag v-else-if="record.paymentProgress" :color="paymentProgressColor(record.paymentProgress)">
+            {{ record.paymentProgressLabel || '—' }}
+          </a-tag>
+          <span v-else>—</span>
         </template>
         <template v-if="column.key === 'publishDate'">
           {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
@@ -53,6 +59,7 @@ import { Modal } from 'ant-design-vue'
 import { ExclamationCircleFilled } from '@ant-design/icons-vue'
 import { paymentApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
+import { paymentProgressColor } from '../../utils/enumColors'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
