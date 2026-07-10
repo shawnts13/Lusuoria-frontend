@@ -246,6 +246,17 @@ async function handleSelectorConfirm(selected) {
   form.payableAmount = selected.reduce((sum, r) => sum + (r.influencerCost != null ? +r.influencerCost : 0), 0)
 
   if (!form.id) {
+    // 修正团队范围：一开始可能勾了好几个团队方便浏览候选记录，但实际勾选的红人视频项目
+    // 可能只涉及其中一部分团队——这里按实际勾选到的记录重新收窄"红人团队"，避免范围跟
+    // 真正涉及的团队对不上（选择范围只会缩小，不会变大，因为候选记录本来就是从这个范围里查出来的）
+    const actualTeamIds = [...new Set(selected.map(r => r.teamId ?? NO_TEAM))]
+    const changed = actualTeamIds.length !== form.teamIds.length
+      || actualTeamIds.some(id => !form.teamIds.includes(id))
+    if (changed) {
+      form.teamIds = actualTeamIds
+      message.info('已根据实际勾选的红人视频项目，自动修正"红人团队"范围')
+    }
+
     // 新建时汇率不接受手填，按结算月份自动取
     try {
       const res = await exchangeRateApi.getOne(form.settlementMonth)
