@@ -68,7 +68,10 @@ const props = defineProps({
   // 这次结款涉及的团队范围，元素可能是 null（代表"不选团队"也在范围内），支持跨团队合并结款
   teamIds: { type: Array, default: () => [] },
   reconcileDate: { type: String, default: null },
-  existingPaymentId: { type: [Number, String], default: null }
+  existingPaymentId: { type: [Number, String], default: null },
+  // 当前表单里已经确认过的勾选（即使这条结款记录还没保存），重新打开这个弹窗时要按这个恢复
+  // 之前的勾选状态——不然新建时筛选一批勾上、关掉再打开一次，之前勾的就全丢了
+  selectedTrackingIds: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:visible', 'confirm'])
 
@@ -180,8 +183,12 @@ async function load() {
     items.sort((a, b) => (a.accountName || '').localeCompare(b.accountName || ''))
 
     list.value = items
-    selectedRowKeys.value = items.filter(i => i.defaultChecked || existingIds.has(i.trackingId))
-      .map(i => i.trackingId)
+    // 已勾选状态取三者的并集：符合自动勾选规则的、已经落库关联到这条结款记录的、
+    // 以及表单里已经确认过但还没保存的（关掉弹窗重开一次不应该丢失之前勾好的记录）
+    const previouslySelectedIds = new Set(props.selectedTrackingIds)
+    selectedRowKeys.value = items.filter(i =>
+      i.defaultChecked || existingIds.has(i.trackingId) || previouslySelectedIds.has(i.trackingId)
+    ).map(i => i.trackingId)
   } finally {
     loading.value = false
   }

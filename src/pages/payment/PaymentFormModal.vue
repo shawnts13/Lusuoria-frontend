@@ -122,6 +122,7 @@
       :team-ids="requestTeamIds"
       :reconcile-date="form.reconcileDate"
       :existing-payment-id="form.id"
+      :selected-tracking-ids="form.selectedItems.map(i => i.trackingId)"
       @confirm="handleSelectorConfirm"
     />
   </a-modal>
