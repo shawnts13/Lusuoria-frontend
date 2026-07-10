@@ -13,17 +13,27 @@
       <a-form-item label="品牌方" name="brandId"
         :rules="[{ required: true, message: '请选择品牌方' }]">
         <a-select v-model:value="form.brandId" show-search option-filter-prop="label"
-          :disabled="!!form.id" @change="form.selectedItems = []">
+          :disabled="!!form.id" @change="onBrandChange">
           <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
         </a-select>
       </a-form-item>
 
-      <a-form-item label="红人团队" name="teamId">
+      <a-form-item v-if="form.brandId" label="红人团队" name="teamId">
         <a-select v-model:value="form.teamId" allow-clear show-search option-filter-prop="label"
-          :disabled="!!form.id" @change="form.selectedItems = []">
-          <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+          :disabled="!!form.id || availableTeams.length <= 1"
+          :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '选择团队'"
+          @change="onTeamChange">
+          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不选团队）'">
+            {{ t.teamName || '（不选团队）' }}
+          </a-select-option>
         </a-select>
+        <div v-if="!form.id && availableTeams.length > 1" style="font-size:12px;color:#999;margin-top:4px">
+          该品牌方下有多个团队，请明确选择其中一个
+        </div>
       </a-form-item>
+      <div v-else style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
+        请先选择品牌方，才能选择红人团队
+      </div>
 
       <a-form-item label="对账日期（可选）" name="reconcileDate">
         <a-date-picker v-model:value="form.reconcileDate" value-format="YYYY-MM-DD" style="width:100%" />
@@ -119,7 +129,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
-import { paymentApi, exchangeRateApi } from '../../api/index'
+import { paymentApi, exchangeRateApi, brandApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
 import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
 
@@ -149,9 +159,46 @@ const form = reactive({
 })
 
 const record = computed(() => props.record)
-const canOpenSelector = computed(() => !!form.brandId && !!form.settlementMonth)
 // 编辑态且已付款：只能查看，不能再调整勾选；其余情况（新建 / 编辑态待付款）可选
 const selectorMode = computed(() => (form.id && record.value?.paymentStatus === 'PAID') ? 'view' : 'select')
+
+// 红人团队跟着品牌方级联（参考"红人合作跟踪"新建表单"请先选择品牌方，才能选择红人团队"的方案），
+// 只是团队选项来自该品牌方下（不限具体红人）出现过的团队，不是某一个红人的关联记录
+const brandTeamOptions = ref([])
+// 编辑态：团队已锁定不可再改，直接展示当前值即可，不需要按品牌方重新拉取选项
+const availableTeams = computed(() =>
+  form.id ? props.teams.map(t => ({ teamId: t.id, teamName: t.name })) : brandTeamOptions.value)
+
+// 团队选项有多个（含"不选团队"）时，teamId=null 既可能是"用户还没选"也可能是"明确选了不选团队"，
+// 这两种情况不能靠 teamId 的值本身区分，所以单独记一个是否已经操作过团队选择框的标记，
+// 避免在真正选完团队之前就能点"选择涉及的红人视频项目"
+const teamTouched = ref(false)
+
+async function onBrandChange(brandId) {
+  form.teamId = null
+  form.selectedItems = []
+  brandTeamOptions.value = []
+  teamTouched.value = false
+  if (!brandId) return
+  const res = await brandApi.teamOptions(brandId)
+  brandTeamOptions.value = res.data || []
+}
+
+function onTeamChange() {
+  form.selectedItems = []
+  teamTouched.value = true
+}
+
+// 团队只有1个选项时自动带入（不管是不是"不选团队"这个唯一选项），0个或多个都不自动填
+watch(() => availableTeams.value, opts => {
+  if (!form.id && opts.length === 1) {
+    form.teamId = opts[0].teamId ?? null
+    teamTouched.value = true
+  }
+})
+
+const teamResolved = computed(() => !!form.id || availableTeams.value.length <= 1 || teamTouched.value)
+const canOpenSelector = computed(() => !!form.brandId && !!form.settlementMonth && teamResolved.value)
 
 const brandCycleHint = computed(() => {
   const brand = props.brands.find(b => b.id === form.brandId)
@@ -220,6 +267,8 @@ async function syncFromRecord(rec) {
       exchangeRate:null, rmbAmount:null, expectedPaymentDate:null,
       paymentStatus:'PENDING', actualPaymentDate:null, notes:''
     })
+    brandTeamOptions.value = []
+    teamTouched.value = false
     return
   }
   Object.assign(form, {

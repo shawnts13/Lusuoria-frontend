@@ -39,6 +39,7 @@ export const brandApi = {
   getById:  (id)   => http.get(`/api/brands/${id}`),
   save:     (data) => http.post('/api/brands', data),
   delete:   (id)   => http.delete(`/api/brands/${id}`),
+  teamOptions: (brandId) => http.get(`/api/brands/${brandId}/team-options`),
 
   exportExcel:      ()     => downloadWithAuth(`${BASE}/api/brands/export/excel`, '品牌方.xlsx'),
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/brands/import/template`, '品牌方导入模板.xlsx'),
