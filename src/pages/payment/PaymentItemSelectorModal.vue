@@ -13,7 +13,8 @@
 
     <a-table :columns="columns" :data-source="filteredList" :loading="loading" row-key="trackingId"
       size="small" :pagination="false" :scroll="{ x: 1500, y: 480 }"
-      :row-selection="mode === 'select' ? rowSelection : undefined">
+      :row-selection="mode === 'select' ? rowSelection : undefined"
+      :custom-row="mode === 'select' ? customRow : undefined">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'influencerCost'">
           {{ record.influencerCost != null ? fmtNum(record.influencerCost) : '—' }}
@@ -113,6 +114,26 @@ const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
   onChange: keys => { selectedRowKeys.value = keys }
 }))
+
+// 点击行内任意位置也能勾选/取消勾选，不用非得精准点中前面那个小方框——方便先横向滑到最右边
+// 看完信息再选的操作习惯
+function toggleRow(record) {
+  const idx = selectedRowKeys.value.indexOf(record.trackingId)
+  selectedRowKeys.value = idx === -1
+    ? [...selectedRowKeys.value, record.trackingId]
+    : selectedRowKeys.value.filter(k => k !== record.trackingId)
+}
+function customRow(record) {
+  return {
+    style: { cursor: 'pointer' },
+    onClick: (e) => {
+      // 点在勾选框本身上时，勾选框自己的 change 已经处理过了，这里不要再触发一次，
+      // 不然会跟勾选框的状态互相抵消
+      if (e.target.closest('.ant-checkbox-wrapper')) return
+      toggleRow(record)
+    }
+  }
+}
 
 async function load() {
   loading.value = true
