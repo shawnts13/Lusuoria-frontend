@@ -46,7 +46,7 @@
             {{ getBrandName(record.brandId) || '—' }}
           </template>
           <template v-if="column.key === 'team'">
-            {{ getTeamName(record.teamId) || '—' }}
+            {{ teamNamesLabel(record.teamIds) }}
           </template>
           <template v-if="column.key === 'items'">
             <a @click="openItemsView(record)">查看涉及的红人视频项目</a>
@@ -163,6 +163,11 @@ function getBrandName(brandId) {
 }
 function getTeamName(teamId) {
   return teams.value.find(t => t.id === teamId)?.name || ''
+}
+// 一条结款记录支持跨团队合并结算，teamIds 是个数组（元素可能是 null，代表"不选团队"也在范围内）
+function teamNamesLabel(teamIds) {
+  if (!teamIds || !teamIds.length) return '—'
+  return teamIds.map(id => id == null ? '（不选团队）' : (getTeamName(id) || id)).join('、')
 }
 
 async function loadData() {

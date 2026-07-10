@@ -53,7 +53,8 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   mode: { type: String, default: 'select' }, // 'select' | 'view'
   brandId: { type: [Number, String], default: null },
-  teamId: { type: [Number, String], default: null },
+  // 这次结款涉及的团队范围，元素可能是 null（代表"不选团队"也在范围内），支持跨团队合并结款
+  teamIds: { type: Array, default: () => [] },
   reconcileDate: { type: String, default: null },
   existingPaymentId: { type: [Number, String], default: null }
 })
@@ -108,8 +109,16 @@ async function load() {
       return
     }
 
+    // teamIds 里的真实团队 id 用逗号拼成一个字符串传给后端（数组会被 axios 序列化成
+    // teamIds[]=1&teamIds[]=2 这种带方括号的格式，Spring 的 List<Long> 绑定不了），
+    // "不选团队"单独用 includeNoTeam 这个布尔值表示，不能塞进同一个逗号字符串里
+    const realTeamIds = props.teamIds.filter(id => id != null)
+    const includeNoTeam = props.teamIds.includes(null)
     const candidatesRes = await paymentApi.candidates({
-      brandId: props.brandId, teamId: props.teamId || undefined, reconcileDate: props.reconcileDate || undefined
+      brandId: props.brandId,
+      teamIds: realTeamIds.length ? realTeamIds.join(',') : undefined,
+      includeNoTeam,
+      reconcileDate: props.reconcileDate || undefined
     })
     let items = candidatesRes.data || []
 

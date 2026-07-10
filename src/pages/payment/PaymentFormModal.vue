@@ -18,17 +18,18 @@
         </a-select>
       </a-form-item>
 
-      <a-form-item v-if="form.brandId" label="红人团队" name="teamId">
-        <a-select v-model:value="form.teamId" allow-clear show-search option-filter-prop="label"
-          :disabled="!!form.id || availableTeams.length <= 1"
-          :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '选择团队'"
+      <a-form-item v-if="form.brandId" label="红人团队" name="teamIds"
+        :rules="[{ required: true, type: 'array', min: 1, message: '请至少选择一个红人团队（或不选团队）' }]">
+        <a-select v-model:value="form.teamIds" mode="multiple" allow-clear show-search option-filter-prop="label"
+          :disabled="!!form.id"
+          :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '可多选，多个团队会合并到同一条结款记录'"
           @change="onTeamChange">
-          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不选团队）'">
+          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? NO_TEAM" :value="t.teamId ?? NO_TEAM" :label="t.teamName || '（不选团队）'">
             {{ t.teamName || '（不选团队）' }}
           </a-select-option>
         </a-select>
-        <div v-if="!form.id && availableTeams.length > 1" style="font-size:12px;color:#999;margin-top:4px">
-          该品牌方下有多个团队，请明确选择其中一个
+        <div v-if="!form.id" style="font-size:12px;color:#999;margin-top:4px">
+          可多选，勾选多个团队时，"选择涉及的红人视频项目"会一起显示这几个团队的候选记录
         </div>
       </a-form-item>
       <div v-else style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
@@ -118,7 +119,7 @@
       v-model:visible="selectorVisible"
       :mode="selectorMode"
       :brand-id="form.brandId"
-      :team-id="form.teamId"
+      :team-ids="requestTeamIds"
       :reconcile-date="form.reconcileDate"
       :existing-payment-id="form.id"
       @confirm="handleSelectorConfirm"
@@ -145,9 +146,14 @@ const formRef = ref()
 const saving  = ref(false)
 const selectorVisible = ref(false)
 
+// a-select 多选模式下用 null 代表"不选团队"这个选项会有兼容性问题（有些组件把 null/undefined
+// 当成"清空"的特殊值），所以内部用一个不会跟真实团队 id 冲突的哨兵值表示，
+// 提交请求/回显已有记录时再跟 null 互相转换
+const NO_TEAM = '__NONE__'
+
 const form = reactive({
   id: null,
-  brandId: null, teamId: null,
+  brandId: null, teamIds: [],
   reconcileDate: null,
   settlementMonth: null, settlementMonthVal: null,
   selectedItems: [],
@@ -163,22 +169,21 @@ const record = computed(() => props.record)
 const selectorMode = computed(() => (form.id && record.value?.paymentStatus === 'PAID') ? 'view' : 'select')
 
 // 红人团队跟着品牌方级联（参考"红人合作跟踪"新建表单"请先选择品牌方，才能选择红人团队"的方案），
-// 只是团队选项来自该品牌方下（不限具体红人）出现过的团队，不是某一个红人的关联记录
+// 只是团队选项来自该品牌方下（不限具体红人）出现过的团队，不是某一个红人的关联记录；
+// 支持多选合并结款，选项本身跟单选时一样，只是勾选结果是个数组
 const brandTeamOptions = ref([])
-// 编辑态：团队已锁定不可再改，直接展示当前值即可，不需要按品牌方重新拉取选项
+// 编辑态：团队范围已锁定不可再改，直接用父组件传入的完整团队列表展示当前值即可，
+// 不需要按品牌方重新拉取选项
 const availableTeams = computed(() =>
   form.id ? props.teams.map(t => ({ teamId: t.id, teamName: t.name })) : brandTeamOptions.value)
 
-// 团队选项有多个（含"不选团队"）时，teamId=null 既可能是"用户还没选"也可能是"明确选了不选团队"，
-// 这两种情况不能靠 teamId 的值本身区分，所以单独记一个是否已经操作过团队选择框的标记，
-// 避免在真正选完团队之前就能点"选择涉及的红人视频项目"
-const teamTouched = ref(false)
+// 提交给后端 / 传给选择弹窗用的团队范围：把哨兵值换回 null
+const requestTeamIds = computed(() => form.teamIds.map(v => v === NO_TEAM ? null : v))
 
 async function onBrandChange(brandId) {
-  form.teamId = null
+  form.teamIds = []
   form.selectedItems = []
   brandTeamOptions.value = []
-  teamTouched.value = false
   if (!brandId) return
   const res = await brandApi.teamOptions(brandId)
   brandTeamOptions.value = res.data || []
@@ -186,22 +191,19 @@ async function onBrandChange(brandId) {
 
 function onTeamChange() {
   form.selectedItems = []
-  teamTouched.value = true
 }
 
 // 团队只有1个选项时自动带入（不管是不是"不选团队"这个唯一选项），0个或多个都不自动填
 watch(() => availableTeams.value, opts => {
-  if (!form.id && opts.length === 1) {
-    form.teamId = opts[0].teamId ?? null
-    teamTouched.value = true
+  if (!form.id && opts.length === 1 && form.teamIds.length === 0) {
+    form.teamIds = [opts[0].teamId ?? NO_TEAM]
   }
 })
 
-const teamResolved = computed(() => !!form.id || availableTeams.value.length <= 1 || teamTouched.value)
-// 结算月份不参与候选查询（只在确认勾选后取汇率、以及最终保存时才需要），
-// 不应该拦住"选择涉及的红人视频项目"——之前误加了这个条件，导致选完品牌方（哪怕团队
-// 只有唯一"不选团队"选项已经自动带出）后，按钮仍然是禁用状态
-const canOpenSelector = computed(() => !!form.brandId && teamResolved.value)
+// 结算月份不参与候选查询（只在确认勾选后取汇率、以及最终保存时才需要），不应该拦住
+// "选择涉及的红人视频项目"——之前误加了这个条件，导致选完品牌方（哪怕团队已经自动选好）后，
+// 按钮仍然是禁用状态
+const canOpenSelector = computed(() => !!form.brandId && (!!form.id || form.teamIds.length > 0))
 
 const brandCycleHint = computed(() => {
   const brand = props.brands.find(b => b.id === form.brandId)
@@ -264,20 +266,19 @@ function recomputeRmb() {
 async function syncFromRecord(rec) {
   if (!rec) {
     Object.assign(form, {
-      id:null, brandId:null, teamId:null, reconcileDate:null,
+      id:null, brandId:null, teamIds:[], reconcileDate:null,
       settlementMonth:null, settlementMonthVal:null,
       selectedItems:[], cooperationQuantity:null, payableAmount:null,
       exchangeRate:null, rmbAmount:null, expectedPaymentDate:null,
       paymentStatus:'PENDING', actualPaymentDate:null, notes:''
     })
     brandTeamOptions.value = []
-    teamTouched.value = false
     return
   }
   Object.assign(form, {
     id: rec.id,
     brandId: rec.brandId || null,
-    teamId:  rec.teamId  || null,
+    teamIds: (rec.teamIds || []).map(v => v === null ? NO_TEAM : v),
     reconcileDate: rec.reconcileDate ? formatDate(rec.reconcileDate) : null,
     settlementMonth: rec.settlementMonth, settlementMonthVal: rec.settlementMonth,
     cooperationQuantity: rec.cooperationQuantity, payableAmount: rec.payableAmount,
@@ -309,7 +310,7 @@ async function handleSave() {
     await paymentApi.save({
       id: form.id,
       brandId: form.brandId,
-      teamId: form.teamId,
+      teamIds: requestTeamIds.value,
       reconcileDate: form.reconcileDate,
       settlementMonth: form.settlementMonth,
       collaborationTrackingIds: form.selectedItems.map(i => i.trackingId),
