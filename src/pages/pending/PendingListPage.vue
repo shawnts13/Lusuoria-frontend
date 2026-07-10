@@ -84,7 +84,8 @@ const rejectNote = ref('')
 const rejectTarget = ref(null)
 
 const columns = [
-  { title: '类别',       key: 'category',   width: 140 },
+  // 宽度按最长标签"视频项目进度倒退审核"留够空间（tag 组件不换行，太窄会被裁切显示不全）
+  { title: '类别',       key: 'category',   width: 200 },
   { title: '所属模块',   key: 'targetModule', width: 120 },
   { title: '摘要',       dataIndex: 'targetSummary', key: 'targetSummary', width: 200 },
   { title: '内部项目编号', dataIndex: 'targetInternalProjectNo', key: 'targetInternalProjectNo', width: 200 },

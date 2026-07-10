@@ -287,14 +287,16 @@ const filters = reactive({
 // 列定义（按新顺序）
 const allColumns = [
   { title: '品牌方-团队',   key: 'brandTeamPairs',  width: 220 },
-  { title: '红人类型',      key: 'influencerType',  width: 130 },
+  // 宽度按最长标签"境外红人（在华）"留够空间（tag 组件不换行，太窄会被裁切显示不全）
+  { title: '红人类型',      key: 'influencerType',  width: 150 },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
   { title: '平台',          key: 'platform',        width: 120 },
   { title: '主页链接',      key: 'links',           width: 220 },
   { title: '所属领域',      key: 'domains',         width: 130 },
   { title: '粉丝量',        key: 'followerCount',   width: 90,  sorter: true, dataIndex: 'followerCount' },
-  { title: '建联情况',      key: 'contactStatus',   width: 120 },
+  // 宽度按最长标签"已回复开发信"留够空间
+  { title: '建联情况',      key: 'contactStatus',   width: 140 },
   { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90 },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },

@@ -292,8 +292,10 @@ const allColumns = [
   { title: '视频发布链接',  key: 'publishLink',    width: 220 },
   { title: '视频发布时间',  key: 'publishDate',    width: 110, sorter: true },
   { title: '创建时间',      key: 'createdAt',      width: 150, sorter: true },
-  { title: '视频项目进度',  key: 'progress',       width: 150, sorter: true },
-  { title: '红人结款进度',  key: 'influencerPaymentProgress', width: 150 },
+  // 宽度按各自最长的标签留够空间（tag 组件内部不换行，太窄会被裁切显示不全）：
+  // 视频项目进度最长"已加入客户未结算列表"，红人结款进度最长"已纳入红人结款批次（缺少invoice）"
+  { title: '视频项目进度',  key: 'progress',       width: 180, sorter: true },
+  { title: '红人结款进度',  key: 'influencerPaymentProgress', width: 260 },
   { title: '项目视频类型',  key: 'videoType',      width: 120, sorter: true },
   { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
