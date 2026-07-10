@@ -4,47 +4,52 @@
       <span class="page-title">待处理</span>
     </div>
 
-    <div class="filter-bar">
-      <a-select v-model:value="filters.category" placeholder="类别" style="width:180px"
-        allow-clear @change="loadData">
-        <a-select-option value="DELETE_REQUEST">删除审核</a-select-option>
-        <a-select-option value="PROGRESS_ROLLBACK">视频项目进度倒退审核</a-select-option>
-      </a-select>
-      <a-button @click="loadData">刷新</a-button>
-    </div>
+    <!-- 进度提醒："管理层"员工角色可见（不是按登录账号的 ADMIN/STAFF 角色） -->
+    <ProgressReminderSection v-if="authStore.isManagement" />
 
-    <div class="table-card">
-      <a-table :columns="columns" :data-source="list" :loading="loading"
-        row-key="id" size="middle" :pagination="pagination" @change="onTableChange">
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'category'">
-            <a-tag color="orange">{{ categoryLabel(record.category) }}</a-tag>
+    <template v-if="authStore.isAdmin">
+      <div class="filter-bar">
+        <a-select v-model:value="filters.category" placeholder="类别" style="width:180px"
+          allow-clear @change="loadData">
+          <a-select-option value="DELETE_REQUEST">删除审核</a-select-option>
+          <a-select-option value="PROGRESS_ROLLBACK">视频项目进度倒退审核</a-select-option>
+        </a-select>
+        <a-button @click="loadData">刷新</a-button>
+      </div>
+
+      <div class="table-card">
+        <a-table :columns="columns" :data-source="list" :loading="loading"
+          row-key="id" size="middle" :pagination="pagination" @change="onTableChange">
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'category'">
+              <a-tag color="orange">{{ categoryLabel(record.category) }}</a-tag>
+            </template>
+            <template v-if="column.key === 'targetModule'">
+              {{ moduleLabel(record.targetModule) }}
+            </template>
+            <template v-if="column.key === 'requestedChange'">
+              <span v-if="record.category === 'PROGRESS_ROLLBACK'">
+                视频项目进度 → {{ getLabel('collab_progress', record.requestedProgress) }}
+                <span style="color:#888">（红人结款进度将清空）</span>
+              </span>
+              <span v-else style="color:#bbb">—</span>
+            </template>
+            <template v-if="column.key === 'detail'">
+              <a :href="detailLink(record)" target="_blank" rel="noopener">查看详情</a>
+            </template>
+            <template v-if="column.key === 'action'">
+              <a-space>
+                <a-popconfirm :title="approveConfirmText(record)" @confirm="handleApprove(record)">
+                  <a style="color:#52c41a">同意</a>
+                </a-popconfirm>
+                <a-divider type="vertical" />
+                <a style="color:#ff4d4f" @click="openReject(record)">拒绝</a>
+              </a-space>
+            </template>
           </template>
-          <template v-if="column.key === 'targetModule'">
-            {{ moduleLabel(record.targetModule) }}
-          </template>
-          <template v-if="column.key === 'requestedChange'">
-            <span v-if="record.category === 'PROGRESS_ROLLBACK'">
-              视频项目进度 → {{ getLabel('collab_progress', record.requestedProgress) }}
-              <span style="color:#888">（红人结款进度将清空）</span>
-            </span>
-            <span v-else style="color:#bbb">—</span>
-          </template>
-          <template v-if="column.key === 'detail'">
-            <a :href="detailLink(record)" target="_blank" rel="noopener">查看详情</a>
-          </template>
-          <template v-if="column.key === 'action'">
-            <a-space>
-              <a-popconfirm :title="approveConfirmText(record)" @confirm="handleApprove(record)">
-                <a style="color:#52c41a">同意</a>
-              </a-popconfirm>
-              <a-divider type="vertical" />
-              <a style="color:#ff4d4f" @click="openReject(record)">拒绝</a>
-            </a-space>
-          </template>
-        </template>
-      </a-table>
-    </div>
+        </a-table>
+      </div>
+    </template>
 
     <a-modal v-model:open="rejectVisible" title="拒绝申请" @ok="handleReject" :confirm-loading="rejecting">
       <a-form layout="vertical">
@@ -62,7 +67,10 @@ import { message } from 'ant-design-vue'
 import { pendingApprovalApi } from '../../api/index'
 import { formatDateTime } from '../../utils/dateFormat'
 import { useOptions } from '../../composables/useOptions'
+import { useAuthStore } from '../../store/auth'
+import ProgressReminderSection from './ProgressReminderSection.vue'
 
+const authStore = useAuthStore()
 const { getLabel } = useOptions()
 
 const loading = ref(false)
@@ -144,5 +152,7 @@ async function handleReject() {
   } finally { rejecting.value = false }
 }
 
-onMounted(loadData)
+// 审批列表只有 ADMIN 能看，非 ADMIN 的"管理层"用户进这个页面只是为了看进度提醒，
+// 不应该去调 /api/pending-approvals（后端是 hasRole('ADMIN')，会报无权限）
+onMounted(() => { if (authStore.isAdmin) loadData() })
 </script>

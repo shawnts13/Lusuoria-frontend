@@ -25,7 +25,9 @@ const routes = [
         path: 'pending',
         name: 'Pending',
         component: () => import('./pages/pending/PendingListPage.vue'),
-        meta: { adminOnly: true }
+        // ADMIN 能看"待处理"审批列表，"管理层"（员工角色，见 isManagement）能看"进度提醒"，
+        // 两者满足其一就能进页面，页面内部再各自控制具体区块的可见性
+        meta: { pendingAccess: true }
       },
       { path: 'brands',      name: 'Brands',      component: () => import('./pages/brand/BrandListPage.vue') },
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },
@@ -55,6 +57,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const role  = localStorage.getItem('role')
+  const isManagement = localStorage.getItem('isManagement') === 'true'
 
   if (!to.meta.public && !token) {
     next('/login')
@@ -71,6 +74,11 @@ router.beforeEach((to, from, next) => {
   }
   // 账号管理：仅 ADMIN
   if (to.meta.adminOnly && role !== 'ADMIN') {
+    next('/collaborations')
+    return
+  }
+  // 待处理：ADMIN（审批列表）或"管理层"员工角色（进度提醒）
+  if (to.meta.pendingAccess && role !== 'ADMIN' && !isManagement) {
     next('/collaborations')
     return
   }

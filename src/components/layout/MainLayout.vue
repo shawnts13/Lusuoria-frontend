@@ -18,8 +18,8 @@
           <template #icon><PayCircleOutlined /></template>红人结款
         </a-menu-item>
 
-        <!-- 待处理（目前只有删除审核）仅 ADMIN 可见 -->
-        <a-menu-item v-if="authStore.isAdmin" key="/pending">
+        <!-- 待处理：ADMIN 能看审批列表，"管理层"员工角色能看进度提醒 -->
+        <a-menu-item v-if="authStore.canAccessPending" key="/pending">
           <template #icon><ExclamationCircleOutlined /></template>待处理
         </a-menu-item>
 
@@ -115,6 +115,9 @@
       </a-form-item>
     </a-form>
   </a-modal>
+
+  <!-- "进度提醒"登录弹窗：仅"管理层"员工角色触发，组件内部自行判断是否需要弹出 -->
+  <ProgressReminderPopup />
 </template>
 
 <script setup>
@@ -130,6 +133,7 @@ import {
 } from '@ant-design/icons-vue'
 import { useAuthStore, clearAllCache } from '../../store/auth'
 import { userApi } from '../../api/index'
+import ProgressReminderPopup from '../../pages/pending/ProgressReminderPopup.vue'
 
 const router    = useRouter()
 const route     = useRoute()

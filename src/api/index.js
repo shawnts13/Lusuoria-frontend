@@ -197,3 +197,12 @@ export const pendingApprovalApi = {
   approve: (id)         => http.post(`/api/pending-approvals/${id}/approve`),
   reject:  (id, note)   => http.post(`/api/pending-approvals/${id}/reject`, { note })
 }
+
+// ===== 进度提醒 =====
+export const progressReminderApi = {
+  list:         ()   => http.get('/api/progress-reminders'),
+  details:      (id) => http.get(`/api/progress-reminders/${id}/details`),
+  recompute:    ()   => http.post('/api/progress-reminders/recompute'),
+  popupCheck:   ()   => http.get('/api/progress-reminders/popup-check'),
+  popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss')
+}

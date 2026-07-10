@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.32.0'
-export const APP_VERSION_TIME = '2026-07-10 12:00'
+export const APP_VERSION = '1.33.0'
+export const APP_VERSION_TIME = '2026-07-10 18:00'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -30,7 +30,7 @@ export function clearAllCache() {
   // 清除 sessionStorage（useOptions 缓存等）
   sessionStorage.clear()
   // 清除 localStorage 里的缓存（保留登录状态）
-  const keep = ['token', 'username', 'displayName', 'role', VERSION_KEY]
+  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', VERSION_KEY]
   Object.keys(localStorage).forEach(key => {
     if (!keep.includes(key)) localStorage.removeItem(key)
   })
@@ -41,7 +41,9 @@ export const useAuthStore = defineStore('auth', {
     token:       localStorage.getItem('token')       || null,
     username:    localStorage.getItem('username')    || null,
     displayName: localStorage.getItem('displayName') || null,
-    role:        localStorage.getItem('role')        || null
+    role:        localStorage.getItem('role')        || null,
+    // "进度提醒"功能受众：登录账号关联的员工角色是不是"管理层"，跟 role（ADMIN/STAFF/...）无关
+    isManagement: localStorage.getItem('isManagement') === 'true'
   }),
 
   getters: {
@@ -58,27 +60,33 @@ export const useAuthStore = defineStore('auth', {
     // "基础"财务字段（红人成本/客户合作价格/已到账金额等）：除 GUEST 外都能看，
     // 比 canViewFinancials 宽松——那个仍然只有 ADMIN/AUDITOR 能看利润/提成这类真正敏感的字段
     canViewBaselineFinancials: (state) => state.role !== 'GUEST',
-    canEditCommission: (state) => state.role === 'ADMIN'
+    canEditCommission: (state) => state.role === 'ADMIN',
+    // "待处理"页面：ADMIN 能看审批列表，"管理层"（员工角色）能看进度提醒，两者满足其一即可进页面
+    canAccessPending: (state) => state.role === 'ADMIN' || state.isManagement
   },
 
   actions: {
     async login(username, password) {
       const res = await authApi.login({ username, password })
-      this.token       = res.data.token
-      this.username    = res.data.username
-      this.displayName = res.data.displayName
-      this.role        = res.data.role
-      localStorage.setItem('token',       this.token)
-      localStorage.setItem('username',    this.username)
-      localStorage.setItem('displayName', this.displayName)
-      localStorage.setItem('role',        this.role)
+      this.token        = res.data.token
+      this.username     = res.data.username
+      this.displayName  = res.data.displayName
+      this.role         = res.data.role
+      this.isManagement = !!res.data.isManagement
+      localStorage.setItem('token',        this.token)
+      localStorage.setItem('username',     this.username)
+      localStorage.setItem('displayName',  this.displayName)
+      localStorage.setItem('role',         this.role)
+      localStorage.setItem('isManagement', String(this.isManagement))
     },
     logout() {
       this.token = this.username = this.displayName = this.role = null
+      this.isManagement = false
       localStorage.removeItem('token')
       localStorage.removeItem('username')
       localStorage.removeItem('displayName')
       localStorage.removeItem('role')
+      localStorage.removeItem('isManagement')
     }
   }
 })
