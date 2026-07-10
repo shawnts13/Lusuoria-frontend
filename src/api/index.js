@@ -103,18 +103,12 @@ export const paymentApi = {
   save:    (data)   => http.post('/api/influencer-payments', data),
   delete:  (id)     => http.delete(`/api/influencer-payments/${id}`),
   updateStatus: (id, data) => http.patch(`/api/influencer-payments/${id}/status`, data),
+  candidates: (params) => http.get('/api/influencer-payments/candidates', { params }),
+  items:      (id)     => http.get(`/api/influencer-payments/${id}/items`),
 
   exportExcel: (settlementMonth) => downloadWithAuth(
     `${BASE}/api/influencer-payments/export/excel${settlementMonth ? '?settlementMonth=' + settlementMonth : ''}`,
-    `红人结款_${settlementMonth || 'all'}.xlsx`),
-
-  downloadTemplate: () => downloadWithAuth(
-    `${BASE}/api/influencer-payments/import/template`, '红人结款导入模板.xlsx'),
-
-  importExcel: (form) => http.post('/api/influencer-payments/import/excel', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000
-  })
+    `红人结款_${settlementMonth || 'all'}.xlsx`)
 }
 
 // ===== Collaboration Trackings =====

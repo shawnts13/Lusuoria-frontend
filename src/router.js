@@ -20,7 +20,13 @@ const routes = [
       },
       { path: 'collaborations', name: 'Collaborations', component: () => import('./pages/collaboration/CollaborationListPage.vue') },
       { path: 'import-batches', name: 'ImportBatches', component: () => import('./pages/collaboration/ImportBatchListPage.vue') },
-      { path: 'payments',    name: 'Payments',    component: () => import('./pages/payment/PaymentListPage.vue') },
+      {
+        path: 'payments',
+        name: 'Payments',
+        component: () => import('./pages/payment/PaymentListPage.vue'),
+        // 严格按员工角色（管理层/财务/法务）判断，跟 ADMIN/AUDITOR 等 role 无关，见 store/auth.js canAccessPayments
+        meta: { paymentAccess: true }
+      },
       {
         path: 'pending',
         name: 'Pending',
@@ -58,6 +64,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const role  = localStorage.getItem('role')
   const isManagement = localStorage.getItem('isManagement') === 'true'
+  const employeeRole = localStorage.getItem('employeeRole')
 
   if (!to.meta.public && !token) {
     next('/login')
@@ -79,6 +86,11 @@ router.beforeEach((to, from, next) => {
   }
   // 待处理：ADMIN（审批列表）或"管理层"员工角色（进度提醒）
   if (to.meta.pendingAccess && role !== 'ADMIN' && !isManagement) {
+    next('/collaborations')
+    return
+  }
+  // 红人结款：严格按员工角色（管理层/财务/法务），跟 ADMIN/AUDITOR 等 role 无关
+  if (to.meta.paymentAccess && !['管理层', '财务', '法务'].includes(employeeRole)) {
     next('/collaborations')
     return
   }

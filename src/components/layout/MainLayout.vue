@@ -14,7 +14,8 @@
         <a-menu-item key="/collaborations">
           <template #icon><SolutionOutlined /></template>红人合作跟踪
         </a-menu-item>
-        <a-menu-item key="/payments">
+        <!-- 红人结款：严格按员工角色（管理层/财务/法务）可见，跟 ADMIN/AUDITOR 等 role 无关 -->
+        <a-menu-item v-if="authStore.canAccessPayments" key="/payments">
           <template #icon><PayCircleOutlined /></template>红人结款
         </a-menu-item>
 

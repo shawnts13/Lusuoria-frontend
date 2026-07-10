@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.34.1'
-export const APP_VERSION_TIME = '2026-07-10 21:30'
+export const APP_VERSION = '1.35.0'
+export const APP_VERSION_TIME = '2026-07-10 22:30'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -30,7 +30,7 @@ export function clearAllCache() {
   // 清除 sessionStorage（useOptions 缓存等）
   sessionStorage.clear()
   // 清除 localStorage 里的缓存（保留登录状态）
-  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', VERSION_KEY]
+  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', 'employeeRole', VERSION_KEY]
   Object.keys(localStorage).forEach(key => {
     if (!keep.includes(key)) localStorage.removeItem(key)
   })
@@ -43,7 +43,9 @@ export const useAuthStore = defineStore('auth', {
     displayName: localStorage.getItem('displayName') || null,
     role:        localStorage.getItem('role')        || null,
     // "进度提醒"功能受众：登录账号关联的员工角色是不是"管理层"，跟 role（ADMIN/STAFF/...）无关
-    isManagement: localStorage.getItem('isManagement') === 'true'
+    isManagement: localStorage.getItem('isManagement') === 'true',
+    // "红人结款"模块受众：登录账号关联的员工角色原值（管理层/财务/法务/...），跟 role 无关
+    employeeRole: localStorage.getItem('employeeRole') || null
   }),
 
   getters: {
@@ -62,7 +64,11 @@ export const useAuthStore = defineStore('auth', {
     canViewBaselineFinancials: (state) => state.role !== 'GUEST',
     canEditCommission: (state) => state.role === 'ADMIN',
     // "待处理"页面：ADMIN 能看审批列表，"管理层"（员工角色）能看进度提醒，两者满足其一即可进页面
-    canAccessPending: (state) => state.role === 'ADMIN' || state.isManagement
+    canAccessPending: (state) => state.role === 'ADMIN' || state.isManagement,
+    // "红人结款"模块：严格按员工角色判断，跟 role（ADMIN/AUDITOR/...）无关——
+    // 没有关联"管理层/财务/法务"这三个员工角色之一的账号，完全看不到这个模块
+    canAccessPayments: (state) => ['管理层', '财务', '法务'].includes(state.employeeRole),
+    canManagePayments: (state) => state.employeeRole === '管理层'
   },
 
   actions: {
@@ -73,20 +79,25 @@ export const useAuthStore = defineStore('auth', {
       this.displayName  = res.data.displayName
       this.role         = res.data.role
       this.isManagement = !!res.data.isManagement
+      this.employeeRole = res.data.employeeRole || null
       localStorage.setItem('token',        this.token)
       localStorage.setItem('username',     this.username)
       localStorage.setItem('displayName',  this.displayName)
       localStorage.setItem('role',         this.role)
       localStorage.setItem('isManagement', String(this.isManagement))
+      if (this.employeeRole) localStorage.setItem('employeeRole', this.employeeRole)
+      else localStorage.removeItem('employeeRole')
     },
     logout() {
       this.token = this.username = this.displayName = this.role = null
       this.isManagement = false
+      this.employeeRole = null
       localStorage.removeItem('token')
       localStorage.removeItem('username')
       localStorage.removeItem('displayName')
       localStorage.removeItem('role')
       localStorage.removeItem('isManagement')
+      localStorage.removeItem('employeeRole')
     }
   }
 })
