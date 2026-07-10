@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.36.0'
-export const APP_VERSION_TIME = '2026-07-11 00:30'
+export const APP_VERSION = '1.37.0'
+export const APP_VERSION_TIME = '2026-07-11 01:30'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -68,7 +68,9 @@ export const useAuthStore = defineStore('auth', {
     // "红人结款"模块：严格按员工角色判断，跟 role（ADMIN/AUDITOR/...）无关——
     // 没有关联"管理层/财务/法务"这三个员工角色之一的账号，完全看不到这个模块
     canAccessPayments: (state) => ['管理层', '财务', '法务'].includes(state.employeeRole),
-    canManagePayments: (state) => state.employeeRole === '管理层'
+    canManagePayments: (state) => state.employeeRole === '管理层',
+    // "品牌方管理"页面：严格按员工角色判断，只有"管理层"能访问（2026-07 起）
+    canAccessBrands: (state) => state.employeeRole === '管理层'
   },
 
   actions: {

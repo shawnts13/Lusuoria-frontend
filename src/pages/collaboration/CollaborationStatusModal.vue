@@ -16,13 +16,19 @@
         </a-select>
       </a-form-item>
       <a-form-item label="红人结款进度">
-        <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
-          allow-clear :disabled="!paymentProgressEnabled">
-          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-        </a-select>
-        <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
-          仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
-        </div>
+        <template v-if="isSystemManagedCurrent">
+          <a-input :value="getLabel('influencer_payment_progress', original.paymentProgress)" disabled />
+          <div style="font-size:12px;color:#ff4d4f;margin-top:2px">此状态仅能由管理层通过"红人结款"功能设置</div>
+        </template>
+        <template v-else>
+          <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
+            allow-clear :disabled="!paymentProgressEnabled">
+            <a-select-option v-for="o in selectablePaymentProgressOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          </a-select>
+          <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+            仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
+          </div>
+        </template>
       </a-form-item>
       <div v-if="willAutoFillPublishDate" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         该记录尚未填写"视频发布时间"，保存后系统将自动填上今天的日期
@@ -44,7 +50,7 @@ import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 
-const { getOptions } = useOptions()
+const { getOptions, getLabel } = useOptions()
 
 const props = defineProps({
   visible: Boolean,
@@ -56,6 +62,12 @@ const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 function qualifies(v) { return !!v && QUALIFYING_PROGRESS.includes(v) }
 
+// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置，状态流转这里既不让选中，
+// 也不提供在下拉选项里，跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
+const SYSTEM_MANAGED_PROGRESS = ['INCLUDED_IN_PAYMENT_BATCH', 'INCLUDED_IN_PAYMENT_BATCH_MISSING_INVOICE']
+const selectablePaymentProgressOptions = computed(() =>
+  getOptions('influencer_payment_progress').filter(o => !SYSTEM_MANAGED_PROGRESS.includes(o.value)))
+
 const progress = ref(null)
 const paymentProgress = ref(null)
 const reason = ref('')
@@ -64,6 +76,9 @@ const saving = ref(false)
 // 弹窗打开那一刻的原始值，用来判断这次改动算不算"倒退"（不随下面 progress/paymentProgress 的
 // 实时编辑而变化，保证即使中途改来改去，isRollback 判断的始终是"跟数据库原值相比"）
 const original = reactive({ progress: null, paymentProgress: null })
+
+// 这条记录数据库里现在就是"已纳入结款批次"状态：直接锁死展示，不给编辑入口
+const isSystemManagedCurrent = computed(() => SYSTEM_MANAGED_PROGRESS.includes(original.paymentProgress))
 
 watch(() => props.visible, v => {
   if (v && props.record) {

@@ -102,7 +102,7 @@
           <a-form-item label="红人结款进度">
             <a-select v-model:value="form.influencerPaymentProgress" allow-clear placeholder="选择红人结款进度"
               :disabled="!!form.id || !paymentProgressEnabled">
-              <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+              <a-select-option v-for="o in selectablePaymentProgressOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
             </a-select>
             <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">红人结款进度请使用"状态流转"功能修改</div>
             <div v-else-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
@@ -356,6 +356,12 @@ const executorCandidates = computed(() =>
 // 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 const paymentProgressEnabled = computed(() => !!form.progress && QUALIFYING_PROGRESS.includes(form.progress))
+
+// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置，新建表单不提供这两个选项，
+// 跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
+const SYSTEM_MANAGED_PROGRESS = ['INCLUDED_IN_PAYMENT_BATCH', 'INCLUDED_IN_PAYMENT_BATCH_MISSING_INVOICE']
+const selectablePaymentProgressOptions = computed(() =>
+  getOptions('influencer_payment_progress').filter(o => !SYSTEM_MANAGED_PROGRESS.includes(o.value)))
 watch(() => form.progress, () => {
   if (!paymentProgressEnabled.value) form.influencerPaymentProgress = null
 })

@@ -9,7 +9,7 @@
         <a-button @click="brandApi.exportExcel()">
           <template #icon><ExportOutlined /></template>Excel 导出
         </a-button>
-        <template v-if="authStore.canWrite">
+        <template v-if="authStore.canAccessBrands">
           <a-upload :before-upload="handleImport" :show-upload-list="false" accept=".xlsx,.xls">
             <a-button><template #icon><UploadOutlined /></template>Excel 导入</a-button>
           </a-upload>
@@ -24,7 +24,7 @@
       <a-table :columns="columns" :data-source="list" :loading="loading" row-key="id" size="middle">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
-            <a-space v-if="authStore.canWrite">
+            <a-space v-if="authStore.canAccessBrands">
               <a @click="openEdit(record)">编辑</a>
               <a-divider type="vertical" />
               <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">

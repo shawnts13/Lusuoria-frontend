@@ -26,11 +26,12 @@
 
         <a-menu-divider />
 
+        <!-- 品牌方管理：严格按员工角色，只有"管理层"可见（2026-07 起） -->
+        <a-menu-item v-if="authStore.canAccessBrands" key="/brands">
+          <template #icon><ShopOutlined /></template>品牌方管理
+        </a-menu-item>
         <!-- 审计员隐藏以下基础数据管理 -->
         <template v-if="!authStore.isAuditor">
-          <a-menu-item key="/brands">
-            <template #icon><ShopOutlined /></template>品牌方管理
-          </a-menu-item>
           <a-menu-item key="/influencers">
             <template #icon><TeamOutlined /></template>红人管理
           </a-menu-item>

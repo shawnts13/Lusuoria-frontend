@@ -6,16 +6,20 @@
       <strong>{{ fmtNum(selectedAmount) }}</strong> 美元
     </div>
 
-    <a-table :columns="columns" :data-source="list" :loading="loading" row-key="trackingId"
+    <div class="filter-bar">
+      <a-select v-model:value="accountFilter" placeholder="红人社媒完整名字" allow-clear show-search
+        style="width:220px" :options="accountOptions" />
+    </div>
+
+    <a-table :columns="columns" :data-source="filteredList" :loading="loading" row-key="trackingId"
       size="small" :pagination="false" :scroll="{ x: 1500, y: 480 }"
-      :row-class-name="rowClassName"
       :row-selection="mode === 'select' ? rowSelection : undefined">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'influencerCost'">
           {{ record.influencerCost != null ? fmtNum(record.influencerCost) : '—' }}
         </template>
         <template v-if="column.key === 'paymentProgressLabel'">
-          <span v-if="record.invoiceWarning" class="invoice-warning"
+          <span v-if="record.invoiceWarning" class="invoice-warning-cell"
             title="该视频项目未提供invoice，为方便后续审计，需提醒相关负责人催促对应红人">
             <ExclamationCircleFilled /> {{ record.paymentProgressLabel || '—' }}
           </span>
@@ -63,6 +67,7 @@ const emit = defineEmits(['update:visible', 'confirm'])
 const loading = ref(false)
 const list = ref([])
 const selectedRowKeys = ref([])
+const accountFilter = ref(undefined)
 
 const columns = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 },
@@ -87,12 +92,21 @@ const selectedAmount = computed(() => {
     .reduce((sum, r) => sum + (r.influencerCost != null ? +r.influencerCost : 0), 0)
 })
 
+// 按"红人社媒完整名字"筛选，方便管理层按红人扫视整批记录；不筛选时保持后端算好的默认顺序
+// （也是按这个维度排序的）。筛选只影响表格展示，已勾选的状态（selectedRowKeys）不受影响，
+// 切换/清空筛选后之前勾选的记录依然是选中的
+const accountOptions = computed(() => {
+  const names = [...new Set(list.value.map(r => r.accountName).filter(Boolean))].sort()
+  return names.map(n => ({ value: n, label: n }))
+})
+const filteredList = computed(() => {
+  if (!accountFilter.value) return list.value
+  return list.value.filter(r => r.accountName === accountFilter.value)
+})
+
 function fmtNum(v) {
   if (v == null) return '—'
   return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-function rowClassName(record) {
-  return record.invoiceWarning ? 'invoice-warning-row' : ''
 }
 
 const rowSelection = computed(() => ({
@@ -102,6 +116,7 @@ const rowSelection = computed(() => ({
 
 async function load() {
   loading.value = true
+  accountFilter.value = undefined
   try {
     if (props.mode === 'view') {
       const res = await paymentApi.items(props.existingPaymentId)
@@ -132,6 +147,9 @@ async function load() {
     // 条目需要单独查出来合并进来（默认勾选），避免编辑时"看不到自己已经选过的项目"
     const existingIds = new Set(existingItems.map(i => i.trackingId))
     items = [...existingItems, ...items.filter(i => !existingIds.has(i.trackingId))]
+    // 合并后重新按红人社媒完整名字排序一遍——上面 existingItems 排在前面会打乱顺序，
+    // 默认（不筛选）就该是按这个维度排序，跟后端 candidates/items 接口的默认顺序保持一致
+    items.sort((a, b) => (a.accountName || '').localeCompare(b.accountName || ''))
 
     list.value = items
     selectedRowKeys.value = items.filter(i => i.defaultChecked || existingIds.has(i.trackingId))
@@ -173,9 +191,13 @@ function doConfirm(selected) {
 
 <style scoped>
 .summary-bar { margin-bottom: 12px; font-size: 14px; }
+.filter-bar { margin-bottom: 12px; }
 .footer-bar { margin-top: 16px; text-align: right; }
-.invoice-warning { color: #ff4d4f; }
-:deep(.invoice-warning-row td) {
-  box-shadow: inset 0 0 0 1px #ff4d4f;
+.invoice-warning-cell {
+  display: inline-block;
+  color: #ff4d4f;
+  border: 1px solid #ff4d4f;
+  border-radius: 4px;
+  padding: 1px 6px;
 }
 </style>

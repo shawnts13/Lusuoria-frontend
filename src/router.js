@@ -35,7 +35,13 @@ const routes = [
         // 两者满足其一就能进页面，页面内部再各自控制具体区块的可见性
         meta: { pendingAccess: true }
       },
-      { path: 'brands',      name: 'Brands',      component: () => import('./pages/brand/BrandListPage.vue') },
+      {
+        path: 'brands',
+        name: 'Brands',
+        component: () => import('./pages/brand/BrandListPage.vue'),
+        // 严格按员工角色判断，只有"管理层"能访问，见 store/auth.js canAccessBrands
+        meta: { brandAccess: true }
+      },
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },
       { path: 'employees',   name: 'Employees',   component: () => import('./pages/employee/EmployeeListPage.vue') },
       {
@@ -91,6 +97,11 @@ router.beforeEach((to, from, next) => {
   }
   // 红人结款：严格按员工角色（管理层/财务/法务），跟 ADMIN/AUDITOR 等 role 无关
   if (to.meta.paymentAccess && !['管理层', '财务', '法务'].includes(employeeRole)) {
+    next('/collaborations')
+    return
+  }
+  // 品牌方管理：严格按员工角色，只有"管理层"
+  if (to.meta.brandAccess && employeeRole !== '管理层') {
     next('/collaborations')
     return
   }
