@@ -102,12 +102,20 @@
           <a-form-item label="红人结款进度">
             <a-select v-model:value="form.influencerPaymentProgress" allow-clear placeholder="选择红人结款进度"
               :disabled="!!form.id || !paymentProgressEnabled">
-              <a-select-option v-for="o in selectablePaymentProgressOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+              <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value"
+                :disabled="SYSTEM_MANAGED_PROGRESS.includes(o.value)">
+                {{ o.label }}
+              </a-select-option>
             </a-select>
             <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">红人结款进度请使用"状态流转"功能修改</div>
-            <div v-else-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
-              仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
-            </div>
+            <template v-else>
+              <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+                仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
+              </div>
+              <div style="font-size:12px;color:#ff4d4f;margin-top:2px">
+                "已纳入红人结款批次"/"已纳入红人结款批次（缺少invoice）"仅能由管理层通过"红人结款"功能设置，此处无法选中
+              </div>
+            </template>
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -357,11 +365,9 @@ const executorCandidates = computed(() =>
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 const paymentProgressEnabled = computed(() => !!form.progress && QUALIFYING_PROGRESS.includes(form.progress))
 
-// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置，新建表单不提供这两个选项，
-// 跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
+// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置：选项本身仍然展示出来（不隐藏），
+// 只是单独禁用这两项，不让用户选中，跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
 const SYSTEM_MANAGED_PROGRESS = ['INCLUDED_IN_PAYMENT_BATCH', 'INCLUDED_IN_PAYMENT_BATCH_MISSING_INVOICE']
-const selectablePaymentProgressOptions = computed(() =>
-  getOptions('influencer_payment_progress').filter(o => !SYSTEM_MANAGED_PROGRESS.includes(o.value)))
 watch(() => form.progress, () => {
   if (!paymentProgressEnabled.value) form.influencerPaymentProgress = null
 })

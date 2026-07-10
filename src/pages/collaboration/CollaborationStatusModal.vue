@@ -16,19 +16,19 @@
         </a-select>
       </a-form-item>
       <a-form-item label="红人结款进度">
-        <template v-if="isSystemManagedCurrent">
-          <a-input :value="getLabel('influencer_payment_progress', original.paymentProgress)" disabled />
-          <div style="font-size:12px;color:#ff4d4f;margin-top:2px">此状态仅能由管理层通过"红人结款"功能设置</div>
-        </template>
-        <template v-else>
-          <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
-            allow-clear :disabled="!paymentProgressEnabled">
-            <a-select-option v-for="o in selectablePaymentProgressOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-          </a-select>
-          <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
-            仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
-          </div>
-        </template>
+        <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
+          allow-clear :disabled="!paymentProgressEnabled || isSystemManagedCurrent">
+          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value"
+            :disabled="SYSTEM_MANAGED_PROGRESS.includes(o.value)">
+            {{ o.label }}
+          </a-select-option>
+        </a-select>
+        <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+          仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
+        </div>
+        <div style="font-size:12px;color:#ff4d4f;margin-top:2px">
+          "已纳入红人结款批次"/"已纳入红人结款批次（缺少invoice）"仅能由管理层通过"红人结款"功能设置，此处无法选中
+        </div>
       </a-form-item>
       <div v-if="willAutoFillPublishDate" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         该记录尚未填写"视频发布时间"，保存后系统将自动填上今天的日期
@@ -50,7 +50,7 @@ import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 
-const { getOptions, getLabel } = useOptions()
+const { getOptions } = useOptions()
 
 const props = defineProps({
   visible: Boolean,
@@ -62,11 +62,10 @@ const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 function qualifies(v) { return !!v && QUALIFYING_PROGRESS.includes(v) }
 
-// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置，状态流转这里既不让选中，
-// 也不提供在下拉选项里，跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
+// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置：选项本身仍然展示出来（不隐藏），
+// 但单独禁用这两项，不让用户选中；如果记录当前就是这两个状态之一，整个下拉框直接锁死
+// （不能手动改离开），跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
 const SYSTEM_MANAGED_PROGRESS = ['INCLUDED_IN_PAYMENT_BATCH', 'INCLUDED_IN_PAYMENT_BATCH_MISSING_INVOICE']
-const selectablePaymentProgressOptions = computed(() =>
-  getOptions('influencer_payment_progress').filter(o => !SYSTEM_MANAGED_PROGRESS.includes(o.value)))
 
 const progress = ref(null)
 const paymentProgress = ref(null)
