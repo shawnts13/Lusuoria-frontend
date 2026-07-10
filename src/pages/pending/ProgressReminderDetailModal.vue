@@ -5,22 +5,27 @@
       <a-select v-model:value="brandTeamFilter" placeholder="品牌方-红人团队" allow-clear
         style="width:240px" :options="brandTeamOptions" />
     </div>
-    <a-table :columns="columns" :data-source="filteredList" :loading="loading"
-      row-key="id" size="middle" :pagination="false" :scroll="{ x: 1300 }">
-      <template #summary>
-        <a-table-summary>
-          <a-table-summary-row>
-            <a-table-summary-cell :index="0" :col-span="5">
-              合计：{{ filteredList.length }} 笔
-            </a-table-summary-cell>
-            <a-table-summary-cell :index="5">
-              {{ fmtAmount(totalCost) }}
-            </a-table-summary-cell>
-            <a-table-summary-cell :index="6" :col-span="4" />
-          </a-table-summary-row>
-        </a-table-summary>
-      </template>
-    </a-table>
+    <div class="table-card" ref="tableWrapperRef">
+      <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
+        <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
+      </div>
+      <a-table :columns="columns" :data-source="filteredList" :loading="loading"
+        row-key="id" size="middle" :pagination="false" :scroll="{ x: 1300 }">
+        <template #summary>
+          <a-table-summary>
+            <a-table-summary-row>
+              <a-table-summary-cell :index="0" :col-span="5">
+                合计：{{ filteredList.length }} 笔
+              </a-table-summary-cell>
+              <a-table-summary-cell :index="5">
+                {{ fmtAmount(totalCost) }}
+              </a-table-summary-cell>
+              <a-table-summary-cell :index="6" :col-span="4" />
+            </a-table-summary-row>
+          </a-table-summary>
+        </template>
+      </a-table>
+    </div>
   </a-modal>
 </template>
 
@@ -28,6 +33,7 @@
 import { ref, computed, watch } from 'vue'
 import { progressReminderApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
+import { useTopScrollbar } from '../../composables/useTopScrollbar'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -38,6 +44,7 @@ const emit = defineEmits(['update:visible'])
 const loading = ref(false)
 const list = ref([])
 const brandTeamFilter = ref(undefined)
+const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 function fmtAmount(val) {
   if (val == null) return '—'
@@ -86,6 +93,7 @@ async function load() {
     const res = await progressReminderApi.details(props.reminderId)
     list.value = res.data || []
     brandTeamFilter.value = undefined
+    remeasure()
   } finally {
     loading.value = false
   }
