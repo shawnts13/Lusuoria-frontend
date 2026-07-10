@@ -198,7 +198,10 @@ watch(() => availableTeams.value, opts => {
 })
 
 const teamResolved = computed(() => !!form.id || availableTeams.value.length <= 1 || teamTouched.value)
-const canOpenSelector = computed(() => !!form.brandId && !!form.settlementMonth && teamResolved.value)
+// 结算月份不参与候选查询（只在确认勾选后取汇率、以及最终保存时才需要），
+// 不应该拦住"选择涉及的红人视频项目"——之前误加了这个条件，导致选完品牌方（哪怕团队
+// 只有唯一"不选团队"选项已经自动带出）后，按钮仍然是禁用状态
+const canOpenSelector = computed(() => !!form.brandId && teamResolved.value)
 
 const brandCycleHint = computed(() => {
   const brand = props.brands.find(b => b.id === form.brandId)
