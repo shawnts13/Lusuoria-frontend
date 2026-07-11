@@ -310,7 +310,6 @@ const allColumns = [
   { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160 },
   { title: '联系方式',      key: 'contacts',        width: 160 },
   { title: '已签署合同',    key: 'contractLink',    width: 100 },
-  { title: '付款周期',      dataIndex: 'paymentCycle', key: 'paymentCycle', width: 90 },
   { title: '操作',          key: 'action',          width: 120, fixed: 'right' }
 ]
 

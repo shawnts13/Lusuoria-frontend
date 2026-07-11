@@ -24,8 +24,8 @@
           :disabled="!!form.id"
           :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '可多选，多个团队会合并到同一条结款记录'"
           @change="onTeamChange">
-          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? NO_TEAM" :value="t.teamId ?? NO_TEAM" :label="t.teamName || '（不选团队）'">
-            {{ t.teamName || '（不选团队）' }}
+          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? NO_TEAM" :value="t.teamId ?? NO_TEAM" :label="t.teamName || '（不涉及团队）'">
+            {{ t.teamName || '（不涉及团队）' }}
           </a-select-option>
         </a-select>
         <div v-if="!form.id" style="font-size:12px;color:#999;margin-top:4px">
@@ -174,9 +174,13 @@ const selectorMode = computed(() => (form.id && record.value?.paymentStatus === 
 // 支持多选合并结款，选项本身跟单选时一样，只是勾选结果是个数组
 const brandTeamOptions = ref([])
 // 编辑态：团队范围已锁定不可再改，直接用父组件传入的完整团队列表展示当前值即可，
-// 不需要按品牌方重新拉取选项
+// 不需要按品牌方重新拉取选项。父组件传入的 teams 只包含真实存在的团队，不含"不涉及团队"这个
+// 选项，如果记录本身涉及"不涉及团队"（teamId 为 null），得手动把这个选项补进来，
+// 否则 a-select 找不到匹配的 option，会把内部哨兵值 NO_TEAM 原样显示出来
 const availableTeams = computed(() =>
-  form.id ? props.teams.map(t => ({ teamId: t.id, teamName: t.name })) : brandTeamOptions.value)
+  form.id
+    ? [...props.teams.map(t => ({ teamId: t.id, teamName: t.name })), { teamId: null, teamName: '' }]
+    : brandTeamOptions.value)
 
 // 提交给后端 / 传给选择弹窗用的团队范围：把哨兵值换回 null
 const requestTeamIds = computed(() => form.teamIds.map(v => v === NO_TEAM ? null : v))

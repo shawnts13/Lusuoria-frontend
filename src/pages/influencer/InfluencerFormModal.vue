@@ -94,14 +94,6 @@
             </a-select>
           </a-form-item>
 
-          <a-form-item label="付款周期">
-            <a-select v-model:value="form.paymentCycle" allow-clear>
-              <a-select-option v-for="o in getOptions('payment_cycle')" :key="o.value" :value="o.value">
-                {{ o.label }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-
           <a-form-item label="跟进人">
             <a-select v-model:value="form.followerPerson" allow-clear show-search
               :filter-option="(input, opt) => opt.value.includes(input)">
@@ -230,7 +222,7 @@ const form = reactive({
   contractLink: '',
   email: '',
   contacts: EMPTY_CONTACTS(),
-  contactStatus: 'UNDEVELOPED', paymentCycle: null,
+  contactStatus: 'UNDEVELOPED',
   followerPerson: null,
   influencerCost: '', notes: '',
   adSpendCost: '', copyrightCost: ''
@@ -327,7 +319,6 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       email:          rec.email          || '',
       contacts:       contactsToObj(rec.contacts),
       contactStatus:  rec.contactStatus  || 'UNDEVELOPED',
-      paymentCycle:   rec.paymentCycle   || null,
       followerPerson: rec.followerPerson || null,
       influencerCost: rec.influencerCost || '',
       adSpendCost:    rec.adSpendCost    || '',
@@ -340,7 +331,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       brandTeamPairs:[], countryMarket:null, platforms:[], domains:[],
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
-      contactStatus:'UNDEVELOPED', paymentCycle:null, followerPerson:null,
+      contactStatus:'UNDEVELOPED', followerPerson:null,
       influencerCost:'', notes:'',
       adSpendCost:'', copyrightCost:''
     })
@@ -408,7 +399,6 @@ async function handleSave() {
       email:          form.email,
       contacts:       contactsToJson(form.contacts),
       contactStatus:  form.contactStatus,
-      paymentCycle:   form.paymentCycle,
       followerPerson: form.followerPerson,
       influencerCost: form.influencerCost,
       adSpendCost:    form.adSpendCost,

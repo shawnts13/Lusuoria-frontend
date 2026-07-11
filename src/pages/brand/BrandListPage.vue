@@ -49,9 +49,6 @@
         <a-form-item label="国家/市场">
           <a-input v-model:value="form.countryMarket" />
         </a-form-item>
-        <a-form-item label="合作类型">
-          <a-input v-model:value="form.cooperationType" />
-        </a-form-item>
         <a-form-item label="联系人">
           <a-input v-model:value="form.contactPerson" />
         </a-form-item>
@@ -123,7 +120,7 @@ const importResultVisible = ref(false)
 const importResults      = ref([])
 
 const form = reactive({
-  id: null, name: '', countryMarket: '', cooperationType: '',
+  id: null, name: '', countryMarket: '',
   contactPerson: '', settlementCurrency: 'USD',
   paymentCycleType: null, costThresholdAmount: null,
   daysWithinThreshold: null, daysAboveThreshold: null, daysAfterMonthEnd: null,
@@ -148,7 +145,6 @@ function formatPaymentCycle(record) {
 const columns = [
   { title: '品牌方名称', dataIndex: 'name',              key: 'name' },
   { title: '国家/市场',  dataIndex: 'countryMarket',     key: 'countryMarket' },
-  { title: '合作类型',   dataIndex: 'cooperationType',   key: 'cooperationType' },
   { title: '联系人',     dataIndex: 'contactPerson',     key: 'contactPerson' },
   { title: '结算币种',   dataIndex: 'settlementCurrency', key: 'settlementCurrency' },
   { title: '付款周期',   key: 'paymentCycle',
@@ -165,7 +161,7 @@ async function loadData() {
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { id:null, name:'', countryMarket:'', cooperationType:'',
+  Object.assign(form, { id:null, name:'', countryMarket:'',
     contactPerson:'', settlementCurrency:'USD',
     paymentCycleType:null, costThresholdAmount:null,
     daysWithinThreshold:null, daysAboveThreshold:null, daysAfterMonthEnd:null,

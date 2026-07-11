@@ -33,6 +33,11 @@
         </template>
         <template v-if="column.key === 'action'">
           <a @click="openDetail(record)">查看详情</a>
+          <a-popconfirm v-if="authStore.canDeleteImportBatch"
+            title="确定删除这条导入历史记录吗？（只删记录本身，不影响这次导入已经写入的数据）"
+            @confirm="handleDelete(record)">
+            <a style="margin-left:12px;color:#ff4d4f">删除</a>
+          </a-popconfirm>
         </template>
       </template>
     </a-table>
@@ -61,11 +66,14 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { importBatchApi } from '../../api/index'
 import { formatDateTime } from '../../utils/dateFormat'
 import { ReloadOutlined } from '@ant-design/icons-vue'
+import { useAuthStore } from '../../store/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const loading = ref(false)
 const tableData = ref([])
@@ -101,6 +109,12 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+async function handleDelete(record) {
+  await importBatchApi.remove(record.id)
+  message.success('已删除')
+  loadData()
 }
 
 function handleTableChange(pag) {

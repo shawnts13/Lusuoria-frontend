@@ -146,7 +146,8 @@ export const collaborationApi = {
 // ===== 导入历史（目前只有红人合作跟踪用异步导入）=====
 export const importBatchApi = {
   list:    (params) => http.get('/api/import-batches', { params }),
-  getById: (id)      => http.get(`/api/import-batches/${id}`)
+  getById: (id)      => http.get(`/api/import-batches/${id}`),
+  remove:  (id)      => http.delete(`/api/import-batches/${id}`)
 }
 
 // ===== Dashboard =====

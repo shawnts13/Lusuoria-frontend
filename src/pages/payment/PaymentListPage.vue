@@ -164,10 +164,10 @@ function getBrandName(brandId) {
 function getTeamName(teamId) {
   return teams.value.find(t => t.id === teamId)?.name || ''
 }
-// 一条结款记录支持跨团队合并结算，teamIds 是个数组（元素可能是 null，代表"不选团队"也在范围内）
+// 一条结款记录支持跨团队合并结算，teamIds 是个数组（元素可能是 null，代表"不涉及团队"也在范围内）
 function teamNamesLabel(teamIds) {
   if (!teamIds || !teamIds.length) return '—'
-  return teamIds.map(id => id == null ? '（不选团队）' : (getTeamName(id) || id)).join('、')
+  return teamIds.map(id => id == null ? '—' : (getTeamName(id) || id)).join('、')
 }
 
 async function loadData() {

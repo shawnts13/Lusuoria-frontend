@@ -54,16 +54,18 @@
         style="width:120px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.progress" placeholder="视频项目进度"
-        style="width:140px" allow-clear @change="loadData">
-        <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-      </a-select>
+      <a-tooltip :title="filters.progress ? getLabel('collab_progress', filters.progress) : ''">
+        <a-select v-model:value="filters.progress" placeholder="视频项目进度"
+          style="width:140px" allow-clear @change="loadData">
+          <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+      </a-tooltip>
       <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
         style="width:140px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
       <a-date-picker v-model:value="filters.videoMonthVal" picker="month"
-        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频月份" style="width:140px"
+        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布月份" style="width:140px"
         @change="v => { filters.videoMonth = v; loadData() }" />
       <a-input v-model:value="filters.clientOrderId" placeholder="客户方的项目订单" style="width:150px"
         allow-clear @press-enter="loadData" />
@@ -300,7 +302,7 @@ const allColumns = [
   { title: '项目视频类型',  key: 'videoType',      width: 120, sorter: true },
   { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
   { title: '项目负责人',    key: 'projectManager', width: 100 },
-  { title: '内部执行人员',  key: 'executor',        width: 100 },
+  { title: '内部执行人员（可选）',  key: 'executor',        width: 100 },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',      width: 160, ellipsis: true },
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150, sorter: true },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150, sorter: true },

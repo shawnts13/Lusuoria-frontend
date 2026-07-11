@@ -47,8 +47,8 @@
               :filter-option="(input, opt) => opt.label.includes(input)"
               :disabled="availableTeams.length <= 1"
               :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '选择团队'">
-              <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不选团队）'">
-                {{ t.teamName || '（不选团队）' }}
+              <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不涉及团队）'">
+                {{ t.teamName || '（不涉及团队）' }}
               </a-select-option>
             </a-select>
             <div v-if="availableTeams.length > 1" style="font-size:12px;color:#888;margin-top:2px">
@@ -346,7 +346,7 @@ const availableBrands = computed(() => {
 })
 
 // 团队选项：跟着选中的品牌方走。0个选项时不允许选；1个选项时自动带入且禁用选择框；
-// 多个选项时列出来让用户明确选择其中一个（可能包含"不选团队"这个选项）
+// 多个选项时列出来让用户明确选择其中一个（可能包含"不涉及团队"这个选项）
 const availableTeams = computed(() => {
   if (!form.influencerId || !form.brandId) return []
   const inf = props.influencers.find(i => i.id === form.influencerId)
@@ -475,7 +475,7 @@ function onBrandChange() {
   form.teamId = null
 }
 
-// 团队只有1个选项时自动带入（不管是不是"不选团队"这个唯一选项）；0个或多个都不自动填
+// 团队只有1个选项时自动带入（不管是不是"不涉及团队"这个唯一选项）；0个或多个都不自动填
 watch(availableTeams, (opts) => {
   if (opts.length === 1) {
     form.teamId = opts[0].teamId ?? null
