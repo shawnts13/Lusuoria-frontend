@@ -4,6 +4,8 @@
     <div class="filter-bar">
       <a-select v-model:value="brandTeamFilter" placeholder="品牌方-红人团队" allow-clear
         style="width:240px" :options="brandTeamOptions" />
+      <a-select v-model:value="accountNameFilter" placeholder="红人社媒完整名字" allow-clear show-search
+        style="width:200px" :options="accountNameOptions" />
     </div>
     <div class="table-card" ref="tableWrapperRef">
       <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
@@ -44,6 +46,7 @@ const emit = defineEmits(['update:visible'])
 const loading = ref(false)
 const list = ref([])
 const brandTeamFilter = ref(undefined)
+const accountNameFilter = ref(undefined)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 function fmtAmount(val) {
@@ -59,9 +62,44 @@ const brandTeamOptions = computed(() => {
   const keys = [...new Set(list.value.map(brandTeamKey))]
   return keys.map(k => ({ value: k, label: k }))
 })
+
+// "红人社媒完整名字"筛选：下拉选项按该红人名下最早的"最迟结款日"排序（越紧急的越靠前），
+// 方便优先处理最快要逾期的红人；没有结款日的名字排在最后
+const accountNameOptions = computed(() => {
+  const earliestDeadline = new Map()
+  for (const r of list.value) {
+    if (!r.accountName || !r.deadlineDate) continue
+    const cur = earliestDeadline.get(r.accountName)
+    if (!cur || new Date(r.deadlineDate) < new Date(cur)) earliestDeadline.set(r.accountName, r.deadlineDate)
+  }
+  const names = [...new Set(list.value.map(r => r.accountName).filter(Boolean))]
+  names.sort((a, b) => {
+    const da = earliestDeadline.get(a)
+    const db = earliestDeadline.get(b)
+    if (!da && !db) return a.localeCompare(b)
+    if (!da) return 1
+    if (!db) return -1
+    return new Date(da) - new Date(db)
+  })
+  return names.map(n => ({ value: n, label: n }))
+})
+
+// 排序：先按红人社媒完整名字归组，组内再按"最迟结款日"升序（越早到期的越靠前）；
+// 没有结款日的记录排在同名分组的最后
+function compareRows(a, b) {
+  const nameCompare = (a.accountName || '').localeCompare(b.accountName || '')
+  if (nameCompare !== 0) return nameCompare
+  if (!a.deadlineDate && !b.deadlineDate) return 0
+  if (!a.deadlineDate) return 1
+  if (!b.deadlineDate) return -1
+  return new Date(a.deadlineDate) - new Date(b.deadlineDate)
+}
+
 const filteredList = computed(() => {
-  if (!brandTeamFilter.value) return list.value
-  return list.value.filter(r => brandTeamKey(r) === brandTeamFilter.value)
+  let result = list.value
+  if (brandTeamFilter.value) result = result.filter(r => brandTeamKey(r) === brandTeamFilter.value)
+  if (accountNameFilter.value) result = result.filter(r => r.accountName === accountNameFilter.value)
+  return [...result].sort(compareRows)
 })
 const totalCost = computed(() =>
   filteredList.value.reduce((sum, r) => sum + (r.influencerCost != null ? +r.influencerCost : 0), 0))
@@ -93,6 +131,7 @@ async function load() {
     const res = await progressReminderApi.details(props.reminderId)
     list.value = res.data || []
     brandTeamFilter.value = undefined
+    accountNameFilter.value = undefined
     remeasure()
   } finally {
     loading.value = false
