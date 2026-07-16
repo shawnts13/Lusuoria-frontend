@@ -165,8 +165,8 @@
         </a-col>
       </a-row>
 
-      <template v-if="canViewFinancials">
-        <a-divider orientation="left" style="font-size:13px">财务信息</a-divider>
+      <!-- 这两个字段是"基础财务字段"，GUEST 之外所有角色都能看/改，不受 canViewFinancials（仅 ADMIN/AUDITOR）限制 -->
+      <template v-if="canViewBaselineFinancials">
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="红人视频制作与发布成本（美金）">
@@ -181,7 +181,10 @@
             </a-form-item>
           </a-col>
         </a-row>
+      </template>
 
+      <template v-if="canViewFinancials">
+        <a-divider orientation="left" style="font-size:13px">财务信息</a-divider>
         <!--
           以下字段 2026-07 从"项目订单"模块迁移过来：
           - 汇率：仅 ADMIN 可编辑，其他角色（AUDITOR/项目负责人/执行人员）只读展示
@@ -296,6 +299,7 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   record: { type: Object, default: null },
   canViewFinancials: { type: Boolean, default: false },
+  canViewBaselineFinancials: { type: Boolean, default: false },
   canEditCommission: { type: Boolean, default: false },
   canEditPublishDate: { type: Boolean, default: false },
   brands: { type: Array, default: () => [] },

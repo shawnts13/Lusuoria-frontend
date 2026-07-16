@@ -199,6 +199,7 @@
     <CollaborationExecutorCostModal
       v-model:visible="executorCostModalVisible"
       :record="executorCostModalRecord"
+      :employees="employees"
       @saved="loadData" />
 
     <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
@@ -214,6 +215,7 @@
       v-model:visible="modalVisible"
       :record="editingRecord"
       :can-view-financials="authStore.canViewFinancials"
+      :can-view-baseline-financials="authStore.canViewBaselineFinancials"
       :can-edit-commission="authStore.canEditCommission"
       :can-edit-publish-date="authStore.isAdmin"
       :brands="brands"
@@ -306,8 +308,9 @@ const allColumns = [
   { title: '备注',          dataIndex: 'notes',     key: 'notes',      width: 160, ellipsis: true },
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150, sorter: true },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150, sorter: true },
-  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
-  { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, sensitive: true },
+  // 这两个字段是"基础财务字段"，GUEST 之外所有角色都能看，不受 canViewFinancials（仅 ADMIN/AUDITOR）限制
+  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, baseline: true },
+  { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, baseline: true },
   // 以下列 2026-07 从"项目订单"模块迁移过来。汇率/其他外部成本/内部执行成本不标 sensitive
   // （按行脱敏：项目负责人/执行人员只能看到自己相关的行，其余显示"—"，由后端按行返回决定，
   // 不是角色整体限制，所以不能靠前端 sensitive 整列隐藏，拿到什么就显示什么，跟原项目订单列表一致）
@@ -338,7 +341,7 @@ function fmtNum(val) {
 }
 
 const visibleColumns = computed(() =>
-  allColumns.filter(col => !col.sensitive || authStore.canViewFinancials))
+  allColumns.filter(col => col.baseline ? authStore.canViewBaselineFinancials : (!col.sensitive || authStore.canViewFinancials)))
 const tableScrollX = computed(() =>
   visibleColumns.value.reduce((sum, c) => sum + (c.width || 120), 0))
 

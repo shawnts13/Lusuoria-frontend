@@ -120,9 +120,11 @@ export const collaborationApi = {
   requestDelete: (id, reason) => http.post(`/api/collaboration-trackings/${id}/delete-request`, { reason }),
   updateStatus: (id, data) => http.patch(`/api/collaboration-trackings/${id}/status`, data),
 
-  // 2026-07 从项目订单模块迁移过来："设置内部执行成本"流程
-  suggestExecutorCost: (id) => http.get(`/api/collaboration-trackings/${id}/executor-cost-suggestion`),
-  setExecutorCost:     (id, amount) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, { amount }),
+  // 2026-07 从项目订单模块迁移过来："设置内部执行成本"流程。executorId 可选：还没选执行人员时
+  // 现场选了人，传这个参数可以现算这个人的建议金额
+  suggestExecutorCost: (id, executorId) => http.get(`/api/collaboration-trackings/${id}/executor-cost-suggestion`,
+    { params: executorId ? { executorId } : {} }),
+  setExecutorCost:     (id, payload) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, payload),
   recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
 
   exportExcel: (params) => {
