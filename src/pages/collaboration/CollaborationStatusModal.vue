@@ -12,8 +12,14 @@
     <a-form layout="vertical">
       <a-form-item label="视频项目进度">
         <a-select v-model:value="progress" placeholder="选择视频项目进度">
-          <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value"
+            :disabled="FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress">
+            {{ o.label }}
+          </a-select-option>
         </a-select>
+        <div v-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#888;margin-top:2px">
+          "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
+        </div>
       </a-form-item>
       <a-form-item label="红人结款进度">
         <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
@@ -49,8 +55,13 @@ import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { useAuthStore } from '../../store/auth'
 
 const { getOptions } = useOptions()
+const authStore = useAuthStore()
+
+// 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
+const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 
 const props = defineProps({
   visible: Boolean,

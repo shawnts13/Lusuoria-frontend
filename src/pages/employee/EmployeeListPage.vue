@@ -14,7 +14,7 @@
           <template v-if="column.key === 'salaryInfo'">
             <template v-if="isCommissionRole(record.role)">
               <span style="color:#888;font-size:12px">默认提成：</span>
-              {{ record.defaultCommissionRate
+              {{ record.defaultCommissionRate != null
                 ? (parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%'
                 : '—' }}
             </template>
@@ -217,7 +217,7 @@ function openEdit(r) {
   Object.assign(form, {
     ...emptyForm(),
     ...r,
-    commissionRateDisplay: r.defaultCommissionRate
+    commissionRateDisplay: r.defaultCommissionRate != null
       ? +(parseFloat(r.defaultCommissionRate) * 100).toFixed(0) : 0
   })
   modalVisible.value = true

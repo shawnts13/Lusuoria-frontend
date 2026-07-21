@@ -119,8 +119,10 @@
       v-model:visible="selectorVisible"
       :mode="selectorMode"
       :brand-id="form.brandId"
+      :brand-name="selectedBrandName"
       :team-ids="requestTeamIds"
       :reconcile-date="form.reconcileDate"
+      :settlement-month="form.settlementMonth"
       :existing-payment-id="form.id"
       :selected-tracking-ids="form.selectedItems.map(i => i.trackingId)"
       @confirm="handleSelectorConfirm"
@@ -166,6 +168,8 @@ const form = reactive({
 })
 
 const record = computed(() => props.record)
+// 传给"选择涉及的红人视频项目"弹窗，供它判断是不是 TEMU中国（排序/展示有专属规则，见该组件）
+const selectedBrandName = computed(() => props.brands.find(b => b.id === form.brandId)?.name || null)
 // 编辑态且已付款：只能查看，不能再调整勾选；其余情况（新建 / 编辑态待付款）可选
 const selectorMode = computed(() => (form.id && record.value?.paymentStatus === 'PAID') ? 'view' : 'select')
 

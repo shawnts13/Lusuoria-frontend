@@ -93,9 +93,15 @@
         <a-col :span="8">
           <a-form-item label="视频项目进度">
             <a-select v-model:value="form.progress" :disabled="!!form.id" allow-clear placeholder="选择视频项目进度">
-              <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+              <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value"
+                :disabled="FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress">
+                {{ o.label }}
+              </a-select-option>
             </a-select>
             <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">视频项目进度请使用"状态流转"功能修改</div>
+            <div v-else-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#888;margin-top:2px">
+              "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
+            </div>
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -213,6 +219,14 @@
             </a-form-item>
           </a-col>
         </a-row>
+        <a-row :gutter="16">
+          <a-col :span="24">
+            <a-form-item label="外部成本备注">
+              <a-textarea v-model:value="form.otherExternalCostNote" :rows="2"
+                placeholder="记录其他外部成本的来源和其他备注，如物流成本等" />
+            </a-form-item>
+          </a-col>
+        </a-row>
 
         <a-divider orientation="left" style="font-size:13px">提成</a-divider>
         <a-row :gutter="16">
@@ -293,6 +307,7 @@ import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { useAuthStore } from '../../store/auth'
 import { formatDate } from '../../utils/dateFormat'
 
 const props = defineProps({
@@ -306,9 +321,12 @@ const props = defineProps({
   influencers: { type: Array, default: () => [] },
   employees: { type: Array, default: () => [] }
 })
-const emit = defineEmits(['update:visible', 'saved'])
+const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
 const { getOptions } = useOptions()
+const authStore = useAuthStore()
+// 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
+const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 const formRef = ref()
 const saving  = ref(false)
 
@@ -321,7 +339,7 @@ const form = reactive({
   progress: null, influencerPaymentProgress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null, executorId: null,
   influencerCost: null, clientPrice: null, notes: '',
-  exchangeRate: null, otherExternalCost: 0, internalExecutionCost: 0,
+  exchangeRate: null, otherExternalCost: 0, otherExternalCostNote: '', internalExecutionCost: 0,
   commissionRate: 0, commissionRateDisplay: 0
 })
 
@@ -403,6 +421,7 @@ watch(() => props.visible, (v) => {
         notes:          rec.notes          || '',
         exchangeRate:   rec.exchangeRate   ?? null,
         otherExternalCost:     rec.otherExternalCost     || 0,
+        otherExternalCostNote: rec.otherExternalCostNote || '',
         internalExecutionCost: rec.internalExecutionCost || 0,
         commissionRate:        rec.commissionRate        || 0,
         commissionRateDisplay: rec.commissionRate
@@ -415,7 +434,7 @@ watch(() => props.visible, (v) => {
         publishLink:'', publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
         influencerCost:null, clientPrice:null, notes:'',
-        exchangeRate:null, otherExternalCost:0, internalExecutionCost:0,
+        exchangeRate:null, otherExternalCost:0, otherExternalCostNote:'', internalExecutionCost:0,
         commissionRate:0, commissionRateDisplay:0
       })
       Object.assign(preview, {
@@ -439,7 +458,9 @@ function onInfluencerChange() {
 function onManagerChange(id) {
   if (!id || !props.canEditCommission) return
   const emp = props.employees?.find(e => e.id === id)
-  if (emp?.defaultCommissionRate) {
+  // 用 != null 而不是真值判断：提成比例可以合法地是 0（0%），真值判断会把 0 当成"没有默认值"
+  // 从而漏掉覆盖，导致重新选负责人后提成比例还残留着上一个负责人的值（一个已确认过的 bug）
+  if (emp && emp.defaultCommissionRate != null) {
     form.commissionRate        = emp.defaultCommissionRate
     form.commissionRateDisplay = +(emp.defaultCommissionRate * 100).toFixed(0)
     calcPreview()
@@ -513,6 +534,7 @@ async function doSave() {
       clientPrice:    form.clientPrice,
       exchangeRate:   form.exchangeRate,
       otherExternalCost:     form.otherExternalCost,
+      otherExternalCostNote: form.otherExternalCostNote || null,
       internalExecutionCost: form.internalExecutionCost,
       commissionRate:        form.commissionRate,
       notes:          form.notes
@@ -529,6 +551,13 @@ async function doSave() {
     message.success('保存成功')
     emit('saved')
     close()
+
+    // 编辑时如果因为填写了"视频发布链接"触发了自动流转到"已发布（未结算）"，
+    // 后端会跟正常状态流转一样判断要不要弹"设置内部执行成本"，这里按标记弹出即可
+    // （accountName/executorName 由上层列表页统一按 id 补齐，这里传原始记录即可）
+    if (res.data?.needExecutorCost) {
+      emit('need-executor-cost', res.data)
+    }
   } catch (e) {
     message.error(e?.response?.data?.message || '保存失败')
   } finally {

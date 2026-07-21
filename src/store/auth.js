@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.40.0'
-export const APP_VERSION_TIME = '2026-07-16 17:36'
+export const APP_VERSION = '1.41.0'
+export const APP_VERSION_TIME = '2026-07-21 09:21'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -72,7 +72,12 @@ export const useAuthStore = defineStore('auth', {
     // "品牌方管理"页面：严格按员工角色判断，只有"管理层"能访问（2026-07 起）
     canAccessBrands: (state) => state.employeeRole === '管理层',
     // "导入历史"删除记录按钮：只有"管理层"能看到并操作，供清理误操作/测试产生的脏历史记录用
-    canDeleteImportBatch: (state) => state.employeeRole === '管理层'
+    canDeleteImportBatch: (state) => state.employeeRole === '管理层',
+    // "红人合作跟踪"里，视频项目进度流转到"已加入客户未结算列表"/"客户已结算"这两个财务专属
+    // 终态：跟后端 ProjectFieldVisibility 的 FULL 层级判定保持一致——ADMIN，或员工角色是
+    // "财务"/"管理层"的 STAFF 账号；其余角色（项目负责人/执行人员/基础权限）只能流转到
+    // "已发布（未结算）"和"折损"这两个终态
+    canSetFinanceSettlementProgress: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole)
   },
 
   actions: {

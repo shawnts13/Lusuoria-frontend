@@ -222,6 +222,7 @@
       :influencers="influencers"
       :employees="employees"
       @saved="loadData"
+      @need-executor-cost="openExecutorCostModal"
     />
   </div>
 </template>
@@ -318,6 +319,8 @@ const allColumns = [
     customRender: ({ text }) => text || '—' },
   { title: '其他外部成本（人民币）', dataIndex: 'otherExternalCost', key: 'otherExternalCost', width: 160,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
+  { title: '外部成本备注', dataIndex: 'otherExternalCostNote', key: 'otherExternalCostNote', width: 180, ellipsis: true,
+    customRender: ({ text }) => text || '—' },
   { title: '内部执行成本（人民币）', dataIndex: 'internalExecutionCost', key: 'internalExecutionCost', width: 160,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
   { title: '项目毛利',        dataIndex: 'grossProfit', key: 'grossProfit', width: 120, sensitive: true,

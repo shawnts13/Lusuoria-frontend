@@ -14,7 +14,8 @@
     <a-table :columns="columns" :data-source="filteredList" :loading="loading" row-key="trackingId"
       size="small" :pagination="false" :scroll="{ x: 1500, y: 480 }"
       :row-selection="mode === 'select' ? rowSelection : undefined"
-      :custom-row="mode === 'select' ? customRow : undefined">
+      :custom-row="mode === 'select' ? customRow : undefined"
+      :row-class-name="rowClassName">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'influencerCost'">
           {{ record.influencerCost != null ? fmtNum(record.influencerCost) : '—' }}
@@ -33,7 +34,10 @@
           <span v-else>—</span>
         </template>
         <template v-if="column.key === 'publishDate'">
-          {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
+          <span :class="{ 'off-month-date': isOffMonth(record) }"
+            :title="isOffMonth(record) ? '视频发布月份不是本次结算月份' : ''">
+            {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
+          </span>
         </template>
         <template v-if="column.key === 'cycleDays'">
           {{ record.cycleDays != null ? record.cycleDays + '天' : '—' }}
@@ -65,9 +69,13 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   mode: { type: String, default: 'select' }, // 'select' | 'view'
   brandId: { type: [Number, String], default: null },
+  // 品牌方名称，仅用于判断是不是"TEMU中国"（该品牌方排序/展示有专属规则，见下方 TEMU_CN 相关逻辑）
+  brandName: { type: String, default: null },
   // 这次结款涉及的团队范围，元素可能是 null（代表"不选团队"也在范围内），支持跨团队合并结款
   teamIds: { type: Array, default: () => [] },
   reconcileDate: { type: String, default: null },
+  // 本次结款记录的"结算月份"（格式 yyyyMM），仅 TEMU中国 用来判断候选记录是不是"当月"的
+  settlementMonth: { type: String, default: null },
   existingPaymentId: { type: [Number, String], default: null },
   // 当前表单里已经确认过的勾选（即使这条结款记录还没保存），重新打开这个弹窗时要按这个恢复
   // 之前的勾选状态——不然新建时筛选一批勾上、关掉再打开一次，之前勾的就全丢了
@@ -120,6 +128,46 @@ function fmtNum(v) {
   return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// TEMU中国排序/展示专属规则：品牌方目前没有结构化的"品类/地区"字段，只能按名称精确匹配
+// （品牌方以后大概率会新增，做成枚举类不现实，直接按 Brand.name 字符串匹配）
+const TEMU_CN = 'TEMU中国'
+
+/** 取某个日期在"北京时间"下的 yyyyMM，跟结算月份（settlementMonth）的格式对齐 */
+function monthKeyOf(d) {
+  if (!d) return null
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit'
+  }).formatToParts(new Date(d))
+  const map = {}
+  for (const p of parts) map[p.type] = p.value
+  return `${map.year}${map.month}`
+}
+
+// 是不是"非本次结算月份"的记录：仅 TEMU中国 需要区分，其余品牌方一律不标记
+function isOffMonth(record) {
+  return props.brandName === TEMU_CN && !!props.settlementMonth
+    && monthKeyOf(record.publishDate) !== props.settlementMonth
+}
+function rowClassName(record) {
+  return isOffMonth(record) ? 'off-month-row' : ''
+}
+
+// TEMU中国专属排序：视频发布月份=本次结算月份的排最前；组内再按最迟结款日从近到远排
+// （越紧迫越靠前，没有最迟结款日的排最后）。其余品牌方保持原有按红人社媒完整名字排序
+function sortForDisplay(items) {
+  if (props.brandName !== TEMU_CN) {
+    return [...items].sort((a, b) => (a.accountName || '').localeCompare(b.accountName || ''))
+  }
+  return [...items].sort((a, b) => {
+    const aCur = monthKeyOf(a.publishDate) === props.settlementMonth
+    const bCur = monthKeyOf(b.publishDate) === props.settlementMonth
+    if (aCur !== bCur) return aCur ? -1 : 1
+    const aDeadline = a.deadlineDate ? new Date(a.deadlineDate).getTime() : Infinity
+    const bDeadline = b.deadlineDate ? new Date(b.deadlineDate).getTime() : Infinity
+    return aDeadline - bDeadline
+  })
+}
+
 const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
   onChange: keys => { selectedRowKeys.value = keys }
@@ -151,7 +199,7 @@ async function load() {
   try {
     if (props.mode === 'view') {
       const res = await paymentApi.items(props.existingPaymentId)
-      list.value = res.data || []
+      list.value = sortForDisplay(res.data || [])
       return
     }
 
@@ -178,9 +226,10 @@ async function load() {
     // 条目需要单独查出来合并进来（默认勾选），避免编辑时"看不到自己已经选过的项目"
     const existingIds = new Set(existingItems.map(i => i.trackingId))
     items = [...existingItems, ...items.filter(i => !existingIds.has(i.trackingId))]
-    // 合并后重新按红人社媒完整名字排序一遍——上面 existingItems 排在前面会打乱顺序，
-    // 默认（不筛选）就该是按这个维度排序，跟后端 candidates/items 接口的默认顺序保持一致
-    items.sort((a, b) => (a.accountName || '').localeCompare(b.accountName || ''))
+    // 合并后重新排序一遍——上面 existingItems 排在前面会打乱顺序。默认（不筛选）就该按
+    // sortForDisplay() 的规则排：TEMU中国按"结算月份优先+最迟结款日紧迫性"，其余品牌方
+    // 保持原来按红人社媒完整名字排序，跟后端 candidates/items 接口的默认顺序保持一致
+    items = sortForDisplay(items)
 
     list.value = items
     // 已勾选状态取三者的并集：符合自动勾选规则的、已经落库关联到这条结款记录的、
@@ -234,5 +283,19 @@ function doConfirm(selected) {
   border: 1px solid #ff4d4f;
   border-radius: 4px;
   padding: 1px 6px;
+}
+.off-month-date {
+  display: inline-block;
+  border: 1px solid #faad14;
+  border-radius: 4px;
+  padding: 0 6px;
+}
+</style>
+
+<style>
+/* 仅 TEMU中国：视频发布月份不是本次结算月份的行，整行标浅灰，跟当月记录做区分
+   （不能用 scoped，antd a-table 的行是通过 :row-class-name 渲染到组件外层的 DOM 上的） */
+.off-month-row > td {
+  background: #fafafa !important;
 }
 </style>
