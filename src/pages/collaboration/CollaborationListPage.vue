@@ -19,10 +19,14 @@
           <a-button type="primary" @click="batchCreateModalVisible = true">
             <template #icon><PlusOutlined /></template>新建跟踪
           </a-button>
-          <a-button @click="legacyLinkModalVisible = true">
-            <template #icon><LinkOutlined /></template>存量记录关联需求
-          </a-button>
         </template>
+      </a-space>
+    </div>
+    <div v-if="authStore.canWrite || authStore.isAdmin" style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <a-space>
+        <a-button v-if="authStore.canWrite" @click="legacyLinkModalVisible = true">
+          <template #icon><LinkOutlined /></template>存量记录关联需求
+        </a-button>
         <a-popconfirm v-if="authStore.isAdmin"
           title="重新计算所有记录的项目毛利/可分配利润/提成/公司利润？用于数据库里的原始金额被绕过系统直接改动后的善后，正常使用不需要点这个。"
           @confirm="handleRecomputeProfits">
