@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-box">
       <div class="login-logo">🌟 Lusuoria</div>
-      <div class="login-subtitle">项目结算系统</div>
+      <div class="login-subtitle">红人管理系统</div>
 
       <a-form
         :model="form"

@@ -96,6 +96,13 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
+          <template v-if="column.key === 'countryMarket'">
+            <template v-if="record.countryMarket">
+              <a-tag v-for="c in splitMulti(record.countryMarket)" :key="c" style="margin:2px">{{ c }}</a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+
           <template v-if="column.key === 'platform'">
             <template v-if="record.platform">
               <a-tag v-for="p in splitMulti(record.platform)" :key="p" :color="colorForValue(p)" style="margin:2px">{{ p }}</a-tag>
@@ -293,7 +300,7 @@ const allColumns = [
   // 宽度按最长标签"境外红人（在华）"留够空间（tag 组件不换行，太窄会被裁切显示不全）
   { title: '红人类型',      key: 'influencerType',  width: 150 },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
-  { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
+  { title: '服务国家/市场', key: 'countryMarket', width: 160 },
   { title: '平台',          key: 'platform',        width: 120 },
   { title: '主页链接',      key: 'links',           width: 220 },
   { title: '所属领域',      key: 'domains',         width: 130 },

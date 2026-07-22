@@ -51,7 +51,8 @@
           </a-form-item>
 
           <a-form-item label="服务国家/市场">
-            <a-select v-model:value="form.countryMarket" show-search allow-clear
+            <a-select v-model:value="form.countryMarkets" mode="multiple" show-search allow-clear
+              placeholder="可多选"
               :filter-option="(input, opt) => opt.value.includes(input)">
               <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">
                 {{ o.label }}
@@ -216,7 +217,7 @@ const form = reactive({
   id: null,
   influencerType: 'OVERSEAS_INFLUENCER',
   accountName: '',
-  brandTeamPairs: [], countryMarket: null, platforms: [],
+  brandTeamPairs: [], countryMarkets: [], platforms: [],
   domains: [],
   followerCount: null, links: [], casesLinks: [],
   contractLink: '',
@@ -307,7 +308,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       influencerType: rec.influencerType || 'OVERSEAS_INFLUENCER',
       accountName:    rec.accountName    || '',
       brandTeamPairs: (rec.brandTeamPairs || []).map(p => ({ brandId: p.brandId, teamId: p.teamId })),
-      countryMarket:  rec.countryMarket  || null,
+      countryMarkets: splitMulti(rec.countryMarket),
       platforms:      splitMulti(rec.platform),
       // 编辑已有记录：只展示这条记录本来就有的领域，不再自动叠加"中国红人"的默认领域，
       // 避免你只是打开看一眼、没注意到领域被悄悄加了默认值就点了保存
@@ -328,7 +329,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
   } else {
     Object.assign(form, {
       id:null, influencerType:'OVERSEAS_INFLUENCER', accountName:'',
-      brandTeamPairs:[], countryMarket:null, platforms:[], domains:[],
+      brandTeamPairs:[], countryMarkets:[], platforms:[], domains:[],
       followerCount:null, links:[], casesLinks:[], contractLink:'',
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', followerPerson:null,
@@ -389,7 +390,7 @@ async function handleSave() {
       influencerType: form.influencerType,
       accountName:    form.accountName,
       brandTeamPairs: form.brandTeamPairs.filter(p => p.brandId != null),
-      countryMarket:  form.countryMarket,
+      countryMarket:  form.countryMarkets.join("\n") || null,
       platform:       form.platforms.join("\n") || null,
       domains:        form.domains,
       followerCount:  form.followerCount,

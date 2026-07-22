@@ -11,8 +11,17 @@
         <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
           <template #icon><DashboardOutlined /></template>数据看板
         </a-menu-item>
+        <!-- 审计员隐藏红人管理 -->
+        <template v-if="!authStore.isAuditor">
+          <a-menu-item key="/influencers">
+            <template #icon><TeamOutlined /></template>0. 红人管理
+          </a-menu-item>
+        </template>
+        <a-menu-item key="/requirements">
+          <template #icon><FileTextOutlined /></template>1. 红人需求管理
+        </a-menu-item>
         <a-menu-item key="/collaborations">
-          <template #icon><SolutionOutlined /></template>红人合作跟踪
+          <template #icon><SolutionOutlined /></template>2. 红人合作跟踪
         </a-menu-item>
         <!-- 红人结款：严格按员工角色（管理层/财务/法务）可见，跟 ADMIN/AUDITOR 等 role 无关 -->
         <a-menu-item v-if="authStore.canAccessPayments" key="/payments">
@@ -30,12 +39,6 @@
         <a-menu-item v-if="authStore.canAccessBrands" key="/brands">
           <template #icon><ShopOutlined /></template>品牌方管理
         </a-menu-item>
-        <!-- 审计员隐藏以下基础数据管理 -->
-        <template v-if="!authStore.isAuditor">
-          <a-menu-item key="/influencers">
-            <template #icon><TeamOutlined /></template>红人管理
-          </a-menu-item>
-        </template>
 
         <!-- 员工管理仅 ADMIN 可见 -->
         <a-menu-item v-if="authStore.isAdmin" key="/employees">
@@ -129,7 +132,7 @@ import { message } from 'ant-design-vue'
 import {
   DashboardOutlined, PayCircleOutlined,
   SolutionOutlined, DollarOutlined, ExclamationCircleOutlined,
-  ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined,
+  ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined, FileTextOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   DownOutlined, LogoutOutlined, LockOutlined
 } from '@ant-design/icons-vue'
@@ -160,13 +163,15 @@ const pwdForm          = reactive({ newPassword: '', confirmPassword: '' })
 const currentRoute = computed(() => '/' + route.path.split('/')[1])
 
 const pageTitleMap = {
-  '/dashboard':   '数据看板',
-  '/payments':    '红人结款管理',
-  '/pending':     '待处理',
-  '/brands':      '品牌方管理',
-  '/influencers': '红人管理',
-  '/employees':   '员工管理',
-  '/users':       '账号管理'
+  '/dashboard':      '数据看板',
+  '/influencers':    '0. 红人管理',
+  '/requirements':   '1. 红人需求管理',
+  '/collaborations': '2. 红人合作跟踪',
+  '/payments':       '红人结款管理',
+  '/pending':        '待处理',
+  '/brands':         '品牌方管理',
+  '/employees':      '员工管理',
+  '/users':          '账号管理'
 }
 const pageTitle = computed(() => pageTitleMap[currentRoute.value] || 'Lusuoria')
 

@@ -142,7 +142,31 @@ export const collaborationApi = {
   importExcel: (form) => http.post('/api/collaboration-trackings/import/excel', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000
-  })
+  }),
+
+  // "复制"批量新建：一次性提交多条视频项目，整批在一个事务里校验+保存
+  batchCreate: (list) => http.post('/api/collaboration-trackings/batch', list)
+}
+
+// ===== 红人需求管理 =====
+export const requirementApi = {
+  list:    (params) => http.get('/api/influencer-requirements', { params }),
+  getById: (id)     => http.get(`/api/influencer-requirements/${id}`),
+  save:    (data)   => http.post('/api/influencer-requirements', data),
+  delete:  (id)     => http.delete(`/api/influencer-requirements/${id}`),
+  items:   (id)     => http.get(`/api/influencer-requirements/${id}/items`),
+  byInfluencer:    (influencerId) => http.get(`/api/influencer-requirements/by-influencer/${influencerId}`),
+  progressDetail:  (id)           => http.get(`/api/influencer-requirements/${id}/progress-detail`),
+  parseContent:    (content)      => http.post('/api/influencer-requirements/parse-content', { content }),
+
+  exportExcel: (params) => {
+    const qs = new URLSearchParams(
+      Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    ).toString()
+    return downloadWithAuth(
+      `${BASE}/api/influencer-requirements/export/excel${qs ? '?' + qs : ''}`,
+      '红人需求.xlsx')
+  }
 }
 
 // ===== 导入历史（目前只有红人合作跟踪用异步导入）=====

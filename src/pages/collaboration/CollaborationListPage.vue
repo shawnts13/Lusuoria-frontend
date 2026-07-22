@@ -16,7 +16,7 @@
           <a-button @click="router.push('/import-batches')" style="color:#fa8c16;border-color:#fa8c16">
             <template #icon><HistoryOutlined /></template>导入历史
           </a-button>
-          <a-button type="primary" @click="openCreate">
+          <a-button type="primary" @click="batchCreateModalVisible = true">
             <template #icon><PlusOutlined /></template>新建跟踪
           </a-button>
         </template>
@@ -224,6 +224,15 @@
       @saved="loadData"
       @need-executor-cost="openExecutorCostModal"
     />
+
+    <CollaborationBatchCreateModal
+      v-model:visible="batchCreateModalVisible"
+      :brands="brands"
+      :influencers="influencers"
+      :employees="employees"
+      :can-view-baseline-financials="authStore.canViewBaselineFinancials"
+      @saved="loadData"
+    />
   </div>
 </template>
 
@@ -242,6 +251,7 @@ import { paymentProgressColor } from '../../utils/enumColors'
 import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
 import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
+import CollaborationBatchCreateModal from './CollaborationBatchCreateModal.vue'
 
 const authStore = useAuthStore()
 const { getOptions, getLabel } = useOptions()
@@ -258,6 +268,7 @@ const projectManagerCandidates = computed(() =>
   employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
+const batchCreateModalVisible = ref(false)
 const statusModalVisible  = ref(false)
 const statusModalRecord   = ref(null)
 const executorCostModalVisible = ref(false)
@@ -445,7 +456,6 @@ function resetFilters() {
   loadData()
 }
 
-function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 function openStatusModal(r) {
   statusModalRecord.value = {

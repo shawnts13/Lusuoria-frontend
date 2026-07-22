@@ -4,6 +4,16 @@
     @ok="handleSave" @cancel="close" :destroy-on-close="false">
     <a-form ref="formRef" :model="form" :rules="rules" layout="vertical">
 
+      <a-form-item label="内部需求编号">
+        <a-input-group compact style="display:flex">
+          <a-input :value="form.internalRequirementNo" disabled placeholder="未关联" style="flex:1" />
+          <a-button :disabled="!form.influencerId" @click="linkPickerVisible = true">关联红人需求</a-button>
+        </a-input-group>
+        <div style="font-size:12px;color:#c00000;margin-top:2px">
+          没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
+        </div>
+      </a-form-item>
+
       <a-form-item v-if="form.internalProjectNo" label="内部项目编号">
         <a-input :value="form.internalProjectNo" disabled />
       </a-form-item>
@@ -18,9 +28,6 @@
                 {{ inf.accountName }}
               </a-select-option>
             </a-select>
-            <div v-if="snapshotInfo" style="font-size:12px;color:#888;margin-top:2px">
-              国家/市场：{{ snapshotInfo.countryMarket || '—' }}
-            </div>
           </a-form-item>
         </a-col>
         <a-col :span="12">
@@ -40,8 +47,8 @@
         </a-col>
       </a-row>
 
-      <a-row :gutter="16" v-if="form.brandId">
-        <a-col :span="12">
+      <a-row :gutter="16" v-if="form.influencerId">
+        <a-col :span="12" v-if="form.brandId">
           <a-form-item label="红人团队">
             <a-select v-model:value="form.teamId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
@@ -56,9 +63,23 @@
             </div>
           </a-form-item>
         </a-col>
+        <a-col :span="12" v-else>
+          <div style="font-size:12px;color:#c00000;margin-top:8px">
+            请先选择品牌方，才能选择红人团队
+          </div>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label="服务国家/市场">
+            <a-select v-if="availableCountryMarkets.length > 1" v-model:value="form.countryMarket"
+              allow-clear placeholder="选择服务国家/市场">
+              <a-select-option v-for="c in availableCountryMarkets" :key="c" :value="c">{{ c }}</a-select-option>
+            </a-select>
+            <span v-else>{{ form.countryMarket || '—' }}</span>
+          </a-form-item>
+        </a-col>
       </a-row>
-      <div v-else-if="form.influencerId" style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
-        请先选择品牌方，才能选择红人团队
+      <div v-if="form.influencerId" style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
+        找不到品牌方、红人团队？请先维护"红人管理"模块下该红人的数据。
       </div>
 
       <a-form-item label="合作平台">
@@ -74,7 +95,12 @@
       <a-row :gutter="16">
         <a-col :span="16">
           <a-form-item label="视频发布链接">
-            <a-input v-model:value="form.publishLink" placeholder="前期可留空" />
+            <div v-for="(link, idx) in form.publishLinks" :key="'pl-' + idx"
+              style="display:flex;gap:8px;margin-bottom:6px">
+              <a-input v-model:value="form.publishLinks[idx]" placeholder="前期可留空" style="flex:1" />
+              <a-button danger size="small" @click="removePublishLink(idx)">删除</a-button>
+            </div>
+            <a-button type="dashed" size="small" block @click="addPublishLink">+ 添加新链接</a-button>
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -299,12 +325,19 @@
       </a-form-item>
 
     </a-form>
+
+    <RequirementLinkPickerModal
+      v-model:visible="linkPickerVisible"
+      :influencer-id="form.influencerId"
+      @confirm="onRequirementLinked"
+    />
   </a-modal>
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
+import RequirementLinkPickerModal from '../requirement/RequirementLinkPickerModal.vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
@@ -327,15 +360,17 @@ const { getOptions } = useOptions()
 const authStore = useAuthStore()
 // 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
 const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+const linkPickerVisible = ref(false)
 const formRef = ref()
 const saving  = ref(false)
 
 const form = reactive({
   id: null,
   internalProjectNo: null,
-  brandId: null, influencerId: null, teamId: null,
+  internalRequirementNo: null,
+  brandId: null, influencerId: null, teamId: null, countryMarket: null,
   platforms: [], demandContent: '',
-  publishLink: '', publishDate: null,
+  publishLinks: [''], publishDate: null,
   progress: null, influencerPaymentProgress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
   projectManagerId: null, executorId: null,
   influencerCost: null, clientPrice: null, notes: '',
@@ -352,10 +387,16 @@ const rules = {
   influencerId: [{ required: true, message: '请选择红人社媒完整名字', trigger: 'change' }]
 }
 
-const snapshotInfo = computed(() => {
-  if (!form.influencerId) return null
+// 服务国家/市场选项：来自选中红人在红人库里维护的服务国家/市场（可能多个，换行分隔）。
+// 只有 1 个选项时自动带入（下面的 watch 处理），有多个时才展示下拉框让用户选一个
+// ——一条视频/一次合作只会涉及一个国家/市场，不像红人库本身那样允许多选
+const availableCountryMarkets = computed(() => {
+  if (!form.influencerId) return []
   const inf = props.influencers.find(i => i.id === form.influencerId)
-  return inf ? { countryMarket: inf.countryMarket } : null
+  return inf ? splitMulti(inf.countryMarket) : []
+})
+watch(availableCountryMarkets, (opts) => {
+  if (opts.length === 1) form.countryMarket = opts[0]
 })
 
 // 品牌方下拉只显示当前选中红人在红人模块里已关联过的品牌方（不管那个品牌方下有没有配团队）
@@ -401,12 +442,14 @@ watch(() => props.visible, (v) => {
       Object.assign(form, {
         id:            rec.id,
         internalProjectNo: rec.internalProjectNo || null,
+        internalRequirementNo: rec.internalRequirementNo || null,
         brandId:       rec.brandId      || null,
         teamId:        rec.teamId       || null,
         influencerId:  rec.influencerId || null,
+        countryMarket: rec.countryMarket || null,
         platforms:     splitMulti(rec.platform),
         demandContent: rec.demandContent || '',
-        publishLink:   rec.publishLink   || '',
+        publishLinks:  rec.publishLink ? splitLinks(rec.publishLink) : [''],
         publishDate:   rec.publishDate ? formatDate(rec.publishDate) : null,
         progress:      rec.progress      || null,
         influencerPaymentProgress: rec.influencerPaymentProgress || null,
@@ -430,8 +473,8 @@ watch(() => props.visible, (v) => {
       calcPreview()
     } else {
       Object.assign(form, {
-        id:null, internalProjectNo:null, brandId:null, influencerId:null, teamId:null, platforms:[], demandContent:'',
-        publishLink:'', publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
+        id:null, internalProjectNo:null, internalRequirementNo:null, brandId:null, influencerId:null, teamId:null, countryMarket:null, platforms:[], demandContent:'',
+        publishLinks:[''], publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
         projectManagerId:null, executorId:null,
         influencerCost:null, clientPrice:null, notes:'',
         exchangeRate:null, otherExternalCost:0, otherExternalCostNote:'', internalExecutionCost:0,
@@ -449,10 +492,33 @@ function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
 }
+// 链接只能按换行拆分，不能按逗号——链接本身（query string）里经常带逗号，按逗号拆会拆坏
+function splitLinks(str) {
+  if (!str) return []
+  return str.split('\n').map(s => s.trim()).filter(Boolean)
+}
+function addPublishLink() { form.publishLinks.push('') }
+function removePublishLink(idx) {
+  form.publishLinks.splice(idx, 1)
+  if (form.publishLinks.length === 0) form.publishLinks.push('')
+}
 function onInfluencerChange() {
-  // 切换红人后，原选中的品牌方可能不再适用，清空让用户重新选
+  // 切换红人后，原选中的品牌方/服务国家/市场可能不再适用，清空让用户重新选
   form.brandId = null
   form.teamId = null
+  form.countryMarket = null
+}
+
+// "关联红人需求"选择器确认后：自动带入内部需求编号 + 红人社媒完整名字/品牌方/红人团队/
+// 服务国家/市场/合作平台/项目视频类型
+function onRequirementLinked(data) {
+  form.internalRequirementNo = data.internalRequirementNo
+  form.influencerId = data.influencerId
+  form.brandId = data.brandId
+  form.teamId = data.teamId
+  form.countryMarket = data.countryMarket
+  form.platforms = data.platform || []
+  form.videoType = data.videoType
 }
 
 function onManagerChange(id) {
@@ -515,12 +581,14 @@ async function doSave() {
   try {
     const payload = {
       id:            form.id,
+      internalRequirementNo: form.internalRequirementNo || null,
       brandId:       form.brandId,
       teamId:        form.teamId,
       influencerId:  form.influencerId,
+      countryMarket: form.countryMarket || null,
       platform:      form.platforms.join('\n') || null,
       demandContent: form.demandContent || null,
-      publishLink:   form.publishLink || null,
+      publishLink:   form.publishLinks.map(l => l.trim()).filter(Boolean).join('\n') || null,
       publishDate:   form.publishDate || null,
       progress:      form.progress || null,
       influencerPaymentProgress: paymentProgressEnabled.value ? (form.influencerPaymentProgress || null) : null,
