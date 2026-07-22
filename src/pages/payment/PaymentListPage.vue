@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">红人结款管理</span>
+      <span class="page-title">3. 红人结款</span>
       <a-space>
         <a-button @click="handleExport">
           <template #icon><ExportOutlined /></template>Excel 导出

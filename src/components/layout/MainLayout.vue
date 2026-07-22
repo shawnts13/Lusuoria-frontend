@@ -11,6 +11,12 @@
         <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
           <template #icon><DashboardOutlined /></template>数据看板
         </a-menu-item>
+
+        <!-- 待处理：ADMIN 能看审批列表，"管理层"员工角色能看进度提醒 -->
+        <a-menu-item v-if="authStore.canAccessPending" key="/pending">
+          <template #icon><ExclamationCircleOutlined /></template>待处理
+        </a-menu-item>
+
         <!-- 审计员隐藏红人管理 -->
         <template v-if="!authStore.isAuditor">
           <a-menu-item key="/influencers">
@@ -25,12 +31,7 @@
         </a-menu-item>
         <!-- 红人结款：严格按员工角色（管理层/财务/法务）可见，跟 ADMIN/AUDITOR 等 role 无关 -->
         <a-menu-item v-if="authStore.canAccessPayments" key="/payments">
-          <template #icon><PayCircleOutlined /></template>红人结款
-        </a-menu-item>
-
-        <!-- 待处理：ADMIN 能看审批列表，"管理层"员工角色能看进度提醒 -->
-        <a-menu-item v-if="authStore.canAccessPending" key="/pending">
-          <template #icon><ExclamationCircleOutlined /></template>待处理
+          <template #icon><PayCircleOutlined /></template>3. 红人结款
         </a-menu-item>
 
         <a-menu-divider />
@@ -45,14 +46,14 @@
           <template #icon><UserOutlined /></template>员工管理
         </a-menu-item>
 
-        <!-- 汇率维护仅 ADMIN 可见 -->
-        <a-menu-item v-if="authStore.isAdmin" key="/exchange-rates">
-          <template #icon><DollarOutlined /></template>汇率维护
-        </a-menu-item>
-
         <!-- 账号管理仅 ADMIN 可见 -->
         <a-menu-item v-if="authStore.isAdmin" key="/users">
           <template #icon><SafetyOutlined /></template>账号管理
+        </a-menu-item>
+
+        <!-- 汇率维护仅 ADMIN 可见 -->
+        <a-menu-item v-if="authStore.isAdmin" key="/exchange-rates">
+          <template #icon><DollarOutlined /></template>汇率维护
         </a-menu-item>
       </a-menu>
     </a-layout-sider>
@@ -167,7 +168,7 @@ const pageTitleMap = {
   '/influencers':    '0. 红人管理',
   '/requirements':   '1. 红人需求管理',
   '/collaborations': '2. 红人合作跟踪',
-  '/payments':       '红人结款管理',
+  '/payments':       '3. 红人结款',
   '/pending':        '待处理',
   '/brands':         '品牌方管理',
   '/employees':      '员工管理',

@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">红人管理</span>
+      <span class="page-title">0. 红人管理</span>
       <a-space>
         <a-button @click="influencerApi.downloadTemplate()">
           <template #icon><DownloadOutlined /></template>下载导入模板

@@ -95,8 +95,8 @@
         </a-form-item>
 
         <a-form-item label="关联员工">
-          <a-select v-model:value="form.employeeId" allow-clear placeholder="可选，绑定员工记录">
-            <a-select-option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }}</a-select-option>
+          <a-select v-model:value="form.employeeId" allow-clear placeholder="可选，绑定员工记录（只列出还未绑定账号的员工）">
+            <a-select-option v-for="e in availableEmployees" :key="e.id" :value="e.id">{{ e.name }}</a-select-option>
           </a-select>
         </a-form-item>
 
@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { userApi, employeeApi } from '../../api/index'
@@ -143,6 +143,17 @@ const columns = [
 function roleColor(role) {
   return { ADMIN:'red', STAFF:'blue', AUDITOR:'orange', GUEST:'default' }[role] || 'default'
 }
+
+// 一个员工只能绑定一个账号：可选列表排除已经被其他账号占用的员工；
+// 编辑态下当前账号自己已绑定的那个员工仍然要保留在列表里，否则下拉框里会找不到当前选中值
+const availableEmployees = computed(() => {
+  const boundIds = new Set(
+    list.value
+      .filter(u => u.employeeId != null && (!editingRecord.value || u.id !== editingRecord.value.id))
+      .map(u => u.employeeId)
+  )
+  return employees.value.filter(e => !boundIds.has(e.id))
+})
 
 async function loadData() {
   loading.value = true

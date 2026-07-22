@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">红人合作跟踪</span>
+      <span class="page-title">2. 红人合作跟踪</span>
       <a-space>
         <a-button @click="collaborationApi.downloadTemplate()">
           <template #icon><DownloadOutlined /></template>下载导入模板
