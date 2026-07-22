@@ -94,7 +94,10 @@ export const employeeApi = {
   list:    (role) => http.get('/api/employees', { params: { role } }),
   getById: (id)   => http.get(`/api/employees/${id}`),
   save:    (data) => http.post('/api/employees', data),
-  delete:  (id)   => http.delete(`/api/employees/${id}`)
+  delete:  (id)   => http.delete(`/api/employees/${id}`),
+
+  exportExcel: (role) => downloadWithAuth(
+    `${BASE}/api/employees/export/excel${role ? '?role=' + role : ''}`, '员工.xlsx')
 }
 
 // ===== Influencer Payments =====
@@ -158,6 +161,12 @@ export const requirementApi = {
   byInfluencer:    (influencerId) => http.get(`/api/influencer-requirements/by-influencer/${influencerId}`),
   progressDetail:  (id)           => http.get(`/api/influencer-requirements/${id}/progress-detail`),
   parseContent:    (content)      => http.post('/api/influencer-requirements/parse-content', { content }),
+
+  // "存量记录关联需求"
+  legacyCandidates: (influencerId, internalRequirementNo) =>
+    http.get('/api/influencer-requirements/legacy-candidates', { params: { influencerId, internalRequirementNo } }),
+  linkLegacy: (internalRequirementNo, trackingIds) =>
+    http.post('/api/influencer-requirements/link-legacy', { internalRequirementNo, trackingIds }),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(

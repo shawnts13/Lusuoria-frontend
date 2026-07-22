@@ -2,9 +2,14 @@
   <div class="page-container">
     <div class="page-header">
       <span class="page-title">员工管理</span>
-      <a-button type="primary" @click="openCreate">
-        <template #icon><PlusOutlined /></template>新建员工
-      </a-button>
+      <a-space>
+        <a-button @click="employeeApi.exportExcel()">
+          <template #icon><ExportOutlined /></template>Excel 导出
+        </a-button>
+        <a-button type="primary" @click="openCreate">
+          <template #icon><PlusOutlined /></template>新建员工
+        </a-button>
+      </a-space>
     </div>
 
     <div class="table-card">
@@ -61,6 +66,15 @@
         </a-form-item>
         <a-form-item label="邮箱" name="email">
           <a-input v-model:value="form.email" />
+        </a-form-item>
+        <a-form-item label="联系电话" name="contactPhone">
+          <a-input v-model:value="form.contactPhone" />
+        </a-form-item>
+        <a-form-item label="入职时间" name="hireDate">
+          <a-date-picker v-model:value="form.hireDate" value-format="YYYY-MM-DD" style="width:100%" />
+        </a-form-item>
+        <a-form-item label="离职时间" name="resignDate">
+          <a-date-picker v-model:value="form.resignDate" value-format="YYYY-MM-DD" style="width:100%" allow-clear />
         </a-form-item>
 
         <!-- 项目负责人 / 管理层：默认提成比例 -->
@@ -128,9 +142,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { employeeApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { formatDate } from '../../utils/dateFormat'
 
 const { getOptions } = useOptions()
 
@@ -151,6 +166,7 @@ const formRef  = ref()
 
 const emptyForm = () => ({
   id: null, name: '', role: '项目负责人', email: '',
+  contactPhone: '', hireDate: null, resignDate: null,
   defaultCommissionRate: null, commissionRateDisplay: 0,
   fixedMonthlySalary: null,
   rateRealShotNew: null, rateAiNewMaterial: null,
@@ -168,6 +184,14 @@ const columns = [
     sorter: (a, b) => (a.role || '').localeCompare(b.role || '', 'zh') },
   { title: '邮箱',   dataIndex: 'email', key: 'email', width: 160,
     sorter: (a, b) => (a.email || '').localeCompare(b.email || '') },
+  { title: '联系电话', dataIndex: 'contactPhone', key: 'contactPhone', width: 130,
+    customRender: ({ text }) => text || '—' },
+  { title: '入职时间', key: 'hireDate', width: 110,
+    customRender: ({ record }) => record.hireDate ? formatDate(record.hireDate) : '—',
+    sorter: (a, b) => new Date(a.hireDate || 0) - new Date(b.hireDate || 0) },
+  { title: '离职时间', key: 'resignDate', width: 110,
+    customRender: ({ record }) => record.resignDate ? formatDate(record.resignDate) : '-',
+    sorter: (a, b) => new Date(a.resignDate || 0) - new Date(b.resignDate || 0) },
   { title: '薪资信息', key: 'salaryInfo', width: 260,
     sorter: (a, b) => salaryValue(a) - salaryValue(b) },
   { title: '备注',   dataIndex: 'notes', key: 'notes', ellipsis: true,
@@ -217,6 +241,8 @@ function openEdit(r) {
   Object.assign(form, {
     ...emptyForm(),
     ...r,
+    hireDate:   r.hireDate   ? formatDate(r.hireDate)   : null,
+    resignDate: r.resignDate ? formatDate(r.resignDate) : null,
     commissionRateDisplay: r.defaultCommissionRate != null
       ? +(parseFloat(r.defaultCommissionRate) * 100).toFixed(0) : 0
   })

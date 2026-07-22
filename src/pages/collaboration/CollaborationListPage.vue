@@ -19,6 +19,9 @@
           <a-button type="primary" @click="batchCreateModalVisible = true">
             <template #icon><PlusOutlined /></template>新建跟踪
           </a-button>
+          <a-button @click="legacyLinkModalVisible = true">
+            <template #icon><LinkOutlined /></template>存量记录关联需求
+          </a-button>
         </template>
         <a-popconfirm v-if="authStore.isAdmin"
           title="重新计算所有记录的项目毛利/可分配利润/提成/公司利润？用于数据库里的原始金额被绕过系统直接改动后的善后，正常使用不需要点这个。"
@@ -233,6 +236,12 @@
       :can-view-baseline-financials="authStore.canViewBaselineFinancials"
       @saved="loadData"
     />
+
+    <LegacyRequirementLinkModal
+      v-model:visible="legacyLinkModalVisible"
+      :influencers="influencers"
+      @linked="loadData"
+    />
   </div>
 </template>
 
@@ -240,7 +249,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, LinkOutlined } from '@ant-design/icons-vue'
 import { collaborationApi, brandApi, influencerApi, influencerTeamApi, employeeApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
@@ -252,6 +261,7 @@ import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
 import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
 import CollaborationBatchCreateModal from './CollaborationBatchCreateModal.vue'
+import LegacyRequirementLinkModal from '../requirement/LegacyRequirementLinkModal.vue'
 
 const authStore = useAuthStore()
 const { getOptions, getLabel } = useOptions()
@@ -269,6 +279,7 @@ const projectManagerCandidates = computed(() =>
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const batchCreateModalVisible = ref(false)
+const legacyLinkModalVisible = ref(false)
 const statusModalVisible  = ref(false)
 const statusModalRecord   = ref(null)
 const executorCostModalVisible = ref(false)
