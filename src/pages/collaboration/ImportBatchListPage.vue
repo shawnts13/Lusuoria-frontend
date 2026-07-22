@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">导入历史</span>
+      <span class="page-title">导入历史{{ moduleLabel ? '（' + moduleLabel + '）' : '' }}</span>
       <a-space>
         <a-button @click="loadData"><template #icon><ReloadOutlined /></template>刷新</a-button>
         <a-button @click="router.back()">返回</a-button>
@@ -64,16 +64,23 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { importBatchApi } from '../../api/index'
 import { formatDateTime } from '../../utils/dateFormat'
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '../../store/auth'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 从路由带的 ?module= 决定看哪个模块的导入历史，不传就是原来的红人合作跟踪
+// （保持向后兼容，老的跳转链接不用改）
+const MODULE_LABELS = { COLLABORATION_TRACKING: '红人合作跟踪', INFLUENCER: '红人管理' }
+const currentModule = computed(() => route.query.module || 'COLLABORATION_TRACKING')
+const moduleLabel = computed(() => MODULE_LABELS[currentModule.value] || '')
 
 const loading = ref(false)
 const tableData = ref([])
@@ -101,7 +108,7 @@ async function loadData() {
   loading.value = true
   try {
     const res = await importBatchApi.list({
-      module: 'COLLABORATION_TRACKING',
+      module: currentModule.value,
       page: pagination.current - 1, size: pagination.pageSize
     })
     tableData.value  = res.data.content || []

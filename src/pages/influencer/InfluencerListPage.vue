@@ -13,6 +13,9 @@
           <a-upload :before-upload="handleImport" :show-upload-list="false" accept=".xlsx,.xls">
             <a-button><template #icon><UploadOutlined /></template>Excel 导入</a-button>
           </a-upload>
+          <a-button @click="router.push('/import-batches?module=INFLUENCER')" style="color:#fa8c16;border-color:#fa8c16">
+            <template #icon><HistoryOutlined /></template>导入历史
+          </a-button>
           <a-button type="primary" @click="openCreate">
             <template #icon><PlusOutlined /></template>新建红人
           </a-button>
@@ -215,17 +218,6 @@
       @team-added="loadTeams"
     />
 
-    <a-modal v-model:open="importResultVisible" title="导入结果" :footer="null" width="560px">
-      <a-list :data-source="importResults" size="small"
-        :pagination="importListPagination">
-        <template #renderItem="{ item, index }">
-          <a-list-item>
-            <span :style="index === 0 ? 'font-weight:600;color:#1677ff'
-              : (item.includes('失败') ? 'color:#ff4d4f' : '')">{{ item }}</span>
-          </a-list-item>
-        </template>
-      </a-list>
-    </a-modal>
   </div>
 </template>
 
@@ -233,7 +225,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons-vue'
 import { influencerApi, brandApi, domainApi, influencerTeamApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
@@ -253,30 +245,7 @@ const domains   = ref([])
 const teams     = ref([])
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
-const importResultVisible = ref(false)
-const importResults       = ref([])
 const projectCounts       = ref({})
-
-// 导入结果弹窗列表分页（独立状态，支持切换每页条数）
-const importListState = reactive({ current: 1, pageSize: 10 })
-const importListPagination = computed(() => {
-  if (importResults.value.length <= 10) return false
-  return {
-    current: importListState.current,
-    pageSize: importListState.pageSize,
-    showSizeChanger: true,
-    pageSizeOptions: ['10', '20', '50', '100'],
-    size: 'small',
-    onChange: (page, size) => {
-      importListState.current = page
-      importListState.pageSize = size
-    },
-    onShowSizeChange: (page, size) => {
-      importListState.current = 1
-      importListState.pageSize = size
-    }
-  }
-})
 
 // 排序状态
 const sortState = reactive({ field: 'accountName', order: 'ascend' })
@@ -408,11 +377,8 @@ function handleExport() { influencerApi.exportExcel(filters.influencerType) }
 async function handleImport(file) {
   const fd = new FormData(); fd.append('file', file)
   try {
-    const res = await influencerApi.importExcel(fd)
-    importResults.value = res.data || []
-    importListState.current = 1   // 每次新导入结果从第1页开始展示
-    importResultVisible.value = true
-    loadData(); loadDomains(); loadTeams()
+    await influencerApi.importExcel(fd)
+    message.success('文件已上传，正在后台导入中，可以去"导入历史"查看进度和结果')
   } catch {}
   return false
 }
