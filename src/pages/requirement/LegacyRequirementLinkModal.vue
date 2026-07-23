@@ -49,6 +49,9 @@
         </template>
         <template #renderEmpty><div style="text-align:center;color:#bbb;padding:24px 0">该红人暂无未完成的需求</div></template>
       </a-list>
+      <div style="font-size:12px;color:#c00000;margin-top:8px">
+        没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
+      </div>
       <div style="margin-top:16px;text-align:right">
         <a-button style="margin-right:8px" @click="step = 1">上一步</a-button>
         <a-button type="primary" :disabled="!selectedRequirement" @click="goToStep3">下一步</a-button>
