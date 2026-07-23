@@ -219,10 +219,6 @@ function videoTypeLabel(v) {
   return getOptions('video_type').find(o => o.value === v)?.label
 }
 
-function comboKey(videoType, platform) {
-  return videoType + '|' + [...(platform || [])].sort().join(',')
-}
-
 function openItemModal(record) {
   if (record) {
     editingTempId.value = record.tempId
@@ -244,12 +240,6 @@ function confirmAddItem() {
   if (!itemDraft.videoType) { message.warning('请选择项目视频类型'); return }
   if (!itemDraft.platform || itemDraft.platform.length === 0) { message.warning('请选择合作平台'); return }
   if (!itemDraft.videoCount || itemDraft.videoCount <= 0) { message.warning('请填写项目视频数目'); return }
-  const key = comboKey(itemDraft.videoType, itemDraft.platform)
-  const dup = form.items.some(i => comboKey(i.videoType, i.platform) === key && i.tempId !== editingTempId.value)
-  if (dup) {
-    message.warning('这个项目视频类型-合作平台组合已经存在，不能重复添加')
-    return
-  }
   if (editingTempId.value) {
     const item = form.items.find(i => i.tempId === editingTempId.value)
     if (item.fulfilledCount > 0 && itemDraft.videoCount < item.fulfilledCount) {
