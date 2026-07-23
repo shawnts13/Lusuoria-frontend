@@ -74,7 +74,7 @@
               allow-clear placeholder="选择服务国家/市场">
               <a-select-option v-for="c in availableCountryMarkets" :key="c" :value="c">{{ c }}</a-select-option>
             </a-select>
-            <span v-else>{{ form.countryMarket || '—' }}</span>
+            <a-input v-else :value="form.countryMarket || '—'" disabled />
           </a-form-item>
         </a-col>
       </a-row>
@@ -187,7 +187,7 @@
           </a-form-item>
         </a-col>
         <a-col :span="8">
-          <a-form-item label="内部执行人员">
+          <a-form-item label="内部执行人员（可选）">
             <a-select v-model:value="form.executorId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
               placeholder="选择执行人员">

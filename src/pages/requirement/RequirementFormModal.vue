@@ -40,9 +40,13 @@
           <a-form-item label="品牌方">
             <a-select v-model:value="form.brandId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
+              :disabled="availableBrands.length <= 1"
               placeholder="选择品牌方" @change="onBrandChange">
               <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
             </a-select>
+            <div v-if="availableBrands.length > 1" style="font-size:12px;color:#faad14;margin-top:2px">
+              该红人有多个品牌方-团队，请手动选择
+            </div>
           </a-form-item>
         </a-col>
         <a-col :span="12" v-if="form.brandId">
@@ -69,7 +73,7 @@
               allow-clear placeholder="选择服务国家/市场">
               <a-select-option v-for="c in availableCountryMarkets" :key="c" :value="c">{{ c }}</a-select-option>
             </a-select>
-            <span v-else>{{ form.countryMarket || '—' }}</span>
+            <a-input v-else :value="form.countryMarket || '—'" disabled />
           </a-form-item>
         </a-col>
       </a-row>
@@ -86,6 +90,8 @@
             <span style="color:#c00000">{{ record.influencerUnitCostPrice ?? '—' }}</span>
           </template>
           <template v-if="column.key === 'action'">
+            <a @click="openItemModal(record)">编辑</a>
+            <a-divider type="vertical" />
             <a-tooltip v-if="record.fulfilledCount > 0" title="已经有关联的红人合作跟踪记录，不能删除">
               <span style="color:#bbb">已实施{{ record.fulfilledCount }}条</span>
             </a-tooltip>
@@ -93,7 +99,7 @@
           </template>
         </template>
       </a-table>
-      <a-button type="dashed" block style="margin-top:8px" @click="openItemModal">
+      <a-button type="dashed" block style="margin-top:8px" @click="openItemModal()">
         + 新增涉及的红人需求条目
       </a-button>
 
@@ -119,8 +125,8 @@
       </a-row>
     </a-form>
 
-    <!-- 新增需求条目弹窗 -->
-    <a-modal v-model:open="itemModalVisible" title="新增涉及的红人需求条目" width="480px" @ok="confirmAddItem">
+    <!-- 新增/编辑需求条目弹窗 -->
+    <a-modal v-model:open="itemModalVisible" :title="editingTempId ? '编辑涉及的红人需求条目' : '新增涉及的红人需求条目'" width="480px" @ok="confirmAddItem">
       <a-form layout="vertical">
         <a-form-item label="项目视频类型" required>
           <a-select v-model:value="itemDraft.videoType" placeholder="选择项目视频类型">
@@ -195,6 +201,7 @@ const itemColumns = [
 ]
 
 const itemModalVisible = ref(false)
+const editingTempId = ref(null)
 const itemDraft = reactive({ videoType: null, platform: [], videoCount: null, clientUnitPrice: null, influencerUnitCostPrice: null })
 
 function videoTypeLabel(v) {
@@ -205,8 +212,20 @@ function comboKey(videoType, platform) {
   return videoType + '|' + [...(platform || [])].sort().join(',')
 }
 
-function openItemModal() {
-  Object.assign(itemDraft, { videoType: null, platform: [], videoCount: null, clientUnitPrice: null, influencerUnitCostPrice: null })
+function openItemModal(record) {
+  if (record) {
+    editingTempId.value = record.tempId
+    Object.assign(itemDraft, {
+      videoType: record.videoType,
+      platform: [...(record.platform || [])],
+      videoCount: record.videoCount,
+      clientUnitPrice: record.clientUnitPrice,
+      influencerUnitCostPrice: record.influencerUnitCostPrice
+    })
+  } else {
+    editingTempId.value = null
+    Object.assign(itemDraft, { videoType: null, platform: [], videoCount: null, clientUnitPrice: null, influencerUnitCostPrice: null })
+  }
   itemModalVisible.value = true
 }
 
@@ -215,20 +234,36 @@ function confirmAddItem() {
   if (!itemDraft.platform || itemDraft.platform.length === 0) { message.warning('请选择合作平台'); return }
   if (!itemDraft.videoCount || itemDraft.videoCount <= 0) { message.warning('请填写项目视频数目'); return }
   const key = comboKey(itemDraft.videoType, itemDraft.platform)
-  if (form.items.some(i => comboKey(i.videoType, i.platform) === key)) {
+  const dup = form.items.some(i => comboKey(i.videoType, i.platform) === key && i.tempId !== editingTempId.value)
+  if (dup) {
     message.warning('这个项目视频类型-合作平台组合已经存在，不能重复添加')
     return
   }
-  form.items.push({
-    tempId: ++itemSeq,
-    id: null,
-    videoType: itemDraft.videoType,
-    platform: [...itemDraft.platform],
-    videoCount: itemDraft.videoCount,
-    clientUnitPrice: itemDraft.clientUnitPrice,
-    influencerUnitCostPrice: itemDraft.influencerUnitCostPrice,
-    fulfilledCount: 0
-  })
+  if (editingTempId.value) {
+    const item = form.items.find(i => i.tempId === editingTempId.value)
+    if (item.fulfilledCount > 0 && itemDraft.videoCount < item.fulfilledCount) {
+      message.warning(`该条目已实施 ${item.fulfilledCount} 条，项目视频数目不能小于这个数`)
+      return
+    }
+    Object.assign(item, {
+      videoType: itemDraft.videoType,
+      platform: [...itemDraft.platform],
+      videoCount: itemDraft.videoCount,
+      clientUnitPrice: itemDraft.clientUnitPrice,
+      influencerUnitCostPrice: itemDraft.influencerUnitCostPrice
+    })
+  } else {
+    form.items.push({
+      tempId: ++itemSeq,
+      id: null,
+      videoType: itemDraft.videoType,
+      platform: [...itemDraft.platform],
+      videoCount: itemDraft.videoCount,
+      clientUnitPrice: itemDraft.clientUnitPrice,
+      influencerUnitCostPrice: itemDraft.influencerUnitCostPrice,
+      fulfilledCount: 0
+    })
+  }
   itemModalVisible.value = false
 }
 
@@ -259,6 +294,9 @@ const availableTeams = computed(() => {
 })
 watch(availableTeams, (opts) => {
   if (opts.length === 1) form.teamId = opts[0].teamId ?? null
+})
+watch(availableBrands, (opts) => {
+  if (opts.length === 1) form.brandId = opts[0].id
 })
 
 function splitMulti(str) {
