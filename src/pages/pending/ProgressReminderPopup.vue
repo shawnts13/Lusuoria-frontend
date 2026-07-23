@@ -22,7 +22,9 @@ const visible = ref(false)
 const reminders = ref([])
 
 async function checkAndMaybeShow() {
-  if (!authStore.isManagement) return
+  // 2026-07 起不再局限于管理层——后端 shouldShowPopup()/list() 已经按当前登录账号的身份
+  // （ADMIN/管理层看全部，项目负责人/执行人员/财务看各自范围）返回正确的子集，这里只挡访客
+  if (authStore.isGuest) return
   try {
     const res = await progressReminderApi.popupCheck()
     if (!res.data?.shouldShow) return

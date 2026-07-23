@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.57.0'
-export const APP_VERSION_TIME = '2026-07-23 14:40'
+export const APP_VERSION = '1.58.0'
+export const APP_VERSION_TIME = '2026-07-23 15:06'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -63,8 +63,9 @@ export const useAuthStore = defineStore('auth', {
     // 比 canViewFinancials 宽松——那个仍然只有 ADMIN/AUDITOR 能看利润/提成这类真正敏感的字段
     canViewBaselineFinancials: (state) => state.role !== 'GUEST',
     canEditCommission: (state) => state.role === 'ADMIN',
-    // "待处理"页面：ADMIN 能看审批列表，"管理层"（员工角色）能看进度提醒，两者满足其一即可进页面
-    canAccessPending: (state) => state.role === 'ADMIN' || state.isManagement,
+    // "待处理"页面：2026-07 起对所有非访客角色开放（提醒中心 + 处理结果通知），
+    // 具体能看到哪些内容由页面内部按角色分区展示 + 后端接口各自按身份过滤
+    canAccessPending: (state) => state.role !== 'GUEST',
     // "红人结款"模块：严格按员工角色判断，跟 role（ADMIN/AUDITOR/...）无关——
     // 没有关联"管理层/财务/法务"这三个员工角色之一的账号，完全看不到这个模块
     canAccessPayments: (state) => ['管理层', '财务', '法务'].includes(state.employeeRole),

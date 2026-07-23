@@ -91,8 +91,9 @@ router.beforeEach((to, from, next) => {
     next('/collaborations')
     return
   }
-  // 待处理：ADMIN（审批列表）或"管理层"员工角色（进度提醒）
-  if (to.meta.pendingAccess && role !== 'ADMIN' && !isManagement) {
+  // 待处理：2026-07 起对所有非访客角色开放（提醒/处理结果通知按角色各自过滤内容，
+  // 具体区块可见性由页面内部+后端接口共同决定，这里只挡访客）
+  if (to.meta.pendingAccess && role === 'GUEST') {
     next('/collaborations')
     return
   }

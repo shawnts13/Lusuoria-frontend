@@ -12,7 +12,12 @@
         <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
       </div>
       <a-table :columns="columns" :data-source="filteredList" :loading="loading"
-        row-key="id" size="middle" :pagination="false" :scroll="{ x: 1300 }">
+        row-key="id" size="middle" :pagination="false" :scroll="{ x: 1450 }">
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'action'">
+            <a @click="goToDetail(record)">查看详情</a>
+          </template>
+        </template>
         <template #summary>
           <a-table-summary>
             <a-table-summary-row>
@@ -22,7 +27,7 @@
               <a-table-summary-cell :index="5">
                 {{ fmtAmount(totalCost) }}
               </a-table-summary-cell>
-              <a-table-summary-cell :index="6" :col-span="4" />
+              <a-table-summary-cell :index="6" :col-span="6" />
             </a-table-summary-row>
           </a-table-summary>
         </template>
@@ -33,9 +38,12 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { progressReminderApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+
+const router = useRouter()
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -105,7 +113,8 @@ const totalCost = computed(() =>
   filteredList.value.reduce((sum, r) => sum + (r.influencerCost != null ? +r.influencerCost : 0), 0))
 
 const columns = [
-  { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 },
+  { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
+    customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
   { title: '红人团队',      dataIndex: 'teamName',            key: 'teamName',            width: 110,
     customRender: ({ text }) => text || '—' },
@@ -121,7 +130,10 @@ const columns = [
   { title: '结款周期',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '最迟结款日',    dataIndex: 'deadlineDate',        key: 'deadlineDate',        width: 110,
-    customRender: ({ text }) => text ? formatDate(text) : '—' }
+    customRender: ({ text }) => text ? formatDate(text) : '—' },
+  { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '操作',          key: 'action',                    width: 90 }
 ]
 
 async function load() {
@@ -141,6 +153,16 @@ async function load() {
 watch(() => props.visible, v => { if (v) load() })
 
 function close() { emit('update:visible', false) }
+
+// Invoice逾期提醒的明细行没有单一对应的合作跟踪记录，跳转到"红人需求管理"按内部需求编号定位；
+// 其余几类（临近结款/进度滞留）跳转到"红人合作跟踪"按内部项目编号定位
+function goToDetail(record) {
+  if (record.internalRequirementNo) {
+    router.push({ path: '/requirements', query: { internalRequirementNo: record.internalRequirementNo } })
+  } else {
+    router.push({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } })
+  }
+}
 </script>
 
 <style scoped>

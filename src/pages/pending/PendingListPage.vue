@@ -4,8 +4,11 @@
       <span class="page-title">待处理</span>
     </div>
 
-    <!-- 进度提醒："管理层"员工角色可见（不是按登录账号的 ADMIN/STAFF 角色） -->
-    <ProgressReminderSection v-if="authStore.isManagement" />
+    <!-- 处理结果通知：所有非访客角色可见，内容为空时组件自己不渲染任何东西 -->
+    <OperationResultNoticeList v-if="!authStore.isGuest" />
+
+    <!-- 进度提醒：2026-07 起对所有非访客角色开放，具体能看到哪几类由后端按身份过滤 -->
+    <ProgressReminderSection v-if="!authStore.isGuest" />
 
     <template v-if="authStore.isAdmin">
       <div class="filter-bar">
@@ -69,6 +72,7 @@ import { formatDateTime } from '../../utils/dateFormat'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
 import ProgressReminderSection from './ProgressReminderSection.vue'
+import OperationResultNoticeList from './OperationResultNoticeList.vue'
 
 const authStore = useAuthStore()
 const { getLabel } = useOptions()

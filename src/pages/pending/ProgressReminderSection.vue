@@ -2,7 +2,9 @@
   <div class="reminder-section">
     <div class="reminder-header">
       <span class="reminder-title">进度提醒</span>
-      <a-button size="small" :loading="recomputing" @click="handleRecompute">结款后更新提示内容</a-button>
+      <a-button v-if="authStore.isManagement" size="small" :loading="recomputing" @click="handleRecompute">
+        结款后更新提示内容
+      </a-button>
     </div>
     <ProgressReminderCardList :reminders="reminders" :loading="loading"
       @view-detail="openDetail" />
@@ -15,9 +17,11 @@
 import { ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { progressReminderApi } from '../../api/index'
+import { useAuthStore } from '../../store/auth'
 import ProgressReminderCardList from './ProgressReminderCardList.vue'
 import ProgressReminderDetailModal from './ProgressReminderDetailModal.vue'
 
+const authStore = useAuthStore()
 const loading = ref(false)
 const reminders = ref([])
 const recomputing = ref(false)

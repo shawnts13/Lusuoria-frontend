@@ -229,7 +229,10 @@ export const exchangeRateApi = {
 export const pendingApprovalApi = {
   list:    (category, page, size) => http.get('/api/pending-approvals', { params: { category, page, size } }),
   approve: (id)         => http.post(`/api/pending-approvals/${id}/approve`),
-  reject:  (id, note)   => http.post(`/api/pending-approvals/${id}/reject`, { note })
+  reject:  (id, note)   => http.post(`/api/pending-approvals/${id}/reject`, { note }),
+  // "处理结果通知"（2026-07 新增）：非管理员看自己相关记录已同意/已拒绝的通知
+  myNotifications: () => http.get('/api/pending-approvals/my-notifications'),
+  dismiss: (id) => http.post(`/api/pending-approvals/${id}/dismiss`)
 }
 
 // ===== 进度提醒 =====

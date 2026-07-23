@@ -105,6 +105,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { requirementApi, brandApi, influencerApi, influencerTeamApi } from '../../api/index'
@@ -117,6 +118,7 @@ import RequirementProgressModal from './RequirementProgressModal.vue'
 import RequirementInvoiceModal from './RequirementInvoiceModal.vue'
 
 const authStore = useAuthStore()
+const route = useRoute()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading     = ref(false)
@@ -149,7 +151,9 @@ const pagination = reactive({
 })
 const filters = reactive({
   brandId: undefined, teamId: undefined, accountName: undefined,
-  requirementMonth: undefined, internalRequirementNo: undefined
+  requirementMonth: undefined,
+  // 支持从"进度提醒"详情等外部入口带 internalRequirementNo 跳转过来直接定位
+  internalRequirementNo: route.query.internalRequirementNo || undefined
 })
 
 // 列顺序按需求描述：内部需求编号、需求月份、品牌方、红人团队、服务国家/市场、红人社媒完整名字、
