@@ -76,6 +76,8 @@
         @change="v => { filters.videoMonth = v; loadData() }" />
       <a-input v-model:value="filters.clientOrderId" placeholder="客户方的项目订单" style="width:150px"
         allow-clear @press-enter="loadData" />
+      <a-input v-model:value="filters.internalRequirementNo" placeholder="内部需求编号" style="width:180px"
+        allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.internalProjectNo" placeholder="内部项目编号" style="width:180px"
         allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.clientPaymentBatch" placeholder="客户方付款批次" style="width:150px"
@@ -311,6 +313,7 @@ const filters = reactive({
   platform: undefined, progress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
+  internalRequirementNo: route.query.internalRequirementNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
 })
 
@@ -440,6 +443,7 @@ async function loadData() {
       videoType:          filters.videoType,
       videoMonth:         filters.videoMonth,
       internalProjectNo:  filters.internalProjectNo?.trim() || undefined,
+      internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
       projectManagerId:   filters.projectManagerId,
@@ -471,6 +475,7 @@ function resetFilters() {
     brandId:undefined, teamId:undefined, countryMarket:undefined,
     accountName:undefined, platform:undefined, progress:undefined, videoType:undefined,
     videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
+    internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
   })
   pagination.current = 1
