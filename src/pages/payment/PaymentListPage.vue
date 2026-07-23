@@ -31,6 +31,8 @@
           {{ s.label }}
         </a-select-option>
       </a-select>
+      <a-input-search v-model:value="filters.internalRequirementNo" placeholder="搜索内部需求编号"
+        style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
     </div>
 
@@ -119,7 +121,8 @@ const pagination = reactive({ current: 1, pageSize: 20, total: 0,
   showTotal: t => `共 ${t} 条` })
 const filters = reactive({
   settlementMonth: undefined, settlementMonthVal: undefined,
-  brandId: undefined, teamId: undefined, paymentStatus: undefined
+  brandId: undefined, teamId: undefined, paymentStatus: undefined,
+  internalRequirementNo: undefined
 })
 
 const paymentStatuses = [
@@ -178,6 +181,7 @@ async function loadData() {
       brandId:         filters.brandId,
       teamId:          filters.teamId,
       paymentStatus:   filters.paymentStatus,
+      internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       page: pagination.current - 1,
       size: pagination.pageSize
     })
@@ -194,7 +198,7 @@ function handleTableChange(pag) {
 }
 function resetFilters() {
   Object.assign(filters, { settlementMonth:undefined, settlementMonthVal:undefined,
-    brandId:undefined, teamId:undefined, paymentStatus:undefined })
+    brandId:undefined, teamId:undefined, paymentStatus:undefined, internalRequirementNo:undefined })
   pagination.current = 1; loadData()
 }
 function openCreate() { editingRecord.value = null; modalVisible.value = true }

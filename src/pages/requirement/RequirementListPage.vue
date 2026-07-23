@@ -83,7 +83,7 @@
     </div>
 
     <a-modal v-model:open="contentModalVisible" title="完整需求内容" :footer="null" width="640px">
-      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6">{{ contentModalText }}</div>
+      <div style="white-space:pre-wrap;font-size:13px;line-height:1.6" v-html="highlightContent(contentModalText)"></div>
     </a-modal>
 
     <RequirementFormModal
@@ -175,6 +175,26 @@ const columns = [
 ]
 const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+// "查看完整需求内容"弹窗高亮：原文是自由文本，不是结构化字段，用正则给已知标签/金额上色，
+// 方便一眼看出重要信息。先转义再上色，避免用户自由文本里带 <> 之类字符被当成 HTML 注入
+function highlightContent(text) {
+  if (!text) return ''
+  let html = escapeHtml(text)
+  // 客户/红人价格类标签（含"合作价格"这种不带前缀的不规范写法）用蓝色加粗强调
+  html = html.replace(/(客户价格|客户合作价格|红人成本|红人合作成本|合作价格)(（[^）]*）)?([：:])/g,
+    '<span style="color:#1677ff;font-weight:600">$1$2$3</span>')
+  // 其余常见标签弱化成灰色，降低视觉噪音，衬托真正重要的价格/金额信息
+  html = html.replace(/(红人区域|红人完整名字|红人社媒完整名字|红人TEMU系统ID|下单条数|下单机构|投流期限|版权)([：:])/g,
+    '<span style="color:#888">$1$2</span>')
+  // "其他权益"小标题
+  html = html.replace(/(其他权益)/g, '<span style="color:#666;font-weight:600">$1</span>')
+  // USD 金额单独标红加粗，是全文最需要一眼看到的数字
+  html = html.replace(/([\d.]+\s*USD)/g, '<span style="color:#c00000;font-weight:600">$1</span>')
+  return html
+}
 function fmtNum(v) {
   if (v == null) return '—'
   return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
