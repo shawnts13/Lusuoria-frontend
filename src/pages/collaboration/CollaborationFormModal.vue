@@ -58,7 +58,7 @@
                 {{ t.teamName || '（不涉及团队）' }}
               </a-select-option>
             </a-select>
-            <div v-if="availableTeams.length > 1" style="font-size:12px;color:#888;margin-top:2px">
+            <div v-if="availableTeams.length > 1" style="font-size:12px;color:#faad14;margin-top:2px">
               该红人在此品牌方下关联了多个团队，请明确选择其中一个
             </div>
           </a-form-item>
@@ -75,6 +75,9 @@
               <a-select-option v-for="c in availableCountryMarkets" :key="c" :value="c">{{ c }}</a-select-option>
             </a-select>
             <a-input v-else :value="form.countryMarket || '—'" disabled />
+            <div v-if="availableCountryMarkets.length > 1" style="font-size:12px;color:#faad14;margin-top:2px">
+              该红人有多个服务国家/市场，请手动选择
+            </div>
           </a-form-item>
         </a-col>
       </a-row>

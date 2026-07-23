@@ -168,6 +168,9 @@ export const requirementApi = {
   linkLegacy: (internalRequirementNo, trackingIds) =>
     http.post('/api/influencer-requirements/link-legacy', { internalRequirementNo, trackingIds }),
 
+  uploadInvoiceLink: (id, invoiceLink) =>
+    http.post(`/api/influencer-requirements/${id}/invoice-link`, { invoiceLink }),
+
   exportExcel: (params) => {
     const qs = new URLSearchParams(
       Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')

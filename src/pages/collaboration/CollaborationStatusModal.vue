@@ -23,13 +23,16 @@
       </a-form-item>
       <a-form-item label="红人结款进度">
         <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
-          allow-clear :disabled="!paymentProgressEnabled || isSystemManagedCurrent">
+          allow-clear :disabled="!paymentProgressEnabled || isSystemManagedCurrent || willAutoSetPayment">
           <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value"
             :disabled="SYSTEM_MANAGED_PROGRESS.includes(o.value)">
             {{ o.label }}
           </a-select-option>
         </a-select>
-        <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+        <div v-if="willAutoSetPayment" style="font-size:12px;color:#1677ff;margin-top:2px">
+          首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」
+        </div>
+        <div v-else-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
           仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
         </div>
         <div style="font-size:12px;color:#ff4d4f;margin-top:2px">
@@ -65,7 +68,8 @@ const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 
 const props = defineProps({
   visible: Boolean,
-  record: Object
+  record: Object,
+  brands: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
@@ -102,6 +106,16 @@ watch(() => props.visible, v => {
 
 const paymentProgressEnabled = computed(() => qualifies(progress.value))
 
+// 首次进入"已发布（未结算）"：后端会自动判定红人结款进度（按品牌方是否需要invoice），
+// 不需要（也不应该）在这里让用户手动选，跟后端 enteringPublishedUnsettled 的条件保持一致
+const willAutoSetPayment = computed(() =>
+  progress.value === 'PUBLISHED_UNSETTLED' && original.progress !== 'PUBLISHED_UNSETTLED'
+)
+const autoPaymentLabel = computed(() => {
+  const brand = props.brands?.find(b => b.id === props.record?.brandId)
+  return brand && brand.requiresInvoice === false ? '待结款（不涉及invoice）' : '待红人发送invoice'
+})
+
 // 视频发布时间自动填写提示：跟后端 updateStatus() 的规则保持一致——首次从不满足前置条件
 // 流转到满足前置条件的状态、且当前还没有视频发布时间时，系统才会自动填今天的日期
 const willAutoFillPublishDate = computed(() =>
@@ -135,7 +149,8 @@ async function handleSave() {
   try {
     const res = await collaborationApi.updateStatus(props.record.id, {
       progress: progress.value,
-      influencerPaymentProgress: paymentProgressEnabled.value ? paymentProgress.value : null,
+      influencerPaymentProgress: willAutoSetPayment.value ? null
+        : (paymentProgressEnabled.value ? paymentProgress.value : null),
       reason: isRollback.value ? reason.value.trim() : null
     })
     if (res.data?.pendingApproval) {

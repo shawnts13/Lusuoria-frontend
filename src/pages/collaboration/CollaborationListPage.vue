@@ -200,6 +200,7 @@
     <CollaborationStatusModal
       v-model:visible="statusModalVisible"
       :record="statusModalRecord"
+      :brands="brands"
       @saved="loadData"
       @need-executor-cost="openExecutorCostModal" />
 

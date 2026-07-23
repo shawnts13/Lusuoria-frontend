@@ -81,6 +81,18 @@
             <a-input-number v-model:value="form.daysAfterMonthEnd" style="width:100%" :precision="0" :min="0" />
           </a-form-item>
         </template>
+        <a-form-item label="是否需要Invoice">
+          <a-select v-model:value="form.requiresInvoice" allow-clear placeholder="默认需要">
+            <a-select-option :value="true">需要</a-select-option>
+            <a-select-option :value="false">不需要</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="合同签订周期">
+          <a-select v-model:value="form.contractCycleType" allow-clear placeholder="尚未配置">
+            <a-select-option value="ANNUAL">一年签一次合同</a-select-option>
+            <a-select-option value="PER_REQUIREMENT">一次需求签一次合同</a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item label="备注">
           <a-textarea v-model:value="form.notes" :rows="3" />
         </a-form-item>
@@ -124,8 +136,11 @@ const form = reactive({
   contactPerson: '', settlementCurrency: 'USD',
   paymentCycleType: null, costThresholdAmount: null,
   daysWithinThreshold: null, daysAboveThreshold: null, daysAfterMonthEnd: null,
-  notes: ''
+  notes: '',
+  requiresInvoice: null, contractCycleType: null
 })
+
+const CONTRACT_CYCLE_LABELS = { ANNUAL: '一年签一次合同', PER_REQUIREMENT: '一次需求签一次合同' }
 
 // 付款周期：按品牌方结算币种拼出可读的一行描述，尚未配置时显示"—"
 function formatPaymentCycle(record) {
@@ -149,6 +164,10 @@ const columns = [
   { title: '结算币种',   dataIndex: 'settlementCurrency', key: 'settlementCurrency' },
   { title: '付款周期',   key: 'paymentCycle',
     customRender: ({ record }) => formatPaymentCycle(record) },
+  { title: '是否需要Invoice', key: 'requiresInvoice',
+    customRender: ({ record }) => record.requiresInvoice === false ? '不需要' : '需要' },
+  { title: '合同签订周期', key: 'contractCycleType',
+    customRender: ({ record }) => CONTRACT_CYCLE_LABELS[record.contractCycleType] || '—' },
   { title: '备注',       dataIndex: 'notes',             key: 'notes', ellipsis: true },
   { title: '操作',       key: 'action',                  width: 120 }
 ]
@@ -165,7 +184,8 @@ function openCreate() {
     contactPerson:'', settlementCurrency:'USD',
     paymentCycleType:null, costThresholdAmount:null,
     daysWithinThreshold:null, daysAboveThreshold:null, daysAfterMonthEnd:null,
-    notes:'' })
+    notes:'',
+    requiresInvoice:null, contractCycleType:null })
   modalVisible.value = true
 }
 

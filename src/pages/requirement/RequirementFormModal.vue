@@ -74,14 +74,24 @@
               <a-select-option v-for="c in availableCountryMarkets" :key="c" :value="c">{{ c }}</a-select-option>
             </a-select>
             <a-input v-else :value="form.countryMarket || '—'" disabled />
+            <div v-if="availableCountryMarkets.length > 1" style="font-size:12px;color:#faad14;margin-top:2px">
+              该红人有多个服务国家/市场，请手动选择
+            </div>
           </a-form-item>
         </a-col>
       </a-row>
 
+      <a-form-item label="备注">
+        <a-textarea v-model:value="form.notes" :rows="2" placeholder="记录一些特殊情况" />
+      </a-form-item>
+
       <a-divider orientation="left" style="font-size:13px">涉及的红人需求条目</a-divider>
       <a-table :columns="itemColumns" :data-source="form.items" :pagination="false" size="small" row-key="tempId">
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'videoType'">{{ videoTypeLabel(record.videoType) || '（未选择）' }}</template>
+          <template v-if="column.key === 'videoType'">
+            <span v-if="!record.videoType" style="color:#faad14">（未选择）</span>
+            <span v-else>{{ videoTypeLabel(record.videoType) }}</span>
+          </template>
           <template v-if="column.key === 'platform'">{{ (record.platform || []).join('、') || '—' }}</template>
           <template v-if="column.key === 'clientUnitPrice'">
             <span style="color:#c00000">{{ record.clientUnitPrice ?? '—' }}</span>
@@ -183,6 +193,7 @@ const form = reactive({
   teamId: null,
   countryMarket: null,
   requirementMonth: currentMonth(),
+  notes: '',
   items: []
 })
 
@@ -375,6 +386,7 @@ watch(() => props.visible, (v) => {
         teamId: rec.teamId || null,
         countryMarket: rec.countryMarket || null,
         requirementMonth: rec.requirementMonth || currentMonth(),
+        notes: rec.notes || '',
         items: []
       })
       loadItems(rec.id)
@@ -382,7 +394,7 @@ watch(() => props.visible, (v) => {
       Object.assign(form, {
         id: null, internalRequirementNo: null, fullRequirementContent: '',
         influencerId: null, brandId: null, teamId: null, countryMarket: null,
-        requirementMonth: currentMonth(), items: []
+        requirementMonth: currentMonth(), notes: '', items: []
       })
     }
   }
@@ -424,6 +436,7 @@ async function handleSave() {
       countryMarket: form.countryMarket,
       requirementMonth: form.requirementMonth,
       fullRequirementContent: form.fullRequirementContent || null,
+      notes: form.notes || null,
       items: form.items.map(i => ({
         id: i.id,
         videoType: i.videoType,

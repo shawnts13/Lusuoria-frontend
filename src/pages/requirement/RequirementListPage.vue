@@ -56,9 +56,21 @@
               {{ record.completedCount ?? 0 }}/{{ record.totalItemCount ?? 0 }}
             </a>
           </template>
+          <template v-if="column.key === 'invoiceLink'">
+            <span v-if="getBrand(record.brandId)?.requiresInvoice === false" style="color:#bbb">不涉及</span>
+            <a v-else-if="record.invoiceLink" :href="record.invoiceLink" target="_blank" style="font-size:12px">查看Invoice</a>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'action'">
             <a-space v-if="authStore.canWrite">
               <a @click="openEdit(record)">编辑</a>
+              <a-divider type="vertical" />
+              <a-tooltip :title="invoiceButtonState(record).tooltip">
+                <span>
+                  <a-button size="small" :disabled="invoiceButtonState(record).disabled"
+                    @click="openInvoiceModal(record)">上传Invoice</a-button>
+                </span>
+              </a-tooltip>
               <a-divider type="vertical" />
               <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
                 <a style="color:#ff4d4f">删除</a>
@@ -85,6 +97,9 @@
     <RequirementItemsViewModal v-model:visible="itemsModalVisible" :requirement-id="itemsModalRequirementId" />
 
     <RequirementProgressModal v-model:visible="progressModalVisible" :requirement-id="progressModalRequirementId" />
+
+    <RequirementInvoiceModal v-model:visible="invoiceModalVisible" :requirement="invoiceModalRequirement"
+      @saved="loadData" />
   </div>
 </template>
 
@@ -99,6 +114,7 @@ import { formatDateTime } from '../../utils/dateFormat'
 import RequirementFormModal from './RequirementFormModal.vue'
 import RequirementItemsViewModal from './RequirementItemsViewModal.vue'
 import RequirementProgressModal from './RequirementProgressModal.vue'
+import RequirementInvoiceModal from './RequirementInvoiceModal.vue'
 
 const authStore = useAuthStore()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -120,6 +136,9 @@ const itemsModalRequirementId = ref(null)
 
 const progressModalVisible = ref(false)
 const progressModalRequirementId = ref(null)
+
+const invoiceModalVisible = ref(false)
+const invoiceModalRequirement = ref(null)
 
 const sortState = reactive({ field: 'id', order: 'descend' })
 const pagination = reactive({
@@ -150,7 +169,9 @@ const columns = [
   { title: '客户合作总价格（$）', key: 'totalClientPrice', width: 160, sorter: true },
   { title: '红人视频制作与发布总成本（$）', key: 'totalInfluencerCost', width: 200, sorter: true },
   { title: '需求完成进度', key: 'progress', width: 120 },
-  { title: '操作', key: 'action', width: 120, fixed: 'right' }
+  { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
+  { title: 'Invoice链接', key: 'invoiceLink', width: 110 },
+  { title: '操作', key: 'action', width: 220, fixed: 'right' }
 ]
 const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
@@ -158,7 +179,21 @@ function fmtNum(v) {
   if (v == null) return '—'
   return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-function getBrandName(id) { return brands.value.find(b => b.id === id)?.name }
+function getBrand(id) { return brands.value.find(b => b.id === id) }
+function getBrandName(id) { return getBrand(id)?.name }
+
+// "上传Invoice"按钮的禁用状态+悬浮提示：品牌方不涉及invoice上传 优先于 "需求未实施完成"
+function invoiceButtonState(record) {
+  const brand = getBrand(record.brandId)
+  if (brand && brand.requiresInvoice === false) {
+    return { disabled: true, tooltip: '该品牌方不涉及Invoice上传' }
+  }
+  const total = record.totalItemCount ?? 0
+  const done = total > 0 && (record.completedCount ?? 0) >= total
+  return done
+    ? { disabled: false, tooltip: null }
+    : { disabled: true, tooltip: '该需求尚未实施完成，还无需上传Invoice' }
+}
 function getTeamName(id) { return teams.value.find(t => t.id === id)?.name }
 function getInfluencerName(id) { return influencers.value.find(i => i.id === id)?.accountName }
 
@@ -236,6 +271,10 @@ function viewItems(record) {
 function viewProgress(record) {
   progressModalRequirementId.value = record.id
   progressModalVisible.value = true
+}
+function openInvoiceModal(record) {
+  invoiceModalRequirement.value = record
+  invoiceModalVisible.value = true
 }
 
 onMounted(async () => {
