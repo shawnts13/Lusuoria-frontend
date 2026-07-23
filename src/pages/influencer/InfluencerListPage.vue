@@ -45,6 +45,12 @@
           {{ o.label }}
         </a-select-option>
       </a-select>
+      <a-select v-model:value="filters.domain" placeholder="所属领域"
+        style="width:150px" allow-clear show-search
+        :filter-option="(input, opt) => opt.label.includes(input)"
+        @change="loadData">
+        <a-select-option v-for="d in domains" :key="d.id" :value="d.name" :label="d.name">{{ d.name }}</a-select-option>
+      </a-select>
       <a-select v-model:value="filters.brandId" placeholder="品牌方"
         style="width:150px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
@@ -257,7 +263,7 @@ const pagination = reactive({
   pageSizeOptions: ['20', '50', '100']
 })
 const filters = reactive({
-  influencerType: undefined, platform: undefined, countryMarket: undefined,
+  influencerType: undefined, platform: undefined, countryMarket: undefined, domain: undefined,
   brandId: undefined, teamId: undefined,
   followerMin: undefined, followerMax: undefined,
   keyword: undefined
@@ -312,6 +318,7 @@ async function loadData() {
       influencerType: filters.influencerType,
       platform:       filters.platform,
       countryMarket:  filters.countryMarket,
+      domain:         filters.domain,
       brandId:        filters.brandId,
       teamId:         filters.teamId      || undefined,
       followerMin:    filters.followerMin || undefined,
@@ -350,7 +357,7 @@ function handleTableChange(pag, _filters, sorter) {
 
 function resetFilters() {
   Object.assign(filters, {
-    influencerType:undefined, platform:undefined, countryMarket:undefined,
+    influencerType:undefined, platform:undefined, countryMarket:undefined, domain:undefined,
     brandId:undefined, teamId:undefined, followerMin:undefined, followerMax:undefined, keyword:undefined
   })
   pagination.current = 1
