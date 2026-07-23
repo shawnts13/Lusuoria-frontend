@@ -16,6 +16,13 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
             <a @click="goToDetail(record)">查看详情</a>
+            <template v-if="canAcknowledge">
+              <a-divider type="vertical" />
+              <a-popconfirm title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
+                @confirm="handleAcknowledge(record)">
+                <a style="color:#52c41a">标记已处理</a>
+              </a-popconfirm>
+            </template>
           </template>
         </template>
         <template #summary>
@@ -39,17 +46,28 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { progressReminderApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { useAuthStore } from '../../store/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  reminderId: { type: [Number, String], default: null }
+  reminderId: { type: [Number, String], default: null },
+  // 只有这3类"进度滞留/Invoice逾期"提醒支持"标记已处理"，且只对项目负责人/执行人员/财务
+  // 本人生效（跟后端 acknowledge 的受众一致）——ADMIN/管理层看到的是完整视角，标记对他们
+  // 自己没有意义，所以不展示这个操作
+  category: { type: String, default: null }
 })
 const emit = defineEmits(['update:visible'])
+
+const ACKNOWLEDGEABLE_CATEGORIES = ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE']
+const canAcknowledge = computed(() =>
+  ACKNOWLEDGEABLE_CATEGORIES.includes(props.category) && !authStore.isAdmin && !authStore.isManagement)
 
 const loading = ref(false)
 const list = ref([])
@@ -133,7 +151,7 @@ const columns = [
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
-  { title: '操作',          key: 'action',                    width: 90 }
+  { title: '操作',          key: 'action',                    width: 170 }
 ]
 
 async function load() {
@@ -162,6 +180,13 @@ function goToDetail(record) {
   } else {
     router.push({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } })
   }
+}
+
+async function handleAcknowledge(record) {
+  const targetId = props.category === 'REQUIREMENT_INVOICE_OVERDUE' ? record.requirementId : record.trackingId
+  await progressReminderApi.acknowledge(props.category, targetId)
+  message.success('已标记为已处理，进度有变化前不会再提醒这条')
+  list.value = list.value.filter(r => r.id !== record.id)
 }
 </script>
 

@@ -243,5 +243,7 @@ export const progressReminderApi = {
   // "项目流转后更新提示内容"（2026-07 新增）：只重算进度滞留/Invoice逾期这3类
   recomputeProjectFlow: () => http.post('/api/progress-reminders/recompute-project-flow'),
   popupCheck:   ()   => http.get('/api/progress-reminders/popup-check'),
-  popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss')
+  popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss'),
+  // "标记已处理"（2026-07 新增，仅进度滞留/Invoice逾期这3类支持）
+  acknowledge: (category, targetId) => http.post('/api/progress-reminders/acknowledge', { category, targetId })
 }

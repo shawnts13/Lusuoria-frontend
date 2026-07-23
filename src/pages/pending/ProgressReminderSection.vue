@@ -12,7 +12,8 @@
     <ProgressReminderCardList :reminders="reminders" :loading="loading"
       @view-detail="openDetail" />
 
-    <ProgressReminderDetailModal v-model:visible="detailVisible" :reminder-id="detailReminderId" />
+    <ProgressReminderDetailModal v-model:visible="detailVisible" :reminder-id="detailReminderId"
+      :category="detailCategory" />
   </div>
 </template>
 
@@ -31,6 +32,7 @@ const recomputing = ref(false)
 const recomputingProjectFlow = ref(false)
 const detailVisible = ref(false)
 const detailReminderId = ref(null)
+const detailCategory = ref(null)
 
 async function loadData() {
   loading.value = true
@@ -44,6 +46,7 @@ async function loadData() {
 
 function openDetail(r) {
   detailReminderId.value = r.id
+  detailCategory.value = r.category
   detailVisible.value = true
 }
 
