@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.62.1'
-export const APP_VERSION_TIME = '2026-07-23 20:17'
+export const APP_VERSION = '1.62.2'
+export const APP_VERSION_TIME = '2026-07-23 20:43'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -66,6 +66,11 @@ export const useAuthStore = defineStore('auth', {
     // 比 canViewFinancials 宽松——那个仍然只有 ADMIN/AUDITOR 能看利润/提成这类真正敏感的字段
     canViewBaselineFinancials: (state) => state.role !== 'GUEST',
     canEditCommission: (state) => state.role === 'ADMIN',
+    // "红人合作跟踪"里汇率/其他外部成本（人民币）/外部成本备注这几个记账细节字段：跟后端
+    // ProjectFieldVisibility 的 FULL 层级判定保持一致——ADMIN/AUDITOR，或员工角色是
+    // "财务"/"管理层"的 STAFF 账号；项目负责人/执行人员一律看不到（无论是不是自己负责的项目）
+    canViewCostBookkeeping: (state) =>
+      state.role === 'ADMIN' || state.role === 'AUDITOR' || ['管理层', '财务'].includes(state.employeeRole),
     // "待处理"页面：2026-07 起对所有非访客角色开放（提醒中心 + 处理结果通知），
     // 具体能看到哪些内容由页面内部按角色分区展示 + 后端接口各自按身份过滤
     canAccessPending: (state) => state.role !== 'GUEST',

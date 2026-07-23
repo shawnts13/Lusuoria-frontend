@@ -339,14 +339,16 @@ const allColumns = [
   // 这两个字段是"基础财务字段"，GUEST 之外所有角色都能看，不受 canViewFinancials（仅 ADMIN/AUDITOR）限制
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, baseline: true },
   { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, baseline: true },
-  // 以下列 2026-07 从"项目订单"模块迁移过来。汇率/其他外部成本/内部执行成本不标 sensitive
+  // 以下列 2026-07 从"项目订单"模块迁移过来。内部执行成本不标 sensitive/costBookkeeping
   // （按行脱敏：项目负责人/执行人员只能看到自己相关的行，其余显示"—"，由后端按行返回决定，
-  // 不是角色整体限制，所以不能靠前端 sensitive 整列隐藏，拿到什么就显示什么，跟原项目订单列表一致）
-  { title: '汇率', dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80,
+  // 不是角色整体限制，所以不能靠前端整列隐藏，拿到什么就显示什么，跟原项目订单列表一致）。
+  // 汇率/其他外部成本/外部成本备注 2026-07 收紧成仅管理层/财务可见（costBookkeeping 整列
+  // 隐藏，标准跟后端 ProjectFieldVisibility 的 FULL 层级判定一致），不再是按行脱敏
+  { title: '汇率', dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80, costBookkeeping: true,
     customRender: ({ text }) => text || '—' },
-  { title: '其他外部成本（人民币）', dataIndex: 'otherExternalCost', key: 'otherExternalCost', width: 160,
+  { title: '其他外部成本（人民币）', dataIndex: 'otherExternalCost', key: 'otherExternalCost', width: 160, costBookkeeping: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '外部成本备注', dataIndex: 'otherExternalCostNote', key: 'otherExternalCostNote', width: 180, ellipsis: true,
+  { title: '外部成本备注', dataIndex: 'otherExternalCostNote', key: 'otherExternalCostNote', width: 180, ellipsis: true, costBookkeeping: true,
     customRender: ({ text }) => text || '—' },
   { title: '内部执行成本（人民币）', dataIndex: 'internalExecutionCost', key: 'internalExecutionCost', width: 160,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
@@ -371,7 +373,11 @@ function fmtNum(val) {
 }
 
 const visibleColumns = computed(() =>
-  allColumns.filter(col => col.baseline ? authStore.canViewBaselineFinancials : (!col.sensitive || authStore.canViewFinancials)))
+  allColumns.filter(col => {
+    if (col.baseline) return authStore.canViewBaselineFinancials
+    if (col.costBookkeeping) return authStore.canViewCostBookkeeping
+    return !col.sensitive || authStore.canViewFinancials
+  }))
 const tableScrollX = computed(() =>
   visibleColumns.value.reduce((sum, c) => sum + (c.width || 120), 0))
 

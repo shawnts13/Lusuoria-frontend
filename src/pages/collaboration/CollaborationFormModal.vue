@@ -363,12 +363,11 @@ const { getOptions } = useOptions()
 const authStore = useAuthStore()
 // 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
 const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
-// 汇率/其他外部成本（人民币）/外部成本备注这几个财务记账细节字段，只有员工角色是"管理层"/
-// "财务"才能看到——项目负责人、执行人员都应该隐藏（不看 canViewFinancials/SysUser角色，
-// 纯按员工角色判断，跟 canSetFinanceSettlementProgress 等既有的"员工角色专属"字段同一套
-// 判断方式）。"内部执行成本"不受这里影响，因为项目负责人可能涉及设置执行人员的成本，
+// 汇率/其他外部成本（人民币）/外部成本备注这几个财务记账细节字段的可见性，统一用
+// authStore.canViewCostBookkeeping（跟后端 ProjectFieldVisibility 的 FULL 层级判定保持
+// 一致）。"内部执行成本"不受这里影响，因为项目负责人可能涉及设置执行人员的成本，
 // 始终按 canViewFinancials 展示
-const canViewCostBookkeeping = computed(() => ['管理层', '财务'].includes(authStore.employeeRole))
+const canViewCostBookkeeping = computed(() => authStore.canViewCostBookkeeping)
 const linkPickerVisible = ref(false)
 const formRef = ref()
 const saving  = ref(false)
