@@ -330,8 +330,18 @@ async function handleParseContent() {
   try {
     const res = await requirementApi.parseContent(form.fullRequirementContent)
     const data = res.data
-    onInfluencerChange()
+    // 只有识别出的红人变了才清空品牌方/团队/服务国家市场——重新识别时如果还是同一个红人
+    // （比如用户只是改了需求内容里的数量/单价重新提取），赋值同一个 id 不会触发响应式更新，
+    // 之前已经自动带入的字段会被 onInfluencerChange 清空后再也填不回来，所以这里改成有条件清空
+    if (form.influencerId !== data.influencerId) {
+      form.brandId = null
+      form.teamId = null
+      form.countryMarket = null
+    }
     form.influencerId = data.influencerId
+    // 清空之前"提取需求内容"生成的、还没被合作跟踪实施过的条目，避免重新识别后条目越堆越多；
+    // 已经被合作跟踪实施过的条目（fulfilledCount > 0）保留，不能凭空丢弃
+    form.items = form.items.filter(i => i.fulfilledCount > 0)
     for (const item of data.items || []) {
       form.items.push({
         tempId: ++itemSeq,
