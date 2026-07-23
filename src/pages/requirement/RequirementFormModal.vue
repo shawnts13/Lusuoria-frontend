@@ -151,13 +151,13 @@
         <a-form-item label="项目视频数目" required>
           <a-input-number v-model:value="itemDraft.videoCount" style="width:100%" :min="1" :precision="0" />
         </a-form-item>
-        <a-form-item label="客户合作单价（$）">
-          <template #label><span style="color:#c00000">客户合作单价（$，注意是单价）</span></template>
-          <a-input-number v-model:value="itemDraft.clientUnitPrice" style="width:100%" :min="0" :precision="2" />
-        </a-form-item>
         <a-form-item>
           <template #label><span style="color:#c00000">红人视频制作与发布单价成本（$，注意是单价）</span></template>
           <a-input-number v-model:value="itemDraft.influencerUnitCostPrice" style="width:100%" :min="0" :precision="2" />
+        </a-form-item>
+        <a-form-item label="客户合作单价（$）">
+          <template #label><span style="color:#c00000">客户合作单价（$，注意是单价）</span></template>
+          <a-input-number v-model:value="itemDraft.clientUnitPrice" style="width:100%" :min="0" :precision="2" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -206,8 +206,8 @@ const itemColumns = [
   { title: '项目视频类型', key: 'videoType', width: 130 },
   { title: '合作平台', key: 'platform', width: 160 },
   { title: '项目视频数目', dataIndex: 'videoCount', key: 'videoCount', width: 100 },
-  { title: '客户合作单价（$）', key: 'clientUnitPrice', width: 130 },
   { title: '红人视频制作与发布单价成本（$）', key: 'influencerUnitCostPrice', width: 180 },
+  { title: '客户合作单价（$）', key: 'clientUnitPrice', width: 130 },
   { title: '操作', key: 'action', width: 140 }
 ]
 

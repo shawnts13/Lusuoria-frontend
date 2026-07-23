@@ -27,8 +27,8 @@ const columns = [
   { title: '项目视频类型', key: 'videoType', width: 130 },
   { title: '合作平台', key: 'platform', width: 160 },
   { title: '项目视频数目', dataIndex: 'videoCount', key: 'videoCount', width: 100 },
-  { title: '客户合作单价（$）', dataIndex: 'clientUnitPrice', key: 'clientUnitPrice', width: 130 },
   { title: '红人视频制作与发布单价成本（$）', dataIndex: 'influencerUnitCostPrice', key: 'influencerUnitCostPrice', width: 180 },
+  { title: '客户合作单价（$）', dataIndex: 'clientUnitPrice', key: 'clientUnitPrice', width: 130 },
   { title: '已实施/总数', key: 'fulfilled', width: 110 }
 ]
 
