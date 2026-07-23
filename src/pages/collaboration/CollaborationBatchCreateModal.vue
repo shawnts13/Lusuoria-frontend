@@ -49,7 +49,7 @@
               <a-form-item label="品牌方">
                 <a-select v-model:value="pane.brandId" allow-clear show-search
                   :filter-option="(input, opt) => opt.label.includes(input)"
-                  :disabled="!pane.influencerId" placeholder="选择品牌方"
+                  :disabled="!pane.influencerId || availableBrands(pane).length <= 1" placeholder="选择品牌方"
                   @change="() => { pane.teamId = null }">
                   <a-select-option v-for="b in availableBrands(pane)" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
                 </a-select>
@@ -224,7 +224,9 @@ function availableBrands(pane) {
   const inf = props.influencers.find(i => i.id === pane.influencerId)
   if (!inf || !inf.brandTeamPairs || !inf.brandTeamPairs.length) return []
   const brandIds = [...new Set(inf.brandTeamPairs.map(p => p.brandId))]
-  return props.brands.filter(b => brandIds.includes(b.id))
+  const opts = props.brands.filter(b => brandIds.includes(b.id))
+  if (opts.length === 1 && pane.brandId == null) pane.brandId = opts[0].id
+  return opts
 }
 function availableTeams(pane) {
   if (!pane.influencerId || !pane.brandId) return []

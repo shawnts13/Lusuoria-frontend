@@ -35,7 +35,7 @@
             <a-select v-model:value="form.brandId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.includes(input)"
               :placeholder="form.influencerId ? '选择品牌方' : '请先选择红人'"
-              :disabled="!form.influencerId"
+              :disabled="!form.influencerId || availableBrands.length <= 1"
               @change="onBrandChange">
               <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
             </a-select>
@@ -570,6 +570,12 @@ function onBrandChange() {
 watch(availableTeams, (opts) => {
   if (opts.length === 1) {
     form.teamId = opts[0].teamId ?? null
+  }
+})
+// 品牌方只有1个选项时同样自动带入，省得再手动选一次
+watch(availableBrands, (opts) => {
+  if (opts.length === 1) {
+    form.brandId = opts[0].id
   }
 })
 
