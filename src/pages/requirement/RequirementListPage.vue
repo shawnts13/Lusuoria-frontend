@@ -39,8 +39,18 @@
         :pagination="pagination" row-key="id" size="middle" :scroll="{ x: tableScrollX }"
         @change="handleTableChange">
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'brandName'">{{ getBrandName(record.brandId) || '—' }}</template>
-          <template v-if="column.key === 'teamName'">{{ getTeamName(record.teamId) || '—' }}</template>
+          <template v-if="column.key === 'brandName'">
+            <a-tag v-if="getBrandName(record.brandId)" :color="colorForValue(getBrandName(record.brandId))">
+              {{ getBrandName(record.brandId) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'teamName'">
+            <a-tag v-if="getTeamName(record.teamId)" :color="colorForValue(getTeamName(record.teamId))">
+              {{ getTeamName(record.teamId) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'accountName'">{{ getInfluencerName(record.influencerId) || '—' }}</template>
           <template v-if="column.key === 'fullRequirementContent'">
             <a @click="viewContent(record)">查看完整需求内容</a>
@@ -52,9 +62,17 @@
           <template v-if="column.key === 'totalClientPrice'">{{ fmtNum(record.totalClientPrice) }}</template>
           <template v-if="column.key === 'totalInfluencerCost'">{{ fmtNum(record.totalInfluencerCost) }}</template>
           <template v-if="column.key === 'progress'">
-            <a @click="viewProgress(record)">
-              {{ record.completedCount ?? 0 }}/{{ record.totalItemCount ?? 0 }}
-            </a>
+            <div style="display:flex;flex-direction:column;gap:2px;width:96px">
+              <a-progress :percent="progressPercent(record)" :stroke-color="progressColor(record)"
+                :show-info="false" size="small" />
+              <a @click="viewProgress(record)" style="font-size:12px">
+                {{ record.completedCount ?? 0 }}/{{ record.totalItemCount ?? 0 }}
+              </a>
+            </div>
+          </template>
+          <template v-if="column.key === 'notes'">
+            <span v-if="record.notes" style="color:#ff4d4f">{{ record.notes }}</span>
+            <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'invoiceLink'">
             <span v-if="getBrand(record.brandId)?.requiresInvoice === false" style="color:#bbb">不涉及</span>
@@ -112,6 +130,7 @@ import { requirementApi, brandApi, influencerApi, influencerTeamApi } from '../.
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDateTime } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
 import RequirementFormModal from './RequirementFormModal.vue'
 import RequirementItemsViewModal from './RequirementItemsViewModal.vue'
 import RequirementProgressModal from './RequirementProgressModal.vue'
@@ -172,7 +191,7 @@ const columns = [
   { title: '需求条目总数', dataIndex: 'totalItemCount', key: 'totalItemCount', width: 120, sorter: true },
   { title: '客户合作总价格（$）', key: 'totalClientPrice', width: 160, sorter: true },
   { title: '红人视频制作与发布总成本（$）', key: 'totalInfluencerCost', width: 200, sorter: true },
-  { title: '需求完成进度', key: 'progress', width: 120 },
+  { title: '需求完成进度', key: 'progress', width: 140 },
   { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
   { title: 'Invoice链接', key: 'invoiceLink', width: 110 },
   { title: '操作', key: 'action', width: 220, fixed: 'right' }
@@ -202,6 +221,20 @@ function highlightContent(text) {
 function fmtNum(v) {
   if (v == null) return '—'
   return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+// 需求完成进度条配色：100%绿色、高于50%黄色、其余（含0）橙色，条目总数为0时用灰色（还没有条目）
+function progressPercent(record) {
+  const total = record.totalItemCount ?? 0
+  if (total <= 0) return 0
+  return Math.round(((record.completedCount ?? 0) / total) * 100)
+}
+function progressColor(record) {
+  const total = record.totalItemCount ?? 0
+  if (total <= 0) return '#d9d9d9'
+  const ratio = (record.completedCount ?? 0) / total
+  if (ratio >= 1) return '#52c41a'
+  if (ratio > 0.5) return '#faad14'
+  return '#fa8c16'
 }
 function getBrand(id) { return brands.value.find(b => b.id === id) }
 function getBrandName(id) { return getBrand(id)?.name }

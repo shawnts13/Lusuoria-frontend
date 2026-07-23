@@ -28,16 +28,14 @@
             </template>
           </template>
         </template>
-        <template #summary v-if="costColumnIndex >= 0">
+        <template #summary v-if="summaryCells.length">
           <a-table-summary>
             <a-table-summary-row>
-              <a-table-summary-cell :index="0" :col-span="costColumnIndex">
-                合计：{{ filteredList.length }} 笔
+              <a-table-summary-cell v-for="cell in summaryCells" :key="cell.index"
+                :index="cell.index" :col-span="cell.colSpan">
+                <template v-if="cell.type === 'label'">合计：{{ filteredList.length }} 笔</template>
+                <template v-else-if="cell.type === 'total'">{{ fmtAmount(cell.value) }}</template>
               </a-table-summary-cell>
-              <a-table-summary-cell :index="costColumnIndex">
-                {{ fmtAmount(totalCost) }}
-              </a-table-summary-cell>
-              <a-table-summary-cell :index="costColumnIndex + 1" :col-span="columns.length - costColumnIndex - 1" />
             </a-table-summary-row>
           </a-table-summary>
         </template>
@@ -133,9 +131,12 @@ const filteredList = computed(() => {
 })
 
 // 汇总合计的金额列：老类目/进度滞留两类是"红人视频制作与发布成本"，Invoice逾期是"总成本"——
-// 字段名一样（influencerCost），语义按类别不同，这里统一按这个字段求和即可
+// 字段名一样（influencerCost），语义按类别不同，这里统一按这个字段求和即可。
+// "客户合作价格（$）"是单独一列的合计，两个金额不相加，各自在自己的列下面显示
 const totalCost = computed(() =>
   filteredList.value.reduce((sum, r) => sum + (r.influencerCost != null ? +r.influencerCost : 0), 0))
+const totalClientPrice = computed(() =>
+  filteredList.value.reduce((sum, r) => sum + (r.clientPrice != null ? +r.clientPrice : 0), 0))
 
 // 老类目（COLLAB_PAYMENT_DUE）列定义，保持不变
 const PAYMENT_DUE_COLUMNS = [
@@ -217,7 +218,31 @@ const columns = computed(() => {
   return PAYMENT_DUE_COLUMNS
 })
 const scrollX = computed(() => columns.value.reduce((sum, c) => sum + (c.width || 120), 0))
-const costColumnIndex = computed(() => columns.value.findIndex(c => c.key === 'influencerCost'))
+
+// 汇总行要展示合计的列：目前是"红人视频制作与发布成本（$）"和"客户合作价格（$）"，两列各自
+// 独立求和（不相加）。按列在当前 columns 里的实际位置排序，中间/前后空隙用空白单元格补齐，
+// 这样不管哪个类别的列顺序如何（进度滞留是成本在前价格在后，Invoice逾期反过来），都能对齐
+const summaryCells = computed(() => {
+  const targets = []
+  const costIdx = columns.value.findIndex(c => c.key === 'influencerCost')
+  if (costIdx >= 0) targets.push({ index: costIdx, value: totalCost.value })
+  const priceIdx = columns.value.findIndex(c => c.key === 'clientPrice')
+  if (priceIdx >= 0) targets.push({ index: priceIdx, value: totalClientPrice.value })
+  if (!targets.length) return []
+  targets.sort((a, b) => a.index - b.index)
+
+  const cells = []
+  let cursor = 0
+  targets.forEach((t, i) => {
+    const gap = t.index - cursor
+    if (gap > 0) cells.push({ index: cursor, colSpan: gap, type: i === 0 ? 'label' : 'blank' })
+    cells.push({ index: t.index, colSpan: 1, type: 'total', value: t.value })
+    cursor = t.index + 1
+  })
+  const trailing = columns.value.length - cursor
+  if (trailing > 0) cells.push({ index: cursor, colSpan: trailing, type: 'blank' })
+  return cells
+})
 
 async function load() {
   if (!props.reminderId) return
