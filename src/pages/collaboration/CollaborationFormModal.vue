@@ -228,27 +228,27 @@
           - 提成比例：仅 ADMIN 可编辑
         -->
         <a-row :gutter="16">
-          <a-col :span="8">
+          <a-col :span="8" v-if="canViewCostBookkeeping">
             <a-form-item label="汇率">
               <a-input-number v-if="canEditCommission" v-model:value="form.exchangeRate"
                 style="width:100%" :precision="4" @change="calcPreview" />
               <span v-else>{{ form.exchangeRate ?? '—' }}</span>
             </a-form-item>
           </a-col>
-          <a-col :span="8">
+          <a-col :span="8" v-if="canViewCostBookkeeping">
             <a-form-item label="其他外部成本（人民币）">
               <a-input-number v-model:value="form.otherExternalCost"
                 style="width:100%" :precision="2" @change="calcPreview" />
             </a-form-item>
           </a-col>
-          <a-col :span="8">
+          <a-col :span="canViewCostBookkeeping ? 8 : 24">
             <a-form-item label="内部执行成本（人民币）">
               <a-input-number v-model:value="form.internalExecutionCost"
                 style="width:100%" :precision="2" @change="calcPreview" />
             </a-form-item>
           </a-col>
         </a-row>
-        <a-row :gutter="16">
+        <a-row :gutter="16" v-if="canViewCostBookkeeping">
           <a-col :span="24">
             <a-form-item label="外部成本备注">
               <a-textarea v-model:value="form.otherExternalCostNote" :rows="2"
@@ -363,6 +363,10 @@ const { getOptions } = useOptions()
 const authStore = useAuthStore()
 // 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
 const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+// 汇率/其他外部成本（人民币）/外部成本备注这几个财务记账细节字段，项目负责人不需要处理
+// （那是管理层/财务的工作），项目负责人只需要关心"内部执行成本"——因为可能涉及设置执行
+// 人员的成本，这个字段不受这里影响，始终按 canViewFinancials 展示
+const canViewCostBookkeeping = computed(() => props.canViewFinancials && authStore.employeeRole !== '项目负责人')
 const linkPickerVisible = ref(false)
 const formRef = ref()
 const saving  = ref(false)

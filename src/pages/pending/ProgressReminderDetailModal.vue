@@ -12,8 +12,11 @@
         <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
       </div>
       <a-table :columns="columns" :data-source="filteredList" :loading="loading"
-        row-key="id" size="middle" :pagination="false" :scroll="{ x: 1450 }">
+        row-key="id" size="middle" :pagination="false" :scroll="{ x: scrollX }">
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'platform'">
+            {{ (record.platform || '').split('\n').join('、') || '—' }}
+          </template>
           <template v-if="column.key === 'action'">
             <a @click="goToDetail(record)">查看详情</a>
             <template v-if="canAcknowledge">
@@ -25,16 +28,16 @@
             </template>
           </template>
         </template>
-        <template #summary>
+        <template #summary v-if="costColumnIndex >= 0">
           <a-table-summary>
             <a-table-summary-row>
-              <a-table-summary-cell :index="0" :col-span="5">
+              <a-table-summary-cell :index="0" :col-span="costColumnIndex">
                 合计：{{ filteredList.length }} 笔
               </a-table-summary-cell>
-              <a-table-summary-cell :index="5">
+              <a-table-summary-cell :index="costColumnIndex">
                 {{ fmtAmount(totalCost) }}
               </a-table-summary-cell>
-              <a-table-summary-cell :index="6" :col-span="6" />
+              <a-table-summary-cell :index="costColumnIndex + 1" :col-span="columns.length - costColumnIndex - 1" />
             </a-table-summary-row>
           </a-table-summary>
         </template>
@@ -65,7 +68,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible'])
 
-const ACKNOWLEDGEABLE_CATEGORIES = ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE']
+const STALL_CATEGORIES = ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL']
+const ACKNOWLEDGEABLE_CATEGORIES = [...STALL_CATEGORIES, 'REQUIREMENT_INVOICE_OVERDUE']
 const canAcknowledge = computed(() =>
   ACKNOWLEDGEABLE_CATEGORIES.includes(props.category) && !authStore.isAdmin && !authStore.isManagement)
 
@@ -89,8 +93,8 @@ const brandTeamOptions = computed(() => {
   return keys.map(k => ({ value: k, label: k }))
 })
 
-// "红人社媒完整名字"筛选：下拉选项按该红人名下最早的"最迟结款日"排序（越紧急的越靠前），
-// 方便优先处理最快要逾期的红人；没有结款日的名字排在最后
+// "红人社媒完整名字"筛选：下拉选项按该红人名下最早的截止时间排序（越紧急的越靠前），
+// 方便优先处理最快要逾期的红人；没有截止时间的名字排在最后
 const accountNameOptions = computed(() => {
   const earliestDeadline = new Map()
   for (const r of list.value) {
@@ -110,8 +114,8 @@ const accountNameOptions = computed(() => {
   return names.map(n => ({ value: n, label: n }))
 })
 
-// 排序：先按红人社媒完整名字归组，组内再按"最迟结款日"升序（越早到期的越靠前）；
-// 没有结款日的记录排在同名分组的最后
+// 排序：先按红人社媒完整名字归组，组内再按截止时间升序（越早到期的越靠前）；
+// 没有截止时间的记录排在同名分组的最后
 function compareRows(a, b) {
   const nameCompare = (a.accountName || '').localeCompare(b.accountName || '')
   if (nameCompare !== 0) return nameCompare
@@ -127,10 +131,14 @@ const filteredList = computed(() => {
   if (accountNameFilter.value) result = result.filter(r => r.accountName === accountNameFilter.value)
   return [...result].sort(compareRows)
 })
+
+// 汇总合计的金额列：老类目/进度滞留两类是"红人视频制作与发布成本"，Invoice逾期是"总成本"——
+// 字段名一样（influencerCost），语义按类别不同，这里统一按这个字段求和即可
 const totalCost = computed(() =>
   filteredList.value.reduce((sum, r) => sum + (r.influencerCost != null ? +r.influencerCost : 0), 0))
 
-const columns = [
+// 老类目（COLLAB_PAYMENT_DUE）列定义，保持不变
+const PAYMENT_DUE_COLUMNS = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
     customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
@@ -153,6 +161,63 @@ const columns = [
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '操作',          key: 'action',                    width: 170 }
 ]
+
+// 进度滞留（项目负责人/财务视角）：只保留红人合作跟踪本身相关的字段，去掉"结款周期"/
+// "最迟结款日"/"视频发布时间"这些跟结款相关、对滞留提醒没有意义的字段；字段顺序尽量
+// 跟"红人合作跟踪"列表页保持一致
+const STALL_COLUMNS = [
+  { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
+    customRender: ({ text }) => text || '—' },
+  { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
+  { title: '红人团队',      dataIndex: 'teamName',            key: 'teamName',            width: 110,
+    customRender: ({ text }) => text || '—' },
+  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
+  { title: '合作平台',      key: 'platform',                  width: 130 },
+  { title: '需求内容',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160, ellipsis: true,
+    customRender: ({ text }) => text || '—' },
+  { title: '视频项目进度',  dataIndex: 'progressLabel',       key: 'progressLabel',       width: 140,
+    customRender: ({ text }) => text || '—' },
+  { title: '项目视频类型',  dataIndex: 'videoTypeLabel',      key: 'videoTypeLabel',      width: 120,
+    customRender: ({ text }) => text || '—' },
+  { title: '红人视频制作与发布成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 180,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '客户合作价格（$）', dataIndex: 'clientPrice',     key: 'clientPrice',         width: 140,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '内部执行人员（可选）', dataIndex: 'executorName', key: 'executorName',        width: 110,
+    customRender: ({ text }) => text || '—' },
+  { title: '提醒阈值（工作日）', dataIndex: 'cycleDays',      key: 'cycleDays',            width: 130,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '操作',          key: 'action',                    width: 170 }
+]
+
+// Invoice逾期：这一类是按"需求"整体展示的，不是单条视频，展示需求维度的汇总字段
+const INVOICE_OVERDUE_COLUMNS = [
+  { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200,
+    customRender: ({ text }) => text || '—' },
+  { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
+  { title: '红人团队',      dataIndex: 'teamName',            key: 'teamName',            width: 110,
+    customRender: ({ text }) => text || '—' },
+  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
+  { title: '需求条目总数',  dataIndex: 'cycleDays',           key: 'cycleDays',           width: 110,
+    customRender: ({ text }) => text != null ? text : '—' },
+  { title: '客户合作总价格（$）', dataIndex: 'clientPrice',   key: 'clientPrice',         width: 160,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '红人视频制作与发布总成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 200,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '操作',          key: 'action',                    width: 170 }
+]
+
+const columns = computed(() => {
+  if (STALL_CATEGORIES.includes(props.category)) return STALL_COLUMNS
+  if (props.category === 'REQUIREMENT_INVOICE_OVERDUE') return INVOICE_OVERDUE_COLUMNS
+  return PAYMENT_DUE_COLUMNS
+})
+const scrollX = computed(() => columns.value.reduce((sum, c) => sum + (c.width || 120), 0))
+const costColumnIndex = computed(() => columns.value.findIndex(c => c.key === 'influencerCost'))
 
 async function load() {
   if (!props.reminderId) return
