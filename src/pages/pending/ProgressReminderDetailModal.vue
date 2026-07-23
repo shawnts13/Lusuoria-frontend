@@ -207,6 +207,11 @@ const INVOICE_OVERDUE_COLUMNS = [
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
   { title: '红人视频制作与发布总成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 200,
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  // 这一类的阈值是后端固定写死的5个工作日（ProgressReminderService.runRequirementInvoiceOverdue
+  // 里的常量），不是按行变化的数据，所以这里直接展示固定文案，不走 cycleDays（那个字段这一类
+  // 复用成"需求条目总数"了，不能兼职存阈值）
+  { title: '提醒阈值（工作日）', key: 'invoiceThreshold', width: 130,
+    customRender: () => '5天' },
   { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '操作',          key: 'action',                    width: 170 }
