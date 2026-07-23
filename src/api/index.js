@@ -240,6 +240,8 @@ export const progressReminderApi = {
   list:         ()   => http.get('/api/progress-reminders'),
   details:      (id) => http.get(`/api/progress-reminders/${id}/details`),
   recompute:    ()   => http.post('/api/progress-reminders/recompute'),
+  // "项目流转后更新提示内容"（2026-07 新增）：只重算进度滞留/Invoice逾期这3类
+  recomputeProjectFlow: () => http.post('/api/progress-reminders/recompute-project-flow'),
   popupCheck:   ()   => http.get('/api/progress-reminders/popup-check'),
   popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss')
 }

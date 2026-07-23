@@ -2,9 +2,12 @@
   <div class="reminder-section">
     <div class="reminder-header">
       <span class="reminder-title">进度提醒</span>
-      <a-button v-if="authStore.isManagement" size="small" :loading="recomputing" @click="handleRecompute">
-        结款后更新提示内容
-      </a-button>
+      <a-space v-if="authStore.isManagement">
+        <a-button size="small" :loading="recomputing" @click="handleRecompute">结款后更新提示内容</a-button>
+        <a-button size="small" :loading="recomputingProjectFlow" @click="handleRecomputeProjectFlow">
+          项目流转后更新提示内容
+        </a-button>
+      </a-space>
     </div>
     <ProgressReminderCardList :reminders="reminders" :loading="loading"
       @view-detail="openDetail" />
@@ -25,6 +28,7 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const reminders = ref([])
 const recomputing = ref(false)
+const recomputingProjectFlow = ref(false)
 const detailVisible = ref(false)
 const detailReminderId = ref(null)
 
@@ -51,6 +55,17 @@ async function handleRecompute() {
     message.success('已重新生成最新的进度提醒')
   } finally {
     recomputing.value = false
+  }
+}
+
+async function handleRecomputeProjectFlow() {
+  recomputingProjectFlow.value = true
+  try {
+    const res = await progressReminderApi.recomputeProjectFlow()
+    reminders.value = res.data || []
+    message.success('已重新生成最新的进度提醒')
+  } finally {
+    recomputingProjectFlow.value = false
   }
 }
 
