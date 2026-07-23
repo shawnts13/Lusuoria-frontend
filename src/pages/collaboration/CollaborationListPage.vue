@@ -318,6 +318,8 @@ const filters = reactive({
 })
 
 const allColumns = [
+  { title: '内部需求编号',  dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200,
+    customRender: ({ text }) => text || '—' },
   { title: '内部项目编号',  dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 200, sorter: true },
   { title: '品牌方',        key: 'brand',          width: 120 },
   { title: '红人团队',      key: 'team',            width: 100 },
