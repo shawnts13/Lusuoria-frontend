@@ -23,8 +23,9 @@
       </a-select>
       <a-input-search v-model:value="filters.accountName" placeholder="搜索红人社媒完整名字"
         style="width:200px" @search="loadData" allow-clear />
-      <a-input v-model:value="filters.requirementMonth" placeholder="需求月份（yyyyMM）"
-        style="width:150px" @pressEnter="loadData" allow-clear />
+      <a-date-picker v-model:value="filters.requirementMonth" picker="month"
+        format="YYYYMM" value-format="YYYYMM" placeholder="需求月份" style="width:150px"
+        allow-clear @change="loadData" />
       <a-input-search v-model:value="filters.internalRequirementNo" placeholder="搜索内部需求编号"
         style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
