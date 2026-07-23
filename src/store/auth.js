@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.60.0'
-export const APP_VERSION_TIME = '2026-07-23 18:34'
+export const APP_VERSION = '1.61.0'
+export const APP_VERSION_TIME = '2026-07-23 19:39'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -30,7 +30,7 @@ export function clearAllCache() {
   // 清除 sessionStorage（useOptions 缓存等）
   sessionStorage.clear()
   // 清除 localStorage 里的缓存（保留登录状态）
-  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', 'employeeRole', VERSION_KEY]
+  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', 'employeeRole', 'employeeId', VERSION_KEY]
   Object.keys(localStorage).forEach(key => {
     if (!keep.includes(key)) localStorage.removeItem(key)
   })
@@ -45,7 +45,10 @@ export const useAuthStore = defineStore('auth', {
     // "进度提醒"功能受众：登录账号关联的员工角色是不是"管理层"，跟 role（ADMIN/STAFF/...）无关
     isManagement: localStorage.getItem('isManagement') === 'true',
     // "红人结款"模块受众：登录账号关联的员工角色原值（管理层/财务/法务/...），跟 role 无关
-    employeeRole: localStorage.getItem('employeeRole') || null
+    employeeRole: localStorage.getItem('employeeRole') || null,
+    // 登录账号关联的员工 id（未关联员工时为 null），供"新建红人合作跟踪时把项目负责人默认
+    // 填成自己"这类场景使用
+    employeeId: localStorage.getItem('employeeId') ? Number(localStorage.getItem('employeeId')) : null
   }),
 
   getters: {
@@ -78,7 +81,11 @@ export const useAuthStore = defineStore('auth', {
     // 终态：跟后端 ProjectFieldVisibility 的 FULL 层级判定保持一致——ADMIN，或员工角色是
     // "财务"/"管理层"的 STAFF 账号；其余角色（项目负责人/执行人员/基础权限）只能流转到
     // "已发布（未结算）"和"折损"这两个终态
-    canSetFinanceSettlementProgress: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole)
+    canSetFinanceSettlementProgress: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole),
+    // 新建"红人合作跟踪"时，项目负责人默认填成自己的资格：员工角色是"项目负责人"或"管理层"，
+    // 且账号确实关联了员工（没关联员工的账号，比如纯 ADMIN 账号，不会被当成某个具体员工）
+    canDefaultAsProjectManager: (state) =>
+      state.employeeId != null && ['项目负责人', '管理层'].includes(state.employeeRole)
   },
 
   actions: {
@@ -90,6 +97,7 @@ export const useAuthStore = defineStore('auth', {
       this.role         = res.data.role
       this.isManagement = !!res.data.isManagement
       this.employeeRole = res.data.employeeRole || null
+      this.employeeId   = res.data.employeeId ?? null
       localStorage.setItem('token',        this.token)
       localStorage.setItem('username',     this.username)
       localStorage.setItem('displayName',  this.displayName)
@@ -97,17 +105,21 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('isManagement', String(this.isManagement))
       if (this.employeeRole) localStorage.setItem('employeeRole', this.employeeRole)
       else localStorage.removeItem('employeeRole')
+      if (this.employeeId != null) localStorage.setItem('employeeId', String(this.employeeId))
+      else localStorage.removeItem('employeeId')
     },
     logout() {
       this.token = this.username = this.displayName = this.role = null
       this.isManagement = false
       this.employeeRole = null
+      this.employeeId = null
       localStorage.removeItem('token')
       localStorage.removeItem('username')
       localStorage.removeItem('displayName')
       localStorage.removeItem('role')
       localStorage.removeItem('isManagement')
       localStorage.removeItem('employeeRole')
+      localStorage.removeItem('employeeId')
     }
   }
 })

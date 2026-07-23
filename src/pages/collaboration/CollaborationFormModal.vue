@@ -478,7 +478,10 @@ watch(() => props.visible, (v) => {
       Object.assign(form, {
         id:null, internalProjectNo:null, internalRequirementNo:null, brandId:null, influencerId:null, teamId:null, countryMarket:null, platforms:[], demandContent:'',
         publishLinks:[''], publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
-        projectManagerId:null, executorId:null,
+        // 项目负责人默认填成自己（仅当创建人的员工角色是"项目负责人"/"管理层"时），依然可以改；
+        // 执行人员角色理论上不会新建跟踪，万一新建也不自动填，保持空
+        projectManagerId: authStore.canDefaultAsProjectManager ? authStore.employeeId : null,
+        executorId:null,
         influencerCost:null, clientPrice:null, notes:'',
         exchangeRate:null, otherExternalCost:0, otherExternalCostNote:'', internalExecutionCost:0,
         commissionRate:0, commissionRateDisplay:0

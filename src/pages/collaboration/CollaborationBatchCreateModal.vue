@@ -181,6 +181,7 @@ import { message, Modal } from 'ant-design-vue'
 import { CopyOutlined, CloseOutlined } from '@ant-design/icons-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { useAuthStore } from '../../store/auth'
 import RequirementLinkPickerModal from '../requirement/RequirementLinkPickerModal.vue'
 
 const props = defineProps({
@@ -193,6 +194,7 @@ const props = defineProps({
 const emit = defineEmits(['update:visible', 'saved'])
 
 const { getOptions } = useOptions()
+const authStore = useAuthStore()
 const saving = ref(false)
 const activeIndex = ref(0)
 const formRefs = ref([])
@@ -208,7 +210,9 @@ function createPane() {
     platforms: [], demandContent: '',
     publishLinks: [''],
     videoType: null, clientOrderId: '', clientPaymentBatch: '',
-    projectManagerId: null, executorId: null,
+    // 项目负责人默认填成自己（仅当创建人的员工角色是"项目负责人"/"管理层"时），依然可以改
+    projectManagerId: authStore.canDefaultAsProjectManager ? authStore.employeeId : null,
+    executorId: null,
     influencerCost: null, clientPrice: null, notes: ''
   }
 }
