@@ -492,11 +492,14 @@ function resetFilters() {
 }
 
 // "查看由我负责的记录"：项目负责人/执行人员/财务专属，其余角色点了也没有对应的后端筛选
-// 条件生效（后端会返回空列表），所以直接不展示这个按钮，避免造成困惑
+// 条件生效（后端会返回空列表），所以直接不展示这个按钮，避免造成困惑。
+// 管理层是一个特殊的项目负责人（部分红人合作跟踪记录的项目负责人直接是管理层本人，负责人
+// 下拉本来就允许选"管理层"角色），跟"项目负责人"享受同样的筛选/排序逻辑（见后端
+// CollaborationTrackingController.resolvePriorityEmployeeId）
 const canFilterMyResponsibility = computed(() =>
-  ['项目负责人', '执行人员', '财务'].includes(authStore.employeeRole))
+  ['项目负责人', '执行人员', '管理层', '财务'].includes(authStore.employeeRole))
 const myResponsibilityTooltip = computed(() => {
-  if (['项目负责人', '执行人员'].includes(authStore.employeeRole)) {
+  if (['项目负责人', '执行人员', '管理层'].includes(authStore.employeeRole)) {
     return '只看自己作为项目负责人/执行人员的记录，再按是否还需要跟进（未到"已发布（未结算）"/"折损"）优先排序'
   }
   return '只看需要处理的记录（视频项目进度为"已发布（未结算）"/"已加入客户未结算列表"）'
