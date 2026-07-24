@@ -148,7 +148,10 @@
                 {{ o.label }}
               </a-select-option>
             </a-select>
-            <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">红人结款进度请使用"状态流转"功能修改</div>
+            <div v-if="form.id" style="font-size:12px;color:#888;margin-top:2px">
+              该状态通过"红人需求管理"的"上传Invoice"（若相关品牌方涉及）、以及管理层的"红人结款"
+              功能来流转（项目负责人/执行人员不涉及），不能在这里手动修改
+            </div>
             <template v-else>
               <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
                 仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
@@ -437,8 +440,10 @@ const projectManagerCandidates = computed(() =>
 const executorCandidates = computed(() =>
   props.employees.filter(e => e.role === '执行人员'))
 
-// 红人结款进度只有在视频项目进度达到前置条件时才能设置（新建表单里跟"状态流转"弹窗规则一致），
-// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致
+// 红人结款进度只有在视频项目进度达到前置条件时才能设置，跟后端
+// CollaborationProgress.allowsPaymentProgress() 保持一致。这个字段只有"新建"时能在这里手动填
+// 一个初始值（编辑已有记录时这里永远禁用，见上面的提示文案）——2026-07 起"状态流转"弹窗已经
+// 不再提供这个字段的编辑入口，改成完全由"红人需求管理"上传Invoice/"红人结款"纳入批次来流转
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 const paymentProgressEnabled = computed(() => !!form.progress && QUALIFYING_PROGRESS.includes(form.progress))
 

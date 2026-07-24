@@ -21,24 +21,9 @@
           "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
         </div>
       </a-form-item>
-      <a-form-item label="红人结款进度">
-        <a-select v-model:value="paymentProgress" placeholder="选择红人结款进度"
-          allow-clear :disabled="!paymentProgressEnabled || isSystemManagedCurrent || willAutoSetPayment">
-          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value"
-            :disabled="SYSTEM_MANAGED_PROGRESS.includes(o.value)">
-            {{ o.label }}
-          </a-select-option>
-        </a-select>
-        <div v-if="willAutoSetPayment" style="font-size:12px;color:#1677ff;margin-top:2px">
-          首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」
-        </div>
-        <div v-else-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
-          仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
-        </div>
-        <div style="font-size:12px;color:#ff4d4f;margin-top:2px">
-          "已纳入红人结款批次"/"已纳入红人结款批次（缺少invoice）"仅能由管理层通过"红人结款"功能设置，此处无法选中
-        </div>
-      </a-form-item>
+      <div v-if="willAutoSetPayment" style="margin-bottom:12px;color:#1677ff;font-size:12px">
+        首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」，不需要在这里手动选
+      </div>
       <div v-if="willAutoFillPublishDate" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         该记录尚未填写"视频发布时间"，保存后系统将自动填上今天的日期
       </div>
@@ -77,37 +62,26 @@ const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 function qualifies(v) { return !!v && QUALIFYING_PROGRESS.includes(v) }
 
-// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置：选项本身仍然展示出来（不隐藏），
-// 但单独禁用这两项，不让用户选中；如果记录当前就是这两个状态之一，整个下拉框直接锁死
-// （不能手动改离开），跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
-const SYSTEM_MANAGED_PROGRESS = ['INCLUDED_IN_PAYMENT_BATCH', 'INCLUDED_IN_PAYMENT_BATCH_MISSING_INVOICE']
-
 const progress = ref(null)
-const paymentProgress = ref(null)
 const reason = ref('')
 const saving = ref(false)
 
-// 弹窗打开那一刻的原始值，用来判断这次改动算不算"倒退"（不随下面 progress/paymentProgress 的
-// 实时编辑而变化，保证即使中途改来改去，isRollback 判断的始终是"跟数据库原值相比"）
+// 弹窗打开那一刻的原始值，用来判断这次改动算不算"倒退"（不随下面 progress 的实时编辑而变化，
+// 保证即使中途改来改去，isRollback 判断的始终是"跟数据库原值相比"）。红人结款进度
+// 2026-07 起不再通过这个弹窗手动设置，只读用来判断是不是"倒退"
 const original = reactive({ progress: null, paymentProgress: null })
-
-// 这条记录数据库里现在就是"已纳入结款批次"状态：直接锁死展示，不给编辑入口
-const isSystemManagedCurrent = computed(() => SYSTEM_MANAGED_PROGRESS.includes(original.paymentProgress))
 
 watch(() => props.visible, v => {
   if (v && props.record) {
     progress.value = props.record.progress || null
-    paymentProgress.value = props.record.influencerPaymentProgress || null
     reason.value = ''
     original.progress = props.record.progress || null
     original.paymentProgress = props.record.influencerPaymentProgress || null
   }
 })
 
-const paymentProgressEnabled = computed(() => qualifies(progress.value))
-
 // 首次进入"已发布（未结算）"：后端会自动判定红人结款进度（按品牌方是否需要invoice），
-// 不需要（也不应该）在这里让用户手动选，跟后端 enteringPublishedUnsettled 的条件保持一致
+// 跟后端 enteringPublishedUnsettled 的条件保持一致，纯展示提示用
 const willAutoSetPayment = computed(() =>
   progress.value === 'PUBLISHED_UNSETTLED' && original.progress !== 'PUBLISHED_UNSETTLED'
 )
@@ -121,12 +95,6 @@ const autoPaymentLabel = computed(() => {
 const willAutoFillPublishDate = computed(() =>
   qualifies(progress.value) && !qualifies(original.progress) && !props.record?.publishDate
 )
-
-// 视频项目进度改成不满足条件的状态时，红人结款进度选项跟着禁用，
-// 界面上不应该继续显示一个"选中但禁用"的值造成误解，这里同步清空
-watch(progress, () => {
-  if (!paymentProgressEnabled.value) paymentProgress.value = null
-})
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
 // 这次要改成不符合条件的另一个状态，就是"倒退"，需要走审核
@@ -149,8 +117,6 @@ async function handleSave() {
   try {
     const res = await collaborationApi.updateStatus(props.record.id, {
       progress: progress.value,
-      influencerPaymentProgress: willAutoSetPayment.value ? null
-        : (paymentProgressEnabled.value ? paymentProgress.value : null),
       reason: isRollback.value ? reason.value.trim() : null
     })
     if (res.data?.pendingApproval) {
