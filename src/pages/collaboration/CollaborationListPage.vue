@@ -67,6 +67,12 @@
           <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
       </a-tooltip>
+      <a-tooltip :title="filters.influencerPaymentProgress ? getLabel('influencer_payment_progress', filters.influencerPaymentProgress) : ''">
+        <a-select v-model:value="filters.influencerPaymentProgress" placeholder="红人结款进度"
+          style="width:160px" allow-clear @change="loadData">
+          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+      </a-tooltip>
       <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
         style="width:140px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
@@ -310,7 +316,7 @@ const pagination = reactive({
 const filters = reactive({
   brandId: undefined, teamId: undefined, countryMarket: undefined,
   accountName: route.query.accountName || undefined,
-  platform: undefined, progress: undefined, videoType: undefined,
+  platform: undefined, progress: undefined, influencerPaymentProgress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
   internalRequirementNo: route.query.internalRequirementNo || undefined,
@@ -422,6 +428,7 @@ async function loadData() {
       accountName:        filters.accountName?.trim() || undefined,
       platform:           filters.platform,
       progress:           filters.progress,
+      influencerPaymentProgress: filters.influencerPaymentProgress,
       videoType:          filters.videoType,
       videoMonth:         filters.videoMonth,
       internalProjectNo:  filters.internalProjectNo?.trim() || undefined,
@@ -455,7 +462,7 @@ function handleTableChange(pag, _f, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamId:undefined, countryMarket:undefined,
-    accountName:undefined, platform:undefined, progress:undefined, videoType:undefined,
+    accountName:undefined, platform:undefined, progress:undefined, influencerPaymentProgress:undefined, videoType:undefined,
     videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
