@@ -53,6 +53,12 @@
           <template v-if="column.key === 'items'">
             <a @click="openItemsView(record)">查看涉及的红人视频项目</a>
           </template>
+          <template v-if="column.key === 'involvedRequirementNos'">
+            <template v-if="record.involvedRequirementNos">
+              <a-tag v-for="no in record.involvedRequirementNos.split('\n').filter(Boolean)" :key="no" style="margin:2px">{{ no }}</a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'payableAmount'">
             <strong>{{ record.currency }} {{ fmtNum(record.payableAmount) }}</strong>
           </template>
@@ -138,6 +144,7 @@ const columns = [
   { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90, sorter: true },
   { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty', width: 80, sorter: true },
   { title: '查看涉及的红人视频项目', key: 'items', width: 180 },
+  { title: '涉及的内部需求编号', key: 'involvedRequirementNos', width: 220 },
   { title: '应付金额',   key: 'payableAmount',  width: 130, sorter: true },
   { title: '币种',       dataIndex: 'currency', key: 'currency', width: 70 },
   { title: '汇率',       dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80, sorter: true,

@@ -9,6 +9,12 @@
     <div class="filter-bar">
       <a-select v-model:value="accountFilter" placeholder="红人社媒完整名字" allow-clear show-search
         style="width:220px" :options="accountOptions" />
+      <a-select v-model:value="requirementNoFilter" placeholder="内部需求编号" allow-clear show-search
+        style="width:220px" :options="requirementNoOptions" />
+    </div>
+    <div v-if="mode === 'select'" style="font-size:12px;color:#888;margin-bottom:8px">
+      提示：切换上面的筛选条件不会影响已经勾选的记录——可以先按一个需求编号筛选、勾选完，
+      再切换成另一个需求编号继续勾选，之前勾的会一直保留，直到点"确定"。
     </div>
 
     <a-table :columns="columns" :data-source="filteredList" :loading="loading" row-key="trackingId"
@@ -23,6 +29,10 @@
         </template>
         <template v-if="column.key === 'teamName'">
           <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+          <span v-else style="color:#bbb">—</span>
+        </template>
+        <template v-if="column.key === 'internalRequirementNo'">
+          <span v-if="record.internalRequirementNo">{{ record.internalRequirementNo }}</span>
           <span v-else style="color:#bbb">—</span>
         </template>
         <template v-if="column.key === 'progressLabel'">
@@ -100,9 +110,11 @@ const loading = ref(false)
 const list = ref([])
 const selectedRowKeys = ref([])
 const accountFilter = ref(undefined)
+const requirementNoFilter = ref(undefined)
 
 const columns = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 },
+  { title: '内部需求编号', key: 'internalRequirementNo', width: 190 },
   { title: '品牌方', key: 'brandName', width: 110 },
   { title: '红人团队', key: 'teamName', width: 100 },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 150 },
@@ -129,9 +141,17 @@ const accountOptions = computed(() => {
   const names = [...new Set(list.value.map(r => r.accountName).filter(Boolean))].sort()
   return names.map(n => ({ value: n, label: n }))
 })
+// 内部需求编号筛选：跟红人社媒完整名字筛选同一个道理，只影响展示，不影响已勾选的记录——
+// 方便先筛一个需求编号勾完，再切到另一个需求编号继续勾，一次性把多个需求的视频都选上
+const requirementNoOptions = computed(() => {
+  const nos = [...new Set(list.value.map(r => r.internalRequirementNo).filter(Boolean))].sort()
+  return nos.map(n => ({ value: n, label: n }))
+})
 const filteredList = computed(() => {
-  if (!accountFilter.value) return list.value
-  return list.value.filter(r => r.accountName === accountFilter.value)
+  let result = list.value
+  if (accountFilter.value) result = result.filter(r => r.accountName === accountFilter.value)
+  if (requirementNoFilter.value) result = result.filter(r => r.internalRequirementNo === requirementNoFilter.value)
+  return result
 })
 
 function fmtNum(v) {
@@ -207,6 +227,7 @@ function customRow(record) {
 async function load() {
   loading.value = true
   accountFilter.value = undefined
+  requirementNoFilter.value = undefined
   try {
     if (props.mode === 'view') {
       const res = await paymentApi.items(props.existingPaymentId)
