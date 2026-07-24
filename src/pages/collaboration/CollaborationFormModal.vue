@@ -8,6 +8,12 @@
         <a-input-group compact style="display:flex">
           <a-input :value="form.internalRequirementNo" disabled placeholder="未关联" style="flex:1" />
           <a-button :disabled="!form.influencerId" @click="linkPickerVisible = true">关联红人需求</a-button>
+          <a-popconfirm v-if="form.internalRequirementNo && form.id"
+            title="确认解除这条记录跟内部需求编号的关联？（误关联到别的需求时用）"
+            @confirm="handleUnlinkRequirement">
+            <a-button>解绑</a-button>
+          </a-popconfirm>
+          <a-button v-else-if="form.internalRequirementNo" @click="handleUnlinkRequirement">解绑</a-button>
         </a-input-group>
         <div style="font-size:12px;color:#c00000;margin-top:2px">
           没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
@@ -530,6 +536,24 @@ function onRequirementLinked(data) {
   form.countryMarket = data.countryMarket
   form.platforms = data.platform || []
   form.videoType = data.videoType
+}
+
+// "解绑"：还没保存过的新记录只是本地暂存的值，直接清空即可；已经保存过的记录，
+// 内部需求编号已经落库了，要调专门的解绑接口（立即生效，不用等这个表单的"保存"按钮）
+async function handleUnlinkRequirement() {
+  if (!form.internalRequirementNo) return
+  if (!form.id) {
+    form.internalRequirementNo = null
+    return
+  }
+  try {
+    await collaborationApi.unlinkRequirement(form.id)
+    form.internalRequirementNo = null
+    message.success('已解除内部需求编号关联')
+    emit('saved')
+  } catch (e) {
+    message.error(e?.response?.data?.message || '解绑失败')
+  }
 }
 
 function onManagerChange(id) {
