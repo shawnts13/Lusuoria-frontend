@@ -1,6 +1,10 @@
 <template>
   <a-modal :open="visible" title="需求完成进度详情" :footer="null" width="800px" @cancel="close">
-    <a-table :columns="columns" :data-source="records" :loading="loading" :pagination="false" size="small" row-key="trackingId">
+    <div class="filter-bar">
+      <a-select v-model:value="itemIndexFilter" placeholder="需求条目" allow-clear
+        style="width:160px" :options="itemIndexOptions" />
+    </div>
+    <a-table :columns="columns" :data-source="filteredRecords" :loading="loading" :pagination="false" size="small" row-key="trackingId">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'itemIndex'">
           <a-tag v-if="record.itemIndex != null" :color="colorForValue(String(record.itemIndex))">条目{{ record.itemIndex }}</a-tag>
@@ -31,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { requirementApi } from '../../api/index'
 import { colorForValue } from '../../utils/tagColor'
@@ -46,6 +50,17 @@ const router = useRouter()
 
 const loading = ref(false)
 const records = ref([])
+const itemIndexFilter = ref(undefined)
+
+// 筛选项按需求里实际出现过的条目编号排序，方便按顺序挑
+const itemIndexOptions = computed(() => {
+  const indexes = [...new Set(records.value.map(r => r.itemIndex).filter(i => i != null))].sort((a, b) => a - b)
+  return indexes.map(i => ({ value: i, label: `条目${i}` }))
+})
+const filteredRecords = computed(() => {
+  if (itemIndexFilter.value == null) return records.value
+  return records.value.filter(r => r.itemIndex === itemIndexFilter.value)
+})
 
 const columns = [
   { title: '需求条目', key: 'itemIndex', width: 90 },
@@ -59,6 +74,7 @@ const columns = [
 async function load() {
   if (!props.requirementId) return
   loading.value = true
+  itemIndexFilter.value = undefined
   try {
     const res = await requirementApi.progressDetail(props.requirementId)
     records.value = res.data || []
@@ -76,3 +92,7 @@ function goToTracking(record) {
   router.push({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } })
 }
 </script>
+
+<style scoped>
+.filter-bar { margin-bottom: 12px; }
+</style>
