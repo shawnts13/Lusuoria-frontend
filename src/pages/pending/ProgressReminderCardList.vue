@@ -25,6 +25,11 @@ defineEmits(['view-detail'])
 // 跟后端 ReminderUrgency 保持一致：0天或已超期=红，1-3天=橙，3-7天=绿（"临近提醒"方向，倒数天数）
 const URGENCY_COLOR = { OVERDUE: 'red', NEAR: 'orange', UPCOMING: 'green' }
 const URGENCY_LABEL = { OVERDUE: '0天或已超期', NEAR: '1-3天', UPCOMING: '3-7天' }
+// "进度滞留-财务"用的是同一套 ReminderUrgency，但语义是"距离14工作日阈值还有几天"，
+// 光写"1-3天"/"3-7天"容易让人搞不清是"已经超了几天"还是"还剩几天"，这里单独换一套
+// 更明确的文案；结款相关的两类提醒（COLLAB_PAYMENT_DUE/BRAND_MONTH_END_PAYMENT_DUE）
+// 保持原样不变，没人反馈那两个有歧义
+const FINANCE_URGENCY_LABEL = { OVERDUE: '0天或已超期', NEAR: '距离超期还剩1-3天', UPCOMING: '距离超期还剩3-7天' }
 // 跟后端 OverdueUrgency 保持一致：1-3天=黄，3-7天=橙，超出7天=红（"超期提醒"方向，正数累加）
 const OVERDUE_COLOR = { MILD: 'gold', MODERATE: 'orange', SEVERE: 'red' }
 const OVERDUE_LABEL = { MILD: '1-3天', MODERATE: '3-7天', SEVERE: '超出7天' }
@@ -44,7 +49,9 @@ function urgencyColor(r) {
   return isOverdueStyle(r) ? (OVERDUE_COLOR[r.overdueUrgency] || 'default') : (URGENCY_COLOR[r.urgency] || 'default')
 }
 function urgencyLabel(r) {
-  return isOverdueStyle(r) ? (OVERDUE_LABEL[r.overdueUrgency] || r.overdueUrgency) : (URGENCY_LABEL[r.urgency] || r.urgency)
+  if (isOverdueStyle(r)) return OVERDUE_LABEL[r.overdueUrgency] || r.overdueUrgency
+  const labels = r.category === 'FINANCE_PROGRESS_STALL' ? FINANCE_URGENCY_LABEL : URGENCY_LABEL
+  return labels[r.urgency] || r.urgency
 }
 function textColor(r) { return TEXT_COLOR[urgencyColor(r)] || '#333' }
 function categoryLabel(c) { return CATEGORY_LABEL[c] || c }
