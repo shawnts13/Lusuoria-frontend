@@ -55,7 +55,9 @@
           </template>
           <template v-if="column.key === 'involvedRequirementNos'">
             <template v-if="record.involvedRequirementNos">
-              <a-tag v-for="no in record.involvedRequirementNos.split('\n').filter(Boolean)" :key="no" style="margin:2px">{{ no }}</a-tag>
+              <div v-for="no in record.involvedRequirementNos.split('\n').filter(Boolean)" :key="no"
+                class="requirement-no-line" :title="'双击查看「' + no + '」涉及的视频'"
+                @dblclick="openRequirementItemsView(record, no)">{{ no }}</div>
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -94,7 +96,8 @@
     <PaymentItemSelectorModal
       v-model:visible="itemsViewVisible"
       mode="view"
-      :existing-payment-id="itemsViewPaymentId" />
+      :existing-payment-id="itemsViewPaymentId"
+      :initial-requirement-no-filter="itemsViewRequirementNoFilter" />
   </div>
 </template>
 
@@ -122,6 +125,7 @@ const statusModalVisible = ref(false)
 const statusModalRecord  = ref(null)
 const itemsViewVisible   = ref(false)
 const itemsViewPaymentId = ref(null)
+const itemsViewRequirementNoFilter = ref(null)
 
 const pagination = reactive({ current: 1, pageSize: 20, total: 0,
   showTotal: t => `共 ${t} 条` })
@@ -144,7 +148,7 @@ const columns = [
   { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90, sorter: true },
   { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty', width: 80, sorter: true },
   { title: '查看涉及的红人视频项目', key: 'items', width: 180 },
-  { title: '涉及的内部需求编号', key: 'involvedRequirementNos', width: 220 },
+  { title: '涉及的内部需求编号', key: 'involvedRequirementNos', width: 320 },
   { title: '应付金额',   key: 'payableAmount',  width: 130, sorter: true },
   { title: '币种',       dataIndex: 'currency', key: 'currency', width: 70 },
   { title: '汇率',       dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80, sorter: true,
@@ -221,7 +225,17 @@ function resetFilters() {
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
-function openItemsView(r) { itemsViewPaymentId.value = r.id; itemsViewVisible.value = true }
+function openItemsView(r) {
+  itemsViewPaymentId.value = r.id
+  itemsViewRequirementNoFilter.value = null
+  itemsViewVisible.value = true
+}
+// 双击"涉及的内部需求编号"列里的某一个具体编号，直接定位到那一个需求下涉及的视频
+function openRequirementItemsView(r, requirementNo) {
+  itemsViewPaymentId.value = r.id
+  itemsViewRequirementNoFilter.value = requirementNo
+  itemsViewVisible.value = true
+}
 
 async function handleDelete(id) {
   await paymentApi.delete(id); message.success('删除成功'); loadData()
@@ -235,3 +249,16 @@ onMounted(async () => {
   loadData()
 })
 </script>
+
+<style scoped>
+/* "涉及的内部需求编号"每个编号单独一行，三击选中只会选中这一行，不会把整格所有编号
+   都选中，方便单独复制某一个；蓝色 + 手型提示可以双击查看详情 */
+.requirement-no-line {
+  cursor: pointer;
+  color: #1677ff;
+  line-height: 1.8;
+}
+.requirement-no-line:hover {
+  text-decoration: underline;
+}
+</style>

@@ -102,7 +102,10 @@ const props = defineProps({
   existingPaymentId: { type: [Number, String], default: null },
   // 当前表单里已经确认过的勾选（即使这条结款记录还没保存），重新打开这个弹窗时要按这个恢复
   // 之前的勾选状态——不然新建时筛选一批勾上、关掉再打开一次，之前勾的就全丢了
-  selectedTrackingIds: { type: Array, default: () => [] }
+  selectedTrackingIds: { type: Array, default: () => [] },
+  // 从"涉及的内部需求编号"列双击某个具体编号打开时，预置这个筛选条件，直接定位到那一个
+  // 需求下涉及的视频，不用打开弹窗后自己再手动选一次
+  initialRequirementNoFilter: { type: String, default: null }
 })
 const emit = defineEmits(['update:visible', 'confirm'])
 
@@ -227,7 +230,7 @@ function customRow(record) {
 async function load() {
   loading.value = true
   accountFilter.value = undefined
-  requirementNoFilter.value = undefined
+  requirementNoFilter.value = props.initialRequirementNoFilter || undefined
   try {
     if (props.mode === 'view') {
       const res = await paymentApi.items(props.existingPaymentId)
