@@ -13,12 +13,16 @@
       <a-form-item label="视频项目进度">
         <a-select v-model:value="progress" placeholder="选择视频项目进度">
           <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value"
-            :disabled="FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress">
+            :disabled="(FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress)
+              || (!authStore.canWrite && !QUALIFYING_PROGRESS.includes(o.value))">
             {{ o.label }}
           </a-select-option>
         </a-select>
         <div v-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#888;margin-top:2px">
           "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
+        </div>
+        <div v-else-if="!authStore.canWrite" style="font-size:12px;color:#888;margin-top:2px">
+          财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"之间流转
         </div>
       </a-form-item>
       <div v-if="willAutoSetPayment" style="margin-bottom:12px;color:#1677ff;font-size:12px">

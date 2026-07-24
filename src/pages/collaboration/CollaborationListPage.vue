@@ -203,6 +203,14 @@
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
             </a-space>
+            <!-- 财务（SysUser角色是AUDITOR、没有普通canWrite写权限的情况很常见）虽然不能编辑/删除，
+                 但仍然需要能把"已发布（未结算）"流转到"已加入客户未结算列表"/"客户已结算"这两个
+                 财务专属终态。只有记录已经进入结算区间（已发布未结算及以后）时才露出这个入口——
+                 还没发布的记录财务什么都不能改，露出个打开就全部禁用的弹窗没有意义，跟后端
+                 updateStatus() 里"AUDITOR只能在结算区间内流转"的限制保持一致 -->
+            <a-space v-else-if="authStore.canSetFinanceSettlementProgress && QUALIFYING_PROGRESS.includes(record.progress)">
+              <a @click="openStatusModal(record)">状态流转</a>
+            </a-space>
             <span v-else style="color:#bbb">只读</span>
           </template>
 
@@ -282,6 +290,9 @@ import CollaborationBatchCreateModal from './CollaborationBatchCreateModal.vue'
 import LegacyRequirementLinkModal from '../requirement/LegacyRequirementLinkModal.vue'
 
 const authStore = useAuthStore()
+// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致，财务只读账号能操作
+// "状态流转"的前提条件（见"操作"列的 v-else-if）
+const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 const { getOptions, getLabel } = useOptions()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
