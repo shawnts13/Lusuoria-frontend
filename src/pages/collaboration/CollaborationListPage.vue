@@ -188,6 +188,13 @@
               <a-divider type="vertical" />
               <a @click="openStatusModal(record)">状态流转</a>
               <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
+              <template v-if="record.internalRequirementNo">
+                <a-divider type="vertical" />
+                <a-popconfirm title="确认解除这条记录跟内部需求编号的关联？（误关联到别的需求时用）"
+                  @confirm="handleUnlinkRequirement(record)">
+                  <a style="color:#fa8c16">解绑需求</a>
+                </a-popconfirm>
+              </template>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
@@ -369,7 +376,7 @@ const allColumns = [
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
   { title: '公司利润（人民币）', dataIndex: 'rmbRevenue', key: 'rmbRevenue', width: 140, sensitive: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '操作', key: 'action', width: 120, fixed: 'right' }
+  { title: '操作', key: 'action', width: 200, fixed: 'right' }
 ]
 
 function fmtNum(val) {
@@ -514,6 +521,16 @@ async function handleDeleteConfirm() {
   } finally { deleting.value = false }
 }
 function handleExport() { collaborationApi.exportExcel(filters) }
+
+async function handleUnlinkRequirement(record) {
+  try {
+    await collaborationApi.unlinkRequirement(record.id)
+    message.success('已解除内部需求编号关联')
+    loadData()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '解绑失败')
+  }
+}
 
 async function handleRecomputeProfits() {
   recomputing.value = true

@@ -128,6 +128,7 @@ export const collaborationApi = {
   suggestExecutorCost: (id, executorId) => http.get(`/api/collaboration-trackings/${id}/executor-cost-suggestion`,
     { params: executorId ? { executorId } : {} }),
   setExecutorCost:     (id, payload) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, payload),
+  unlinkRequirement:   (id) => http.patch(`/api/collaboration-trackings/${id}/unlink-requirement`),
   recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
 
   exportExcel: (params) => {
