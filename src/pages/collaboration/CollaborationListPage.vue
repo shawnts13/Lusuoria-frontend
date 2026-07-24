@@ -96,6 +96,11 @@
       </a-select>
       <a-button type="primary" @click="loadData">查询</a-button>
       <a-button @click="resetFilters">重置</a-button>
+      <a-tooltip v-if="canFilterMyResponsibility" :title="myResponsibilityTooltip">
+        <a-button :type="filters.onlyMyResponsibility ? 'primary' : 'default'" @click="toggleMyResponsibility">
+          查看由我负责的记录
+        </a-button>
+      </a-tooltip>
     </div>
 
     <!-- 表格 -->
@@ -320,7 +325,8 @@ const filters = reactive({
   videoMonth: undefined, videoMonthVal: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
   internalRequirementNo: route.query.internalRequirementNo || undefined,
-  clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined
+  clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined,
+  onlyMyResponsibility: false
 })
 
 const allColumns = [
@@ -436,6 +442,7 @@ async function loadData() {
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
       projectManagerId:   filters.projectManagerId,
+      onlyMyResponsibility: filters.onlyMyResponsibility,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -465,10 +472,27 @@ function resetFilters() {
     accountName:undefined, platform:undefined, progress:undefined, influencerPaymentProgress:undefined, videoType:undefined,
     videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
-    clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined
+    clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined,
+    onlyMyResponsibility: false
   })
   pagination.current = 1
   sortState.field = 'id'; sortState.order = 'descend'
+  loadData()
+}
+
+// "查看由我负责的记录"：项目负责人/执行人员/财务专属，其余角色点了也没有对应的后端筛选
+// 条件生效（后端会返回空列表），所以直接不展示这个按钮，避免造成困惑
+const canFilterMyResponsibility = computed(() =>
+  ['项目负责人', '执行人员', '财务'].includes(authStore.employeeRole))
+const myResponsibilityTooltip = computed(() => {
+  if (['项目负责人', '执行人员'].includes(authStore.employeeRole)) {
+    return '只看自己作为项目负责人/执行人员的记录，再按是否还需要跟进（未到"已发布（未结算）"/"折损"）优先排序'
+  }
+  return '只看需要处理的记录（视频项目进度为"已发布（未结算）"/"已加入客户未结算列表"）'
+})
+function toggleMyResponsibility() {
+  filters.onlyMyResponsibility = !filters.onlyMyResponsibility
+  pagination.current = 1
   loadData()
 }
 
