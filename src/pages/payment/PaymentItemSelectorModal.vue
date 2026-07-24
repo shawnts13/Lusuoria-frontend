@@ -17,6 +17,18 @@
       :custom-row="mode === 'select' ? customRow : undefined"
       :row-class-name="rowClassName">
       <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'brandName'">
+          <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+          <span v-else style="color:#bbb">—</span>
+        </template>
+        <template v-if="column.key === 'teamName'">
+          <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+          <span v-else style="color:#bbb">—</span>
+        </template>
+        <template v-if="column.key === 'progressLabel'">
+          <a-tag v-if="record.progress" :color="collabProgressColor(record.progress)">{{ record.progressLabel || '—' }}</a-tag>
+          <span v-else style="color:#bbb">—</span>
+        </template>
         <template v-if="column.key === 'influencerCost'">
           {{ record.influencerCost != null ? fmtNum(record.influencerCost) : '—' }}
         </template>
@@ -63,7 +75,8 @@ import { Modal } from 'ant-design-vue'
 import { ExclamationCircleFilled } from '@ant-design/icons-vue'
 import { paymentApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
-import { paymentProgressColor } from '../../utils/enumColors'
+import { paymentProgressColor, collabProgressColor } from '../../utils/enumColors'
+import { colorForValue } from '../../utils/tagColor'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -90,15 +103,13 @@ const accountFilter = ref(undefined)
 
 const columns = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 },
-  { title: '品牌方', dataIndex: 'brandName', key: 'brandName', width: 110 },
-  { title: '红人团队', dataIndex: 'teamName', key: 'teamName', width: 100,
-    customRender: ({ text }) => text || '—' },
+  { title: '品牌方', key: 'brandName', width: 110 },
+  { title: '红人团队', key: 'teamName', width: 100 },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 150 },
   { title: '需求内容', dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true,
     customRender: ({ text }) => text || '—' },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180 },
-  { title: '视频项目进度', dataIndex: 'progressLabel', key: 'progressLabel', width: 140,
-    customRender: ({ text }) => text || '—' },
+  { title: '视频项目进度', key: 'progressLabel', width: 140 },
   { title: '红人结款进度', key: 'paymentProgressLabel', width: 170 },
   { title: '视频发布时间', key: 'publishDate', width: 110 },
   { title: '结款周期', key: 'cycleDays', width: 90 },

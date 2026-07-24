@@ -147,7 +147,7 @@
           </template>
 
           <template v-if="column.key === 'progress'">
-            <a-tag v-if="record.progress" :color="progressColor(record.progress)">
+            <a-tag v-if="record.progress" :color="collabProgressColor(record.progress)">
               {{ getLabel('collab_progress', record.progress) }}
             </a-tag>
             <span v-else style="color:#bbb">—</span>
@@ -263,7 +263,7 @@ import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
-import { paymentProgressColor } from '../../utils/enumColors'
+import { paymentProgressColor, collabProgressColor, videoTypeColor } from '../../utils/enumColors'
 import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
 import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
@@ -410,28 +410,6 @@ function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
 }
-// 沿着"待客户出brief → ... → 客户已结算"这条流水线渐进上色：早期阶段用中性色，
-// 越接近完成越暖/越亮，"客户已结算"是终态用绿色，"折损"是异常终态用红色
-function progressColor(p) {
-  const m = {
-    PENDING_CLIENT_BRIEF: 'default', CONTRACT_SENT: 'default', INFLUENCER_ORDERED: 'purple',
-    SHOOTING_GUIDE_SENT: 'purple',
-    PENDING_DRAFT: 'default', PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
-    PUBLISHED_UNSETTLED: 'blue', JOINED_CLIENT_UNSETTLED_LIST: 'cyan',
-    SETTLED: 'green', DELAYED: 'red'
-  }
-  return m[p] || 'default'
-}
-
-// 项目视频类型是分类，不是状态，随便挑几个能区分开的颜色
-function videoTypeColor(t) {
-  const m = {
-    REAL_SHOT_NEW: 'blue', REAL_SHOT_NEW_PHOTO: 'cyan',
-    AI_NEW_MATERIAL: 'purple', OLD_MATERIAL_REPOST: 'default'
-  }
-  return m[t] || 'default'
-}
-
 async function loadData() {
   loading.value = true
   try {

@@ -23,6 +23,29 @@
     <div class="table-card">
       <a-table :columns="columns" :data-source="list" :loading="loading" row-key="id" size="middle">
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'name'">
+            <a-tag :color="colorForValue(record.name)">{{ record.name }}</a-tag>
+          </template>
+          <template v-if="column.key === 'settlementCurrency'">
+            <a-tag :color="CURRENCY_COLOR[record.settlementCurrency] || 'default'">{{ record.settlementCurrency }}</a-tag>
+          </template>
+          <template v-if="column.key === 'requiresInvoice'">
+            <a-tag :color="record.requiresInvoice === false ? 'default' : 'green'">
+              {{ record.requiresInvoice === false ? '不需要' : '需要' }}
+            </a-tag>
+          </template>
+          <template v-if="column.key === 'paymentCycle'">
+            <span :style="{ color: record.paymentCycleType ? '#262626' : '#bbb' }">{{ formatPaymentCycle(record) }}</span>
+          </template>
+          <template v-if="column.key === 'contractCycleType'">
+            <span :style="{ color: record.contractCycleType ? '#262626' : '#bbb' }">
+              {{ CONTRACT_CYCLE_LABELS[record.contractCycleType] || '—' }}
+            </span>
+          </template>
+          <template v-if="column.key === 'notes'">
+            <span v-if="record.notes">{{ record.notes }}</span>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'action'">
             <a-space v-if="authStore.canAccessBrands">
               <a @click="openEdit(record)">编辑</a>
@@ -120,6 +143,7 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import { brandApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
+import { colorForValue } from '../../utils/tagColor'
 
 const authStore = useAuthStore()
 const loading   = ref(false)
@@ -157,18 +181,20 @@ function formatPaymentCycle(record) {
   return '—'
 }
 
+// 结算币种是固定的3个值，用固定色而不是哈希色，方便一眼记住对应关系
+const CURRENCY_COLOR = { USD: 'green', RMB: 'red', EUR: 'blue' }
+
 const columns = [
-  { title: '品牌方名称', dataIndex: 'name',              key: 'name' },
-  { title: '国家/市场',  dataIndex: 'countryMarket',     key: 'countryMarket' },
-  { title: '联系人',     dataIndex: 'contactPerson',     key: 'contactPerson' },
-  { title: '结算币种',   dataIndex: 'settlementCurrency', key: 'settlementCurrency' },
-  { title: '付款周期',   key: 'paymentCycle',
-    customRender: ({ record }) => formatPaymentCycle(record) },
-  { title: '是否需要Invoice', key: 'requiresInvoice',
-    customRender: ({ record }) => record.requiresInvoice === false ? '不需要' : '需要' },
-  { title: '合同签订周期', key: 'contractCycleType',
-    customRender: ({ record }) => CONTRACT_CYCLE_LABELS[record.contractCycleType] || '—' },
-  { title: '备注',       dataIndex: 'notes',             key: 'notes', ellipsis: true },
+  { title: '品牌方名称', key: 'name' },
+  { title: '国家/市场',  dataIndex: 'countryMarket',     key: 'countryMarket',
+    customRender: ({ text }) => text || '—' },
+  { title: '联系人',     dataIndex: 'contactPerson',     key: 'contactPerson',
+    customRender: ({ text }) => text || '—' },
+  { title: '结算币种',   key: 'settlementCurrency' },
+  { title: '付款周期',   key: 'paymentCycle' },
+  { title: '是否需要Invoice', key: 'requiresInvoice' },
+  { title: '合同签订周期', key: 'contractCycleType' },
+  { title: '备注',       key: 'notes', ellipsis: true },
   { title: '操作',       key: 'action',                  width: 120 }
 ]
 

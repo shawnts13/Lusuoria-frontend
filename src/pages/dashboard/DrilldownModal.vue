@@ -39,8 +39,12 @@
         style="margin-top:12px"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'dimensionLabel'">
+            <a-tag v-if="record.dimensionLabel" :color="colorForValue(record.dimensionLabel)">{{ record.dimensionLabel }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'amount'">
-            {{ fmtAmount(record.amount) }}
+            <span style="color:#237804;font-weight:600">{{ fmtAmount(record.amount) }}</span>
           </template>
           <template v-if="column.key === 'videoCount'">
             {{ record.videoCount }}
@@ -67,6 +71,7 @@
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
 import dayjs from 'dayjs'
+import { colorForValue } from '../../utils/tagColor'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

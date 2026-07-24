@@ -19,3 +19,29 @@ const PAYMENT_PROGRESS_COLOR = {
 export function paymentProgressColor(value) {
   return PAYMENT_PROGRESS_COLOR[value] || 'default'
 }
+
+// 沿着"待客户出brief → ... → 客户已结算"这条流水线渐进上色：早期阶段用中性色，
+// 越接近完成越暖/越亮，"客户已结算"是终态用绿色，"折损"是异常终态用红色。
+// 提取自 CollaborationListPage.vue，供红人结款/进度提醒等其他也展示"视频项目进度"的
+// 页面共用，不用各自复制一份
+const COLLAB_PROGRESS_COLOR = {
+  PENDING_CLIENT_BRIEF: 'default', CONTRACT_SENT: 'default', INFLUENCER_ORDERED: 'purple',
+  SHOOTING_GUIDE_SENT: 'purple',
+  PENDING_DRAFT: 'default', PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
+  PUBLISHED_UNSETTLED: 'blue', JOINED_CLIENT_UNSETTLED_LIST: 'cyan',
+  SETTLED: 'green', DELAYED: 'red'
+}
+
+export function collabProgressColor(value) {
+  return COLLAB_PROGRESS_COLOR[value] || 'default'
+}
+
+// 项目视频类型是分类，不是状态，随便挑几个能区分开的颜色
+const VIDEO_TYPE_COLOR = {
+  REAL_SHOT_NEW: 'blue', REAL_SHOT_NEW_PHOTO: 'cyan',
+  AI_NEW_MATERIAL: 'purple', OLD_MATERIAL_REPOST: 'default'
+}
+
+export function videoTypeColor(value) {
+  return VIDEO_TYPE_COLOR[value] || 'default'
+}

@@ -16,6 +16,18 @@
       <a-table :columns="columns" :data-source="list" :loading="loading"
         row-key="id" size="middle" :pagination="tablePagination">
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'role'">
+            <a-tag v-if="record.role" :color="colorForValue(record.role)">{{ record.role }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'email'">
+            <span v-if="record.email">{{ record.email }}</span>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'notes'">
+            <span v-if="record.notes">{{ record.notes }}</span>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'salaryInfo'">
             <template v-if="isCommissionRole(record.role)">
               <span style="color:#888;font-size:12px">默认提成：</span>
@@ -146,6 +158,7 @@ import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { employeeApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
 
 const { getOptions } = useOptions()
 

@@ -14,8 +14,28 @@
       <a-table :columns="columns" :data-source="filteredList" :loading="loading"
         row-key="id" size="middle" :pagination="false" :scroll="{ x: scrollX }">
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'brandName'">
+            <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'teamName'">
+            <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'progressLabel'">
+            <a-tag v-if="record.progressLabel" :color="colorForValue(record.progressLabel)">{{ record.progressLabel }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'videoTypeLabel'">
+            <a-tag v-if="record.videoTypeLabel" :color="colorForValue(record.videoTypeLabel)">{{ record.videoTypeLabel }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'platform'">
-            {{ (record.platform || '').split('\n').join('、') || '—' }}
+            <template v-if="record.platform">
+              <a-tag v-for="p in record.platform.split('\n').filter(Boolean)" :key="p"
+                :color="colorForValue(p)" style="margin:2px">{{ p }}</a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'action'">
             <a @click="goToDetail(record)">查看详情</a>
@@ -52,6 +72,7 @@ import { progressReminderApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { useAuthStore } from '../../store/auth'
+import { colorForValue } from '../../utils/tagColor'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -143,15 +164,13 @@ const PAYMENT_DUE_COLUMNS = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
     customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
-  { title: '红人团队',      dataIndex: 'teamName',            key: 'teamName',            width: 110,
-    customRender: ({ text }) => text || '—' },
+  { title: '红人团队',      key: 'teamName',            width: 110 },
   { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
   { title: '需求内容',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160, ellipsis: true,
     customRender: ({ text }) => text || '—' },
   { title: '红人视频制作与发布成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 180,
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
-  { title: '视频项目进度',  dataIndex: 'progressLabel',       key: 'progressLabel',       width: 140,
-    customRender: ({ text }) => text || '—' },
+  { title: '视频项目进度',  key: 'progressLabel',       width: 140 },
   { title: '视频发布时间',  dataIndex: 'publishDate',         key: 'publishDate',         width: 110,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '结款周期',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
@@ -170,16 +189,13 @@ const STALL_COLUMNS = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
     customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
-  { title: '红人团队',      dataIndex: 'teamName',            key: 'teamName',            width: 110,
-    customRender: ({ text }) => text || '—' },
+  { title: '红人团队',      key: 'teamName',            width: 110 },
   { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
   { title: '合作平台',      key: 'platform',                  width: 130 },
   { title: '需求内容',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160, ellipsis: true,
     customRender: ({ text }) => text || '—' },
-  { title: '视频项目进度',  dataIndex: 'progressLabel',       key: 'progressLabel',       width: 140,
-    customRender: ({ text }) => text || '—' },
-  { title: '项目视频类型',  dataIndex: 'videoTypeLabel',      key: 'videoTypeLabel',      width: 120,
-    customRender: ({ text }) => text || '—' },
+  { title: '视频项目进度',  key: 'progressLabel',       width: 140 },
+  { title: '项目视频类型',  key: 'videoTypeLabel',      width: 120 },
   { title: '红人视频制作与发布成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 180,
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
   { title: '客户合作价格（$）', dataIndex: 'clientPrice',     key: 'clientPrice',         width: 140,
@@ -198,8 +214,7 @@ const INVOICE_OVERDUE_COLUMNS = [
   { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200,
     customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
-  { title: '红人团队',      dataIndex: 'teamName',            key: 'teamName',            width: 110,
-    customRender: ({ text }) => text || '—' },
+  { title: '红人团队',      key: 'teamName',            width: 110 },
   { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
   { title: '需求条目总数',  dataIndex: 'cycleDays',           key: 'cycleDays',           width: 110,
     customRender: ({ text }) => text != null ? text : '—' },

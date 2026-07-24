@@ -25,11 +25,18 @@
       <a-table :columns="columns" :data-source="list" :loading="loading"
         row-key="id" size="middle">
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'yearMonth'">
+            <a-tag color="blue">{{ record.yearMonth }}</a-tag>
+          </template>
           <template v-if="column.key === 'usdToCny'">
-            1 USD = {{ record.usdToCny }} CNY
+            <span style="color:#237804;font-weight:600">1 USD = {{ record.usdToCny }} CNY</span>
+          </template>
+          <template v-if="column.key === 'updatedBy'">
+            <span v-if="record.updatedBy">{{ record.updatedBy }}</span>
+            <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'lastUpdatedAt'">
-            {{ record.lastUpdatedAt ? formatDateTime(record.lastUpdatedAt) : '—' }}
+            <span style="color:#888">{{ record.lastUpdatedAt ? formatDateTime(record.lastUpdatedAt) : '—' }}</span>
           </template>
           <template v-if="column.key === 'action'">
             <a @click="openEdit(record)">修改</a>

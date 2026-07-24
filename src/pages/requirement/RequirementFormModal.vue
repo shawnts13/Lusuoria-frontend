@@ -90,9 +90,14 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'videoType'">
             <span v-if="!record.videoType" style="color:#faad14">（未选择）</span>
-            <span v-else>{{ videoTypeLabel(record.videoType) }}</span>
+            <a-tag v-else :color="videoTypeColor(record.videoType)">{{ videoTypeLabel(record.videoType) }}</a-tag>
           </template>
-          <template v-if="column.key === 'platform'">{{ (record.platform || []).join('、') || '—' }}</template>
+          <template v-if="column.key === 'platform'">
+            <template v-if="record.platform && record.platform.length">
+              <a-tag v-for="p in record.platform" :key="p" :color="colorForValue(p)" style="margin:2px">{{ p }}</a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'clientUnitPrice'">
             <span style="color:#c00000">{{ record.clientUnitPrice ?? '—' }}</span>
           </template>
@@ -169,6 +174,8 @@ import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { requirementApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { colorForValue } from '../../utils/tagColor'
+import { videoTypeColor } from '../../utils/enumColors'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
