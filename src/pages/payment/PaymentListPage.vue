@@ -119,6 +119,7 @@ const itemsViewPaymentId = ref(null)
 
 const pagination = reactive({ current: 1, pageSize: 20, total: 0,
   showTotal: t => `共 ${t} 条` })
+const sortState = reactive({ field: 'settlementMonth', order: 'descend' })
 const filters = reactive({
   settlementMonth: undefined, settlementMonthVal: undefined,
   brandId: undefined, teamId: undefined, paymentStatus: undefined,
@@ -134,20 +135,20 @@ const columns = [
   { title: '结款单号',   dataIndex: 'paymentNo',       key: 'paymentNo',       width: 200 },
   { title: '品牌方',     key: 'brand', width: 120 },
   { title: '红人团队',   key: 'team', width: 120 },
-  { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90 },
-  { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty', width: 80 },
+  { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90, sorter: true },
+  { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty', width: 80, sorter: true },
   { title: '查看涉及的红人视频项目', key: 'items', width: 180 },
-  { title: '应付金额',   key: 'payableAmount',  width: 130 },
+  { title: '应付金额',   key: 'payableAmount',  width: 130, sorter: true },
   { title: '币种',       dataIndex: 'currency', key: 'currency', width: 70 },
-  { title: '汇率',       dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80,
+  { title: '汇率',       dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80, sorter: true,
     customRender: ({ text }) => text || '—' },
-  { title: '人民币金额', dataIndex: 'rmbAmount', key: 'rmbAmount', width: 110,
+  { title: '人民币金额', dataIndex: 'rmbAmount', key: 'rmbAmount', width: 110, sorter: true,
     customRender: ({ text }) => text ? '¥' + fmtNum(text) : '—' },
-  { title: '对账日期',   dataIndex: 'reconcileDate',       key: 'reconcileDate',       width: 110,
+  { title: '对账日期',   dataIndex: 'reconcileDate',       key: 'reconcileDate',       width: 110, sorter: true,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
-  { title: '预计付款日', dataIndex: 'expectedPaymentDate', key: 'expectedPaymentDate', width: 110,
+  { title: '预计付款日', dataIndex: 'expectedPaymentDate', key: 'expectedPaymentDate', width: 110, sorter: true,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
-  { title: '实际付款日', dataIndex: 'actualPaymentDate',   key: 'actualPaymentDate',   width: 110,
+  { title: '实际付款日', dataIndex: 'actualPaymentDate',   key: 'actualPaymentDate',   width: 110, sorter: true,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '付款状态',   key: 'paymentStatus', width: 100 },
   { title: '备注',       dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
@@ -182,6 +183,8 @@ async function loadData() {
       teamId:          filters.teamId,
       paymentStatus:   filters.paymentStatus,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
+      sortBy:  sortState.field,
+      sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
       size: pagination.pageSize
     })
@@ -193,13 +196,20 @@ async function loadData() {
   }
 }
 
-function handleTableChange(pag) {
-  pagination.current = pag.current; pagination.pageSize = pag.pageSize; loadData()
+function handleTableChange(pag, _filters, sorter) {
+  pagination.current = pag.current; pagination.pageSize = pag.pageSize
+  if (sorter && sorter.field) {
+    sortState.field = sorter.field
+    sortState.order = sorter.order || 'descend'
+  }
+  loadData()
 }
 function resetFilters() {
   Object.assign(filters, { settlementMonth:undefined, settlementMonthVal:undefined,
     brandId:undefined, teamId:undefined, paymentStatus:undefined, internalRequirementNo:undefined })
-  pagination.current = 1; loadData()
+  pagination.current = 1
+  sortState.field = 'settlementMonth'; sortState.order = 'descend'
+  loadData()
 }
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }

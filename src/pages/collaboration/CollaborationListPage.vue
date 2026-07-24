@@ -318,7 +318,7 @@ const filters = reactive({
 })
 
 const allColumns = [
-  { title: '内部需求编号',  dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200,
+  { title: '内部需求编号',  dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200, sorter: true,
     customRender: ({ text }) => text || '—' },
   { title: '内部项目编号',  dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 200, sorter: true },
   { title: '品牌方',        key: 'brand',          width: 120 },
@@ -342,32 +342,34 @@ const allColumns = [
   { title: '客户方的项目订单', dataIndex: 'clientOrderId', key: 'clientOrderId', width: 150, sorter: true },
   { title: '客户方付款批次',   dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 150, sorter: true },
   // 这两个字段是"基础财务字段"，GUEST 之外所有角色都能看，不受 canViewFinancials（仅 ADMIN/AUDITOR）限制
-  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, baseline: true },
-  { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, baseline: true },
+  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, baseline: true, sorter: true },
+  { title: '客户合作价格（$）',           key: 'clientPrice',    width: 140, baseline: true, sorter: true },
   // 以下列 2026-07 从"项目订单"模块迁移过来。内部执行成本不标 sensitive/costBookkeeping
   // （按行脱敏：项目负责人/执行人员只能看到自己相关的行，其余显示"—"，由后端按行返回决定，
   // 不是角色整体限制，所以不能靠前端整列隐藏，拿到什么就显示什么，跟原项目订单列表一致）。
   // 汇率/其他外部成本/外部成本备注 2026-07 收紧成仅管理层/财务可见（costBookkeeping 整列
   // 隐藏，标准跟后端 ProjectFieldVisibility 的 FULL 层级判定一致），不再是按行脱敏
-  { title: '汇率', dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80, costBookkeeping: true,
+  // 这些字段这次都补上了 sorter：以前在"项目订单"模块里是字符串字段没法数值排序，
+  // 迁移到红人合作跟踪后改成了真正的 BigDecimal 类型，后端 Sort.by(属性名) 直接就能排
+  { title: '汇率', dataIndex: 'exchangeRate', key: 'exchangeRate', width: 80, costBookkeeping: true, sorter: true,
     customRender: ({ text }) => text || '—' },
-  { title: '其他外部成本（人民币）', dataIndex: 'otherExternalCost', key: 'otherExternalCost', width: 160, costBookkeeping: true,
+  { title: '其他外部成本（人民币）', dataIndex: 'otherExternalCost', key: 'otherExternalCost', width: 160, costBookkeeping: true, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
   { title: '外部成本备注', dataIndex: 'otherExternalCostNote', key: 'otherExternalCostNote', width: 180, ellipsis: true, costBookkeeping: true,
     customRender: ({ text }) => text || '—' },
-  { title: '内部执行成本（人民币）', dataIndex: 'internalExecutionCost', key: 'internalExecutionCost', width: 160,
+  { title: '内部执行成本（人民币）', dataIndex: 'internalExecutionCost', key: 'internalExecutionCost', width: 160, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '项目毛利',        dataIndex: 'grossProfit', key: 'grossProfit', width: 120, sensitive: true,
+  { title: '项目毛利',        dataIndex: 'grossProfit', key: 'grossProfit', width: 120, sensitive: true, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '可分配利润',      dataIndex: 'distributableProfit', key: 'distributableProfit', width: 120, sensitive: true,
+  { title: '可分配利润',      dataIndex: 'distributableProfit', key: 'distributableProfit', width: 120, sensitive: true, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '提成比例',        dataIndex: 'commissionRate', key: 'commissionRate', width: 90, sensitive: true,
+  { title: '提成比例',        dataIndex: 'commissionRate', key: 'commissionRate', width: 90, sensitive: true, sorter: true,
     customRender: ({ text }) => text ? (parseFloat(text) * 100).toFixed(0) + '%' : '—' },
-  { title: '负责人提成',      dataIndex: 'commissionAmount', key: 'commissionAmount', width: 120, sensitive: true,
+  { title: '负责人提成',      dataIndex: 'commissionAmount', key: 'commissionAmount', width: 120, sensitive: true, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '公司利润（美金）', dataIndex: 'companyNetProfit', key: 'companyNetProfit', width: 140, sensitive: true,
+  { title: '公司利润（美金）', dataIndex: 'companyNetProfit', key: 'companyNetProfit', width: 140, sensitive: true, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
-  { title: '公司利润（人民币）', dataIndex: 'rmbRevenue', key: 'rmbRevenue', width: 140, sensitive: true,
+  { title: '公司利润（人民币）', dataIndex: 'rmbRevenue', key: 'rmbRevenue', width: 140, sensitive: true, sorter: true,
     customRender: ({ text }) => text != null ? fmtNum(text) : '—' },
   { title: '操作', key: 'action', width: 120, fixed: 'right' }
 ]

@@ -130,13 +130,18 @@ const form = reactive({
 })
 
 const columns = [
-  { title: '用户名',   dataIndex: 'username',     key: 'username' },
-  { title: '角色',     key: 'role',               width: 130 },
+  { title: '用户名',   dataIndex: 'username',     key: 'username',
+    sorter: (a, b) => (a.username || '').localeCompare(b.username || '') },
+  { title: '角色',     key: 'role',               width: 130,
+    sorter: (a, b) => (a.role || '').localeCompare(b.role || '') },
   { title: '关联员工', dataIndex: 'employeeName', key: 'employeeName',
-    customRender: ({ text }) => text || '—' },
-  { title: '状态',     key: 'enabled',            width: 90 },
+    customRender: ({ text }) => text || '—',
+    sorter: (a, b) => (a.employeeName || '').localeCompare(b.employeeName || '', 'zh') },
+  { title: '状态',     key: 'enabled',            width: 90,
+    sorter: (a, b) => Number(a.enabled) - Number(b.enabled) },
   { title: '创建时间', dataIndex: 'createdAt',    key: 'createdAt', width: 170,
-    customRender: ({ text }) => text ? formatDateTime(text) : '—' },
+    customRender: ({ text }) => text ? formatDateTime(text) : '—',
+    sorter: (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0) },
   { title: '操作',     key: 'action',             width: 160 }
 ]
 

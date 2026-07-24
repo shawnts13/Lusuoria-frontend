@@ -95,10 +95,13 @@ const editingId = ref(null)
 const form = reactive({ yearMonth: null, monthVal: null, usdToCny: null })
 
 const columns = [
-  { title: '业务月份', dataIndex: 'yearMonth', key: 'yearMonth', width: 120 },
-  { title: '汇率', key: 'usdToCny', width: 180 },
+  { title: '业务月份', dataIndex: 'yearMonth', key: 'yearMonth', width: 120,
+    sorter: (a, b) => (a.yearMonth || '').localeCompare(b.yearMonth || '') },
+  { title: '汇率', key: 'usdToCny', width: 180,
+    sorter: (a, b) => parseFloat(a.usdToCny || 0) - parseFloat(b.usdToCny || 0) },
   { title: '最后修改人', dataIndex: 'updatedBy', key: 'updatedBy', width: 120 },
-  { title: '最后修改时间', key: 'lastUpdatedAt', width: 180 },
+  { title: '最后修改时间', key: 'lastUpdatedAt', width: 180,
+    sorter: (a, b) => new Date(a.lastUpdatedAt || 0) - new Date(b.lastUpdatedAt || 0) },
   { title: '操作', key: 'action', width: 100 }
 ]
 

@@ -185,14 +185,18 @@ function formatPaymentCycle(record) {
 const CURRENCY_COLOR = { USD: 'green', RMB: 'red', EUR: 'blue' }
 
 const columns = [
-  { title: '品牌方名称', key: 'name' },
+  { title: '品牌方名称', key: 'name',
+    sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh') },
   { title: '国家/市场',  dataIndex: 'countryMarket',     key: 'countryMarket',
-    customRender: ({ text }) => text || '—' },
+    customRender: ({ text }) => text || '—',
+    sorter: (a, b) => (a.countryMarket || '').localeCompare(b.countryMarket || '', 'zh') },
   { title: '联系人',     dataIndex: 'contactPerson',     key: 'contactPerson',
     customRender: ({ text }) => text || '—' },
-  { title: '结算币种',   key: 'settlementCurrency' },
+  { title: '结算币种',   key: 'settlementCurrency',
+    sorter: (a, b) => (a.settlementCurrency || '').localeCompare(b.settlementCurrency || '') },
   { title: '付款周期',   key: 'paymentCycle' },
-  { title: '是否需要Invoice', key: 'requiresInvoice' },
+  { title: '是否需要Invoice', key: 'requiresInvoice',
+    sorter: (a, b) => Number(a.requiresInvoice === false) - Number(b.requiresInvoice === false) },
   { title: '合同签订周期', key: 'contractCycleType' },
   { title: '备注',       key: 'notes', ellipsis: true },
   { title: '操作',       key: 'action',                  width: 120 }

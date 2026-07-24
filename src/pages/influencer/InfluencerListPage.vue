@@ -273,7 +273,7 @@ const filters = reactive({
 const allColumns = [
   { title: '品牌方-团队',   key: 'brandTeamPairs',  width: 220 },
   // 宽度按最长标签"境外红人（在华）"留够空间（tag 组件不换行，太窄会被裁切显示不全）
-  { title: '红人类型',      key: 'influencerType',  width: 150 },
+  { title: '红人类型',      key: 'influencerType',  width: 150, sorter: true, dataIndex: 'influencerType' },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
   { title: '服务国家/市场', key: 'countryMarket', width: 160 },
   { title: '平台',          key: 'platform',        width: 120 },
@@ -281,15 +281,15 @@ const allColumns = [
   { title: '所属领域',      key: 'domains',         width: 130 },
   { title: '粉丝量',        key: 'followerCount',   width: 90,  sorter: true, dataIndex: 'followerCount' },
   // 宽度按最长标签"已回复开发信"留够空间
-  { title: '建联情况',      key: 'contactStatus',   width: 140 },
-  { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90 },
+  { title: '建联情况',      key: 'contactStatus',   width: 140, sorter: true, dataIndex: 'contactStatus' },
+  { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90, sorter: true },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
   { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
   { title: '视频投流成本（$）',           key: 'adSpendCost',    width: 150, sensitive: true },
   { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 150, sensitive: true },
   { title: '合作项目',      key: 'projects',        width: 100 },
   { title: '合作案例',      key: 'casesLinks',      width: 220 },
-  { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160 },
+  { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160, sorter: true },
   { title: '联系方式',      key: 'contacts',        width: 160 },
   { title: '已签署合同',    key: 'contractLink',    width: 100 },
   { title: '操作',          key: 'action',          width: 120, fixed: 'right' }
