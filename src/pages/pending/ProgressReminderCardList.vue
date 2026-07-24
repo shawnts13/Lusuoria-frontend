@@ -5,9 +5,7 @@
         <div class="card-main">
           <a-tag :color="categoryTagColor(r.category)" class="category-tag">{{ categoryLabel(r.category) }}</a-tag>
           <a-tag :color="urgencyColor(r)">{{ urgencyLabel(r) }}</a-tag>
-          <span class="card-text" :style="{ color: textColor(r) }">
-            {{ r.category === 'COLLAB_PAYMENT_DUE' ? r.count + ' 笔临近结款的红人合作跟踪记录' : r.title }}
-          </span>
+          <span class="card-text" :style="{ color: textColor(r) }">{{ r.title }}</span>
         </div>
         <a v-if="showDetailButton && r.category !== 'BRAND_MONTH_END_PAYMENT_DUE'" @click="$emit('view-detail', r)">查看详情</a>
       </div>
