@@ -86,6 +86,7 @@
               <a-tooltip :title="invoiceButtonState(record).tooltip">
                 <span>
                   <a-button size="small" :disabled="invoiceButtonState(record).disabled"
+                    :class="{ 'invoice-btn-pending': invoiceButtonState(record).reason === 'notComplete' }"
                     @click="openInvoiceModal(record)">上传Invoice</a-button>
                 </span>
               </a-tooltip>
@@ -239,17 +240,19 @@ function progressColor(record) {
 function getBrand(id) { return brands.value.find(b => b.id === id) }
 function getBrandName(id) { return getBrand(id)?.name }
 
-// "上传Invoice"按钮的禁用状态+悬浮提示：品牌方不涉及invoice上传 优先于 "需求未实施完成"
+// "上传Invoice"按钮的禁用状态+悬浮提示：品牌方不涉及invoice上传 优先于 "需求未实施完成"。
+// 两种禁用原因用不同颜色区分：不涉及invoice（本来就不需要点）用灰色，尚未实施完成
+// （还没到能点的时候，但流程正常推进中）用橙色，避免两种"点不了"的情况看起来一样
 function invoiceButtonState(record) {
   const brand = getBrand(record.brandId)
   if (brand && brand.requiresInvoice === false) {
-    return { disabled: true, tooltip: '该品牌方不涉及Invoice上传' }
+    return { disabled: true, reason: 'notRequired', tooltip: '该品牌方不涉及Invoice上传' }
   }
   const total = record.totalItemCount ?? 0
   const done = total > 0 && (record.completedCount ?? 0) >= total
   return done
-    ? { disabled: false, tooltip: null }
-    : { disabled: true, tooltip: '该需求尚未实施完成，还无需上传Invoice' }
+    ? { disabled: false, reason: null, tooltip: null }
+    : { disabled: true, reason: 'notComplete', tooltip: '该需求尚未实施完成，还无需上传Invoice' }
 }
 function getTeamName(id) { return teams.value.find(t => t.id === id)?.name }
 function getInfluencerName(id) { return influencers.value.find(i => i.id === id)?.accountName }
@@ -342,3 +345,14 @@ onMounted(async () => {
   loadData()
 })
 </script>
+
+<style scoped>
+/* "上传Invoice"按钮禁用态区分：不涉及invoice保持默认灰色，需求尚未实施完成的用橙色，
+   跟应用里"待处理/进行中"惯用的橙色系保持一致（区别于纯粹"跟我无关"的灰色） */
+.invoice-btn-pending:disabled,
+.invoice-btn-pending.ant-btn-disabled {
+  color: #fa8c16 !important;
+  border-color: #ffd591 !important;
+  background: #fff7e6 !important;
+}
+</style>
