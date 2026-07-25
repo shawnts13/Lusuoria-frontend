@@ -90,8 +90,10 @@ export const influencerApi = {
 // ===== 红人已签署合同（2026-07 新增，"红人管理"编辑弹窗"已签署合同"区块） =====
 export const influencerContractApi = {
   byInfluencer:    (influencerId) => http.get(`/api/influencer-contracts/by-influencer/${influencerId}`),
-  // 批量按红人id取合同，返回 { influencerId: { year: contractLink } }，供"红人需求管理"列表交叉核对
-  byInfluencerIds: (ids)          => http.get('/api/influencer-contracts/by-influencer-ids', { params: { ids } }),
+  // 批量按红人id取合同，返回 { influencerId: { year: contractLink } }，供"红人需求管理"列表交叉核对。
+  // ids 要 join 成逗号分隔字符串再传——axios 默认把数组序列化成 ids[]=1&ids[]=2，
+  // Spring 的 @RequestParam List<Long> ids 认不出这种带方括号的参数名，会直接报 500
+  byInfluencerIds: (ids) => http.get('/api/influencer-contracts/by-influencer-ids', { params: { ids: ids.join(',') } }),
   create: (data)     => http.post('/api/influencer-contracts', data),
   update: (id, data) => http.put(`/api/influencer-contracts/${id}`, data)
 }
