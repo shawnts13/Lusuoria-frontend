@@ -83,7 +83,8 @@
             <a v-if="contractCellState(record).mode === 'link'"
               :href="contractCellState(record).href" target="_blank" style="font-size:12px">查看合同</a>
             <a v-else-if="contractCellState(record).mode === 'gotoInfluencer'"
-              @click="goToInfluencerContract(record)" style="font-size:12px">{{ contractCellState(record).text }}</a>
+              @click="goToInfluencerContract(record)"
+              style="font-size:12px;color:#999;cursor:pointer">{{ contractCellState(record).text }}</a>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'action'">
@@ -305,7 +306,7 @@ async function loadInfluencerContracts() {
 
 // "合同链接"列的展示状态：品牌方"每次需求签一次合同"时看需求自己的 contractLink；
 // "一年签一次合同"时按需求自己的年份去匹配红人管理里对应年份的合同，匹配上就直接展示真实链接，
-// 没匹配上则展示可点击的引导文案（点击效果等同"跳转红人库上传"按钮）
+// 没匹配上则展示可点击的引导文案（点击效果等同操作列的"上传合同"按钮跳转红人管理）
 function contractCellState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
@@ -319,7 +320,8 @@ function contractCellState(record) {
 
 // "上传合同"操作按钮的三态：每次需求签一次合同 -> 始终可点的"上传合同"；一年签一次合同且该
 // 需求年份红人已有合同 -> 置灰的"该红人已有XXXX年的合同"；一年签一次合同且该年份还没合同 ->
-// 不起眼的"跳转红人库上传"
+// 文案同样是"上传合同"（跟第一种状态统一按钮宽度，避免表格排版参差不齐），
+// 但保留 contract-btn-goto 的不起眼配色跟真正能直接上传的那种区分开，点击后跳转红人管理
 function contractButtonState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
@@ -335,7 +337,7 @@ function contractButtonState(record) {
     }
   }
   return {
-    disabled: false, mode: 'gotoInfluencer', label: '跳转红人库上传',
+    disabled: false, mode: 'gotoInfluencer', label: '上传合同',
     tooltip: '该品牌方是一年签一次合同，请在红人管理处上传'
   }
 }
@@ -452,8 +454,9 @@ onMounted(async () => {
   background: #fff7e6 !important;
 }
 
-/* "跳转红人库上传"故意做得不起眼——这条路径不是首选操作（真正合同还是要在红人管理上传），
-   跟"上传合同"的默认按钮样式拉开区别，降低被误点的概率 */
+/* 一年签一次合同且该年份还没上传的"上传合同"按钮：文案跟真正能直接上传的那种一样（表格排版
+   整齐），但故意做得不起眼——这条路径实际是跳转红人管理，不是首选操作，用配色区分开，
+   降低被误点的概率 */
 .contract-btn-goto {
   color: #999 !important;
   border-color: #e8e8e8 !important;
