@@ -145,14 +145,22 @@
             <a-button type="dashed" size="small" @click="form.casesLinks.push('')">+ 添加案例链接</a-button>
           </a-form-item>
 
-          <a-form-item label="已签署合同">
-            <a-input v-model:value="form.contractLink" placeholder="粘贴 Google Drive 链接" />
-            <div style="margin-top:4px">
-              <a v-if="contractUploadUrl" :href="contractUploadUrl" target="_blank">
-                跳转至合同上传页面 ↗
-              </a>
-              <span v-else style="color:#bbb;font-size:12px">合同上传页面暂未配置</span>
-            </div>
+          <a-form-item label="已签署合同" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
+            <template v-if="props.record?.id">
+              <div v-if="contracts.length" style="margin-bottom:8px">
+                <div v-for="c in contracts" :key="c.id"
+                  style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+                  <span style="width:56px">{{ c.year }}年</span>
+                  <a :href="c.contractLink" target="_blank" style="flex:1;font-size:12px">查看合同</a>
+                  <a @click="openContractModal(c)">编辑</a>
+                </div>
+              </div>
+              <span v-else style="color:#bbb;font-size:12px;display:block;margin-bottom:8px">还没有已签署的合同记录</span>
+              <a-button size="small" @click="openContractModal(null)">
+                {{ hasCurrentYearContract ? '新增其他年份合同' : '新增本年度合同' }}
+              </a-button>
+            </template>
+            <span v-else style="color:#bbb;font-size:12px">保存红人后才能维护已签署合同</span>
           </a-form-item>
 
           <!-- 敏感字段 -->
@@ -182,15 +190,19 @@
         </a-col>
       </a-row>
     </a-form>
+
+    <InfluencerContractModal v-model:visible="contractModalVisible" :influencer-id="props.record?.id"
+      :contract="contractModalRecord" :year-fixed="contractModalYearFixed" @saved="loadContracts" />
   </a-modal>
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { influencerApi, employeeApi, domainApi, influencerTeamApi } from '../../api/index'
+import { influencerApi, employeeApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
+import InfluencerContractModal from './InfluencerContractModal.vue'
 
 const props = defineProps({
   visible:           Boolean,
@@ -205,11 +217,29 @@ const emit = defineEmits(['update:visible', 'saved', 'domain-added', 'team-added
 const formRef          = ref()
 const saving           = ref(false)
 const employees        = ref([])
-const contractUploadUrl = ref('')
 const newDomainName    = ref('')
 const newTeamName      = ref('')
 const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
+
+// 已签署合同（2026-07 新增，一个红人可以有多条，一年一条）
+const contracts               = ref([])
+const contractModalVisible    = ref(false)
+const contractModalRecord     = ref(null)   // 正在编辑的合同记录，null 表示新增
+const contractModalYearFixed  = ref(false)  // true="新增本年度合同"（年份固定不可选），false=年份可选
+const CURRENT_YEAR = new Date().getFullYear()
+const hasCurrentYearContract = computed(() => contracts.value.some(c => c.year === CURRENT_YEAR))
+
+async function loadContracts() {
+  if (!props.record?.id) { contracts.value = []; return }
+  const res = await influencerContractApi.byInfluencer(props.record.id)
+  contracts.value = res.data || []
+}
+function openContractModal(existing) {
+  contractModalRecord.value = existing || null
+  contractModalYearFixed.value = !existing && !hasCurrentYearContract.value
+  contractModalVisible.value = true
+}
 
 const EMPTY_CONTACTS = () => ({ phone: '', whatsapp: '', line: '', telegram: '' })
 
@@ -220,7 +250,6 @@ const form = reactive({
   brandTeamPairs: [], countryMarkets: [], platforms: [],
   domains: [],
   followerCount: null, links: [], casesLinks: [],
-  contractLink: '',
   email: '',
   contacts: EMPTY_CONTACTS(),
   contactStatus: 'UNDEVELOPED',
@@ -316,7 +345,6 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       followerCount:  rec.followerCount  || null,
       links:          splitMulti(rec.links),
       casesLinks:     splitMulti(rec.casesLinks),
-      contractLink:   rec.contractLink   || '',
       email:          rec.email          || '',
       contacts:       contactsToObj(rec.contacts),
       contactStatus:  rec.contactStatus  || 'UNDEVELOPED',
@@ -330,13 +358,14 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
     Object.assign(form, {
       id:null, influencerType:'OVERSEAS_INFLUENCER', accountName:'',
       brandTeamPairs:[], countryMarkets:[], platforms:[], domains:[],
-      followerCount:null, links:[], casesLinks:[], contractLink:'',
+      followerCount:null, links:[], casesLinks:[],
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', followerPerson:null,
       influencerCost:'', notes:'',
       adSpendCost:'', copyrightCost:''
     })
   }
+  loadContracts()
   nextTick(() => { populatingFromRecord = false })
 }, { immediate: true })
 
@@ -396,7 +425,6 @@ async function handleSave() {
       followerCount:  form.followerCount,
       links:          form.links.filter(l => l.includes('http')),
       casesLinks:     form.casesLinks.filter(l => l.includes('http')),
-      contractLink:   form.contractLink || null,
       email:          form.email,
       contacts:       contactsToJson(form.contacts),
       contactStatus:  form.contactStatus,
@@ -413,11 +441,7 @@ async function handleSave() {
 }
 
 onMounted(async () => {
-  const [empRes, urlRes] = await Promise.all([
-    employeeApi.list(),
-    influencerApi.contractUploadUrl()
-  ])
-  employees.value      = empRes.data || []
-  contractUploadUrl.value = urlRes.data || ''
+  const empRes = await employeeApi.list()
+  employees.value = empRes.data || []
 })
 </script>

@@ -1,22 +1,22 @@
 <template>
-  <a-modal :open="visible" title="上传Invoice链接" width="560px"
+  <a-modal :open="visible" title="上传合同链接" width="560px"
     :confirm-loading="saving" @ok="handleSave" @cancel="close" :destroy-on-close="true">
     <div style="margin-bottom:16px">
       <a href="https://drive.google.com/drive/folders/1KNz3r_SDDxkupki7i2b6zXgL_CDdZjAp"
         target="_blank" rel="noopener">
         <a-button>
-          <template #icon><LinkOutlined /></template>前往Invoice上传Google Drive页面
+          <template #icon><LinkOutlined /></template>前往合同上传Google Drive页面
         </a-button>
       </a>
     </div>
     <a-form layout="vertical">
-      <a-form-item label="Invoice链接">
-        <a-input v-model:value="invoiceLink" placeholder="粘贴上传好后的Invoice链接" />
+      <a-form-item label="合同链接">
+        <a-input v-model:value="contractLink" placeholder="粘贴上传好后的合同链接" />
       </a-form-item>
     </a-form>
     <div class="upload-hint">
-      请点击"前往Invoice上传Google Drive页面"按钮，将Invoice上传至对应年份的Invoices文件夹里。
-      文件命名规则：年月日-invoice-红人社媒完整名字，例如20260723-invoice-kam2kute
+      请点击"前往合同上传Google Drive页面"按钮，将合同上传至对应年份的Contracts文件夹里。
+      文件命名规则：年月日-contract-红人社媒完整名字，例如 20260723-contract-kam2kute
     </div>
   </a-modal>
 </template>
@@ -34,23 +34,23 @@ const props = defineProps({
 const emit = defineEmits(['update:visible', 'saved'])
 
 const saving = ref(false)
-const invoiceLink = ref('')
+const contractLink = ref('')
 
 watch(() => props.visible, v => {
-  if (v) invoiceLink.value = props.requirement?.invoiceLink || ''
+  if (v) contractLink.value = props.requirement?.contractLink || ''
 })
 
 function close() { emit('update:visible', false) }
 
 async function handleSave() {
-  if (!invoiceLink.value || !invoiceLink.value.trim()) {
-    message.warning('请填写Invoice链接')
+  if (!contractLink.value || !contractLink.value.trim()) {
+    message.warning('请填写合同链接')
     return
   }
   saving.value = true
   try {
-    await requirementApi.uploadInvoiceLink(props.requirement.id, invoiceLink.value.trim())
-    message.success('Invoice链接已保存，关联的红人合作跟踪记录的红人结款进度已自动更新为"红人已提供invoice"')
+    await requirementApi.uploadContractLink(props.requirement.id, contractLink.value.trim())
+    message.success('合同链接已保存')
     emit('saved')
     close()
   } catch (e) {
@@ -63,7 +63,7 @@ async function handleSave() {
 
 <style scoped>
 /* 命名规则提示：从纯灰色小字改成深色文字+浅色背景提示框，避免这条重要的文件命名规则被忽略
-   （跟"上传合同"弹窗共用同一套样式，AntD warning 配色） */
+   （跟"上传Invoice"弹窗共用同一套样式，AntD warning 配色） */
 .upload-hint {
   font-size: 12px;
   color: #614700;

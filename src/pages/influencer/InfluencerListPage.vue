@@ -191,8 +191,8 @@
           </template>
 
           <template v-if="column.key === 'contractLink'">
-            <a v-if="record.contractLink" :href="record.contractLink" target="_blank" style="font-size:12px">
-              查看合同
+            <a v-if="latestContract(record.id)" :href="latestContract(record.id).contractLink" target="_blank" style="font-size:12px">
+              查看{{ latestContract(record.id).year }}年合同
             </a>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -229,10 +229,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons-vue'
-import { influencerApi, brandApi, domainApi, influencerTeamApi } from '../../api/index'
+import { influencerApi, brandApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
@@ -241,6 +241,7 @@ import InfluencerFormModal from './InfluencerFormModal.vue'
 
 const authStore = useAuthStore()
 const router    = useRouter()
+const route     = useRoute()
 const { getOptions, getLabel } = useOptions()
 
 const loading   = ref(false)
@@ -252,6 +253,7 @@ const teams     = ref([])
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const projectCounts       = ref({})
+const influencerContracts = ref({})  // 已签署合同（2026-07 新增），key=influencerId，value={year: contractLink}
 
 // 排序状态
 const sortState = reactive({ field: 'accountName', order: 'ascend' })
@@ -310,6 +312,15 @@ function contactTypeLabel(type) {
   const m = { phone:'电话', whatsapp:'WhatsApp', line:'Line', telegram:'Telegram' }
   return m[type] || type
 }
+// "已签署合同"列：展示这个红人年份最新的一条合同（可能有多条，一年一条）
+function latestContract(influencerId) {
+  const byYear = influencerContracts.value[influencerId]
+  if (!byYear) return null
+  const years = Object.keys(byYear).map(Number)
+  if (!years.length) return null
+  const latestYear = Math.max(...years)
+  return { year: latestYear, contractLink: byYear[latestYear] }
+}
 
 async function loadData() {
   loading.value = true
@@ -337,7 +348,11 @@ async function loadData() {
         const countRes = await influencerApi.projectCounts(ids)
         projectCounts.value = countRes.data || {}
       } catch { projectCounts.value = {} }
-    } else { projectCounts.value = {} }
+      try {
+        const contractRes = await influencerContractApi.byInfluencerIds(ids)
+        influencerContracts.value = contractRes.data || {}
+      } catch { influencerContracts.value = {} }
+    } else { projectCounts.value = {}; influencerContracts.value = {} }
   } finally {
     loading.value = false
     remeasure()  // 数据变化后表格宽度可能变化，重新同步顶部滚动条
@@ -428,5 +443,15 @@ onMounted(async () => {
   domains.value = d.data || []
   teams.value   = t.data || []
   loadData()
+
+  // "红人需求管理"的"跳转红人库上传"按钮/"该红人已有XXXX年的合同"提示点击后带 editInfluencerId
+  // 跳转过来，自动定位并打开这个红人的编辑弹窗
+  const editId = route.query.editInfluencerId
+  if (editId) {
+    try {
+      const res = await influencerApi.getById(editId)
+      if (res.data) openEdit(res.data)
+    } catch {}
+  }
 })
 </script>

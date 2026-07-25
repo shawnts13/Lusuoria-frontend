@@ -79,6 +79,13 @@
             <a v-else-if="record.invoiceLink" :href="record.invoiceLink" target="_blank" style="font-size:12px">查看Invoice</a>
             <span v-else style="color:#bbb">—</span>
           </template>
+          <template v-if="column.key === 'contractLink'">
+            <a v-if="contractCellState(record).mode === 'link'"
+              :href="contractCellState(record).href" target="_blank" style="font-size:12px">查看合同</a>
+            <a v-else-if="contractCellState(record).mode === 'gotoInfluencer'"
+              @click="goToInfluencerContract(record)" style="font-size:12px">{{ contractCellState(record).text }}</a>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'action'">
             <a-space v-if="authStore.canWrite">
               <a @click="openEdit(record)">编辑</a>
@@ -88,6 +95,14 @@
                   <a-button size="small" :disabled="invoiceButtonState(record).disabled"
                     :class="{ 'invoice-btn-pending': invoiceButtonState(record).reason === 'notComplete' }"
                     @click="openInvoiceModal(record)">上传Invoice</a-button>
+                </span>
+              </a-tooltip>
+              <a-divider type="vertical" />
+              <a-tooltip :title="contractButtonState(record).tooltip">
+                <span>
+                  <a-button size="small" :disabled="contractButtonState(record).disabled"
+                    :class="{ 'contract-btn-goto': contractButtonState(record).mode === 'gotoInfluencer' }"
+                    @click="handleContractButtonClick(record)">{{ contractButtonState(record).label }}</a-button>
                 </span>
               </a-tooltip>
               <a-divider type="vertical" />
@@ -119,15 +134,18 @@
 
     <RequirementInvoiceModal v-model:visible="invoiceModalVisible" :requirement="invoiceModalRequirement"
       @saved="loadData" />
+
+    <RequirementContractModal v-model:visible="contractModalVisible" :requirement="contractModalRequirement"
+      @saved="loadData" />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import { requirementApi, brandApi, influencerApi, influencerTeamApi } from '../../api/index'
+import { requirementApi, brandApi, influencerApi, influencerTeamApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDateTime } from '../../utils/dateFormat'
@@ -136,9 +154,11 @@ import RequirementFormModal from './RequirementFormModal.vue'
 import RequirementItemsViewModal from './RequirementItemsViewModal.vue'
 import RequirementProgressModal from './RequirementProgressModal.vue'
 import RequirementInvoiceModal from './RequirementInvoiceModal.vue'
+import RequirementContractModal from './RequirementContractModal.vue'
 
 const authStore = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading     = ref(false)
@@ -161,6 +181,13 @@ const progressModalRequirementId = ref(null)
 
 const invoiceModalVisible = ref(false)
 const invoiceModalRequirement = ref(null)
+
+const contractModalVisible = ref(false)
+const contractModalRequirement = ref(null)
+
+// 红人合同数据（按红人id批量拉取，key=influencerId，value={year: contractLink}），
+// 供"合同链接"列/按钮判断品牌方"一年签一次合同"时，该需求年份红人是否已经在"红人管理"上传过合同
+const influencerContractsByInfluencerId = ref({})
 
 const sortState = reactive({ field: 'id', order: 'descend' })
 const pagination = reactive({
@@ -195,7 +222,8 @@ const columns = [
   { title: '需求完成进度', key: 'progress', width: 140 },
   { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
   { title: 'Invoice链接', key: 'invoiceLink', width: 110 },
-  { title: '操作', key: 'action', width: 220, fixed: 'right' }
+  { title: '合同链接', key: 'contractLink', width: 220 },
+  { title: '操作', key: 'action', width: 260, fixed: 'right' }
 ]
 const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
@@ -257,6 +285,73 @@ function invoiceButtonState(record) {
 function getTeamName(id) { return teams.value.find(t => t.id === id)?.name }
 function getInfluencerName(id) { return influencers.value.find(i => i.id === id)?.accountName }
 
+// 需求年份：需求月份（yyyyMM）取年份，品牌方"一年签一次合同"时用来匹配红人管理里对应年份的合同
+function requirementYear(record) {
+  if (!record.requirementMonth || record.requirementMonth.length < 4) return null
+  const year = parseInt(record.requirementMonth.slice(0, 4), 10)
+  return Number.isNaN(year) ? null : year
+}
+function matchedInfluencerContractLink(record) {
+  const year = requirementYear(record)
+  if (year == null) return null
+  return influencerContractsByInfluencerId.value[record.influencerId]?.[year] || null
+}
+async function loadInfluencerContracts() {
+  const ids = [...new Set(tableData.value.map(r => r.influencerId).filter(Boolean))]
+  if (!ids.length) { influencerContractsByInfluencerId.value = {}; return }
+  const res = await influencerContractApi.byInfluencerIds(ids)
+  influencerContractsByInfluencerId.value = res.data || {}
+}
+
+// "合同链接"列的展示状态：品牌方"每次需求签一次合同"时看需求自己的 contractLink；
+// "一年签一次合同"时按需求自己的年份去匹配红人管理里对应年份的合同，匹配上就直接展示真实链接，
+// 没匹配上则展示可点击的引导文案（点击效果等同"跳转红人库上传"按钮）
+function contractCellState(record) {
+  const brand = getBrand(record.brandId)
+  const isAnnual = brand?.contractCycleType === 'ANNUAL'
+  if (!isAnnual) {
+    return record.contractLink ? { mode: 'link', href: record.contractLink } : { mode: 'none' }
+  }
+  const matchedLink = matchedInfluencerContractLink(record)
+  if (matchedLink) return { mode: 'link', href: matchedLink }
+  return { mode: 'gotoInfluencer', text: '该品牌方是一年签一次合同，请在红人管理处上传' }
+}
+
+// "上传合同"操作按钮的三态：每次需求签一次合同 -> 始终可点的"上传合同"；一年签一次合同且该
+// 需求年份红人已有合同 -> 置灰的"该红人已有XXXX年的合同"；一年签一次合同且该年份还没合同 ->
+// 不起眼的"跳转红人库上传"
+function contractButtonState(record) {
+  const brand = getBrand(record.brandId)
+  const isAnnual = brand?.contractCycleType === 'ANNUAL'
+  if (!isAnnual) {
+    return { disabled: false, mode: 'upload', label: '上传合同', tooltip: null }
+  }
+  const year = requirementYear(record)
+  const matchedLink = matchedInfluencerContractLink(record)
+  if (matchedLink) {
+    return {
+      disabled: true, mode: 'matched', label: `该红人已有${year}年的合同`,
+      tooltip: `该红人已有${year}年的合同，若合同上传有误，请在红人管理模块更新合同链接`
+    }
+  }
+  return {
+    disabled: false, mode: 'gotoInfluencer', label: '跳转红人库上传',
+    tooltip: '该品牌方是一年签一次合同，请在红人管理处上传'
+  }
+}
+function handleContractButtonClick(record) {
+  const state = contractButtonState(record)
+  if (state.mode === 'upload') openContractModal(record)
+  else if (state.mode === 'gotoInfluencer') goToInfluencerContract(record)
+}
+function openContractModal(record) {
+  contractModalRequirement.value = record
+  contractModalVisible.value = true
+}
+function goToInfluencerContract(record) {
+  router.push({ path: '/influencers', query: { editInfluencerId: record.influencerId } })
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -273,6 +368,7 @@ async function loadData() {
     })
     tableData.value  = res.data.content || []
     pagination.total = res.data.totalElements || 0
+    await loadInfluencerContracts()
   } finally {
     loading.value = false
     remeasure()
@@ -354,5 +450,13 @@ onMounted(async () => {
   color: #fa8c16 !important;
   border-color: #ffd591 !important;
   background: #fff7e6 !important;
+}
+
+/* "跳转红人库上传"故意做得不起眼——这条路径不是首选操作（真正合同还是要在红人管理上传），
+   跟"上传合同"的默认按钮样式拉开区别，降低被误点的概率 */
+.contract-btn-goto {
+  color: #999 !important;
+  border-color: #e8e8e8 !important;
+  background: #fafafa !important;
 }
 </style>

@@ -41,7 +41,8 @@ const CATEGORY_LABEL = {
   BRAND_MONTH_END_PAYMENT_DUE: '品牌方月结临近结款',
   PM_EXECUTOR_PROGRESS_STALL: '进度滞留-项目',
   FINANCE_PROGRESS_STALL: '进度滞留-财务',
-  REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期'
+  REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期',
+  REQUIREMENT_CONTRACT_OVERDUE: '合同上传逾期'
 }
 
 function isOverdueStyle(r) { return r.overdueUrgency != null }
@@ -57,7 +58,7 @@ function textColor(r) { return TEXT_COLOR[urgencyColor(r)] || '#333' }
 function categoryLabel(c) { return CATEGORY_LABEL[c] || c }
 // 分类小标签用中性色，跟严重度色（红/橙/黄/绿）区分开，不会互相干扰
 function categoryTagColor(c) {
-  return ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE'].includes(c)
+  return ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE', 'REQUIREMENT_CONTRACT_OVERDUE'].includes(c)
     ? 'purple' : 'blue'
 }
 </script>

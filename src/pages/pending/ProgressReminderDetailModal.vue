@@ -88,7 +88,8 @@ const props = defineProps({
 const emit = defineEmits(['update:visible'])
 
 const STALL_CATEGORIES = ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL']
-const ACKNOWLEDGEABLE_CATEGORIES = [...STALL_CATEGORIES, 'REQUIREMENT_INVOICE_OVERDUE']
+const REQUIREMENT_CATEGORIES = ['REQUIREMENT_INVOICE_OVERDUE', 'REQUIREMENT_CONTRACT_OVERDUE']
+const ACKNOWLEDGEABLE_CATEGORIES = [...STALL_CATEGORIES, ...REQUIREMENT_CATEGORIES]
 const canAcknowledge = computed(() =>
   ACKNOWLEDGEABLE_CATEGORIES.includes(props.category) && !authStore.isAdmin && !authStore.isManagement)
 
@@ -232,9 +233,32 @@ const INVOICE_OVERDUE_COLUMNS = [
   { title: '操作',          key: 'action',                    width: 170 }
 ]
 
+// 合同上传逾期：结构完全照抄 Invoice逾期（都是按"需求"整体展示），阈值固定14个工作日
+// （ProgressReminderService.runRequirementContractOverdue 里的常量），只针对品牌方"每次需求
+// 签一次合同"的场景（一年签一次合同的品牌方不生成这类提醒）
+const CONTRACT_OVERDUE_COLUMNS = [
+  { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200,
+    customRender: ({ text }) => text || '—' },
+  { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
+  { title: '红人团队',      key: 'teamName',            width: 110 },
+  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
+  { title: '需求条目总数',  dataIndex: 'cycleDays',           key: 'cycleDays',           width: 110,
+    customRender: ({ text }) => text != null ? text : '—' },
+  { title: '客户合作总价格（$）', dataIndex: 'clientPrice',   key: 'clientPrice',         width: 160,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '红人视频制作与发布总成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 200,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '提醒阈值（工作日）', key: 'contractThreshold', width: 130,
+    customRender: () => '14天' },
+  { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '操作',          key: 'action',                    width: 170 }
+]
+
 const columns = computed(() => {
   if (STALL_CATEGORIES.includes(props.category)) return STALL_COLUMNS
   if (props.category === 'REQUIREMENT_INVOICE_OVERDUE') return INVOICE_OVERDUE_COLUMNS
+  if (props.category === 'REQUIREMENT_CONTRACT_OVERDUE') return CONTRACT_OVERDUE_COLUMNS
   return PAYMENT_DUE_COLUMNS
 })
 const scrollX = computed(() => columns.value.reduce((sum, c) => sum + (c.width || 120), 0))
@@ -293,7 +317,7 @@ function goToDetail(record) {
 }
 
 async function handleAcknowledge(record) {
-  const targetId = props.category === 'REQUIREMENT_INVOICE_OVERDUE' ? record.requirementId : record.trackingId
+  const targetId = REQUIREMENT_CATEGORIES.includes(props.category) ? record.requirementId : record.trackingId
   await progressReminderApi.acknowledge(props.category, targetId)
   message.success('已标记为已处理，进度有变化前不会再提醒这条')
   list.value = list.value.filter(r => r.id !== record.id)

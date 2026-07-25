@@ -75,8 +75,6 @@ export const influencerApi = {
   save:    (data)  => http.post('/api/influencers', data),
   delete:  (id)    => http.delete(`/api/influencers/${id}`),
 
-  contractUploadUrl: () => http.get('/api/influencers/contract-upload-url'),
-
   // 批量查询红人的合作项目数量（红人管理列表"合作项目"列用）
   projectCounts: (influencerIds) => http.post('/api/influencers/project-counts', influencerIds),
 
@@ -87,6 +85,15 @@ export const influencerApi = {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000  // 导入数据量大，超时设为2分钟
   })
+}
+
+// ===== 红人已签署合同（2026-07 新增，"红人管理"编辑弹窗"已签署合同"区块） =====
+export const influencerContractApi = {
+  byInfluencer:    (influencerId) => http.get(`/api/influencer-contracts/by-influencer/${influencerId}`),
+  // 批量按红人id取合同，返回 { influencerId: { year: contractLink } }，供"红人需求管理"列表交叉核对
+  byInfluencerIds: (ids)          => http.get('/api/influencer-contracts/by-influencer-ids', { params: { ids } }),
+  create: (data)     => http.post('/api/influencer-contracts', data),
+  update: (id, data) => http.put(`/api/influencer-contracts/${id}`, data)
 }
 
 // ===== Employees =====
@@ -171,6 +178,8 @@ export const requirementApi = {
 
   uploadInvoiceLink: (id, invoiceLink) =>
     http.post(`/api/influencer-requirements/${id}/invoice-link`, { invoiceLink }),
+  uploadContractLink: (id, contractLink) =>
+    http.post(`/api/influencer-requirements/${id}/contract-link`, { contractLink }),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(
