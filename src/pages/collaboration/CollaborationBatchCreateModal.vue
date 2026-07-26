@@ -323,7 +323,16 @@ function openForRequirement(record) {
   emit('update:visible', true)
 }
 
-function close() { emit('update:visible', false) }
+function close() {
+  // 关闭整个"新建跟踪"弹窗时，如果"关联红人需求"子弹窗还开着（比如直接点了外层弹窗的
+  // 取消/关闭，没有先关掉内层选择器），linkPickerVisible 会一直卡在 true——下次再打开时
+  // （无论是手动点"关联红人需求"还是"新建合作跟踪"预设流程）它已经是 true，值没有变化，
+  // RequirementLinkPickerModal 内部监听 visible 的 watch 不会重新触发，就会停留在上次
+  // 关闭前的状态（可能是第一步、需求列表还是空的），看起来像是"第一次查不到、第二次才有"。
+  // 这里显式复位，保证下次打开一定是一次干净的 false→true 转变。
+  linkPickerVisible.value = false
+  emit('update:visible', false)
+}
 
 async function handleSaveAll() {
   if (saving.value) return

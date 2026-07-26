@@ -101,7 +101,12 @@ async function goToStep2() {
   await loadItems(selectedRequirement.value.id)
 }
 
-watch(() => props.visible, v => {
+// 同时监听 visible 和 presetRequirement 两个来源，不要只看 visible 的 false→true 变化——
+// 如果外层弹窗没有把 visible 正确复位成 false 就再次打开（比如上层调用方状态没清干净），
+// 这里再次传入 true 时值没有变化，只监听 visible 会导致这个 watch 压根不重新触发，
+// 停留在上一次残留的状态（可能是空列表）。同时监听 presetRequirement，只要这个引用变了
+// （哪怕 visible 一直是 true）也会重新加载，更稳妥。
+watch(() => [props.visible, props.presetRequirement], ([v]) => {
   if (!v) return
   selectedItem.value = null
   if (props.presetRequirement) {
