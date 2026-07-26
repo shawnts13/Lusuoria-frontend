@@ -4,22 +4,6 @@
     @ok="handleSave" @cancel="close" :destroy-on-close="false">
     <a-form ref="formRef" :model="form" :rules="rules" layout="vertical">
 
-      <a-form-item label="内部需求编号">
-        <a-input-group compact style="display:flex">
-          <a-input :value="form.internalRequirementNo" disabled placeholder="未关联" style="flex:1" />
-          <a-button :disabled="!form.influencerId" @click="linkPickerVisible = true">关联红人需求</a-button>
-          <a-popconfirm v-if="form.internalRequirementNo && form.id"
-            title="确认解除这条记录跟内部需求编号的关联？（误关联到别的需求时用）"
-            @confirm="handleUnlinkRequirement">
-            <a-button>解绑</a-button>
-          </a-popconfirm>
-          <a-button v-else-if="form.internalRequirementNo" @click="handleUnlinkRequirement">解绑</a-button>
-        </a-input-group>
-        <div style="font-size:12px;color:#c00000;margin-top:2px">
-          没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
-        </div>
-      </a-form-item>
-
       <a-form-item v-if="form.internalProjectNo" label="内部项目编号">
         <a-input :value="form.internalProjectNo" disabled />
       </a-form-item>
@@ -90,6 +74,22 @@
       <div v-if="form.influencerId" style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
         找不到品牌方、红人团队？请先维护"红人管理"模块下该红人的数据。
       </div>
+
+      <a-form-item label="内部需求编号">
+        <a-input-group compact style="display:flex">
+          <a-input :value="form.internalRequirementNo" disabled placeholder="未关联" style="flex:1" />
+          <a-button :disabled="!form.influencerId" @click="linkPickerVisible = true">关联红人需求</a-button>
+          <a-popconfirm v-if="form.internalRequirementNo && form.id"
+            title="确认解除这条记录跟内部需求编号的关联？（误关联到别的需求时用）"
+            @confirm="handleUnlinkRequirement">
+            <a-button>解绑</a-button>
+          </a-popconfirm>
+          <a-button v-else-if="form.internalRequirementNo" @click="handleUnlinkRequirement">解绑</a-button>
+        </a-input-group>
+        <div style="font-size:12px;color:#c00000;margin-top:2px">
+          没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
+        </div>
+      </a-form-item>
 
       <a-form-item label="合作平台">
         <a-select v-model:value="form.platforms" mode="multiple" allow-clear placeholder="可多选">
