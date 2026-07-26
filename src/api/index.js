@@ -95,7 +95,9 @@ export const influencerContractApi = {
   // Spring 的 @RequestParam List<Long> ids 认不出这种带方括号的参数名，会直接报 500
   byInfluencerIds: (ids) => http.get('/api/influencer-contracts/by-influencer-ids', { params: { ids: ids.join(',') } }),
   create: (data)     => http.post('/api/influencer-contracts', data),
-  update: (id, data) => http.put(`/api/influencer-contracts/${id}`, data)
+  update: (id, data) => http.put(`/api/influencer-contracts/${id}`, data),
+  // 硬删除（不是软删除），数据库行直接删掉，方便手动清理很久以前的历史合同
+  delete: (id) => http.delete(`/api/influencer-contracts/${id}`)
 }
 
 // ===== Employees =====

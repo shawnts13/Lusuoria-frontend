@@ -164,6 +164,10 @@
                     <div class="contract-card-actions">
                       <a :href="c.contractLink" target="_blank">查看合同</a>
                       <a @click="openContractModal(c)">编辑</a>
+                      <a-popconfirm title="确认删除这条合同记录？删除后不可恢复（数据库行会直接删掉，不是软删除）"
+                        @confirm="handleDeleteContract(c.id)">
+                        <a style="color:#ff4d4f">删除</a>
+                      </a-popconfirm>
                     </div>
                   </div>
                 </div>
@@ -267,6 +271,11 @@ async function loadContracts() {
 function openContractModal(existing) {
   contractModalRecord.value = existing || null
   contractModalVisible.value = true
+}
+async function handleDeleteContract(id) {
+  await influencerContractApi.delete(id)
+  message.success('已删除')
+  loadContracts()
 }
 
 const EMPTY_CONTACTS = () => ({ phone: '', whatsapp: '', line: '', telegram: '' })
