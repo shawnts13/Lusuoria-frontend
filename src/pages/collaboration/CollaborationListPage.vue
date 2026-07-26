@@ -97,7 +97,8 @@
       <a-button type="primary" @click="loadData">查询</a-button>
       <a-button @click="resetFilters">重置</a-button>
       <a-tooltip v-if="canFilterMyResponsibility" :title="myResponsibilityTooltip">
-        <a-button :type="filters.onlyMyResponsibility ? 'primary' : 'default'" @click="toggleMyResponsibility">
+        <a-button class="my-responsibility-filter-btn" :class="{ active: filters.onlyMyResponsibility }"
+          @click="toggleMyResponsibility">
           查看由我负责的记录
         </a-button>
       </a-tooltip>
@@ -568,3 +569,26 @@ onMounted(async () => {
   loadData()
 })
 </script>
+
+<style scoped>
+/* "查看由我负责的记录"筛选按钮：常态用醒目的橙色描边，激活（正在只看自己负责的）时
+   切换成实心橙色背景，跟"红人需求管理"的"查看未完成的需求"按钮保持一致的配色风格 */
+.my-responsibility-filter-btn {
+  color: #fa8c16;
+  border-color: #fa8c16;
+}
+.my-responsibility-filter-btn:hover {
+  color: #ffa940 !important;
+  border-color: #ffa940 !important;
+}
+.my-responsibility-filter-btn.active {
+  color: #fff;
+  background: #fa8c16;
+  border-color: #fa8c16;
+}
+.my-responsibility-filter-btn.active:hover {
+  color: #fff !important;
+  background: #ffa940 !important;
+  border-color: #ffa940 !important;
+}
+</style>

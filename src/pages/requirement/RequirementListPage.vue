@@ -3,10 +3,6 @@
     <div class="page-header">
       <span class="page-title">1. 红人需求管理</span>
       <a-space>
-        <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyIncomplete }" @click="toggleOnlyIncomplete">
-          <template #icon><FilterOutlined /></template>
-          {{ filters.onlyIncomplete ? '查看全部需求' : '查看未完成的需求' }}
-        </a-button>
         <a-button @click="handleExport">
           <template #icon><ExportOutlined /></template>Excel 导出
         </a-button>
@@ -33,6 +29,11 @@
       <a-input-search v-model:value="filters.internalRequirementNo" placeholder="搜索内部需求编号"
         style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
+      <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyIncomplete }"
+        style="margin-left:16px" @click="toggleOnlyIncomplete">
+        <template #icon><FilterOutlined /></template>
+        {{ filters.onlyIncomplete ? '查看全部需求' : '查看未完成的需求' }}
+      </a-button>
     </div>
 
     <div class="table-card" ref="tableWrapperRef">
