@@ -67,9 +67,13 @@ const availableBrandIds = computed(() => [...new Set(props.brandTeamPairs.map(p 
 const availableBrands = computed(() => props.brands.filter(b => availableBrandIds.value.includes(b.id)))
 const availableTeams = computed(() => props.brandTeamPairs.filter(p => p.brandId === brandId.value))
 
-// 该品牌方下只有一个团队选项（含"不涉及团队"这一个选项）时自动带入
-watch(availableTeams, opts => {
-  if (opts.length === 1) teamId.value = opts[0].teamId ?? null
+// 该品牌方下只有一个团队选项（含"不涉及团队"这一个选项）时自动带入——用于用户在弹窗打开后
+// 手动切换"品牌方"下拉框的场景。注意：这个组件不会随弹窗关闭销毁（只有外层"编辑红人"弹窗
+// 的 destroy-on-close 会销毁它），如果 brandId 被重新赋值成上一次打开时同一个值，
+// watch 不会判定为"变化"、不会触发，所以下面弹窗打开时的初始填充不能只依赖这个 watch，
+// 必须直接同步读取 availableTeams 当下的值来兜底（见 props.visible 的 watch）
+watch(brandId, () => {
+  if (availableTeams.value.length === 1) teamId.value = availableTeams.value[0].teamId ?? null
 })
 
 watch(() => props.visible, v => {
@@ -81,7 +85,9 @@ watch(() => props.visible, v => {
     contractLink.value = props.contract.contractLink || ''
   } else {
     brandId.value = availableBrands.value.length === 1 ? availableBrands.value[0].id : null
-    teamId.value = null
+    // 直接同步读取 availableTeams（不依赖上面的 watch(brandId,...) 异步触发），
+    // 避免 brandId 被赋成跟上次打开时相同的值导致 watch 不触发、团队漏填
+    teamId.value = availableTeams.value.length === 1 ? (availableTeams.value[0].teamId ?? null) : null
     dateRange.value = []
     contractLink.value = ''
   }
