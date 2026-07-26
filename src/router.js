@@ -44,7 +44,20 @@ const routes = [
         meta: { brandAccess: true }
       },
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },
-      { path: 'employees',   name: 'Employees',   component: () => import('./pages/employee/EmployeeListPage.vue') },
+      {
+        path: 'employees',
+        name: 'Employees',
+        component: () => import('./pages/employee/EmployeeListPage.vue'),
+        // 员工管理：ADMIN 或员工角色="管理层"，见 store/auth.js canAccessEmployeeManagement
+        meta: { employeeManagementAccess: true }
+      },
+      {
+        path: 'executor-pay-rates',
+        name: 'ExecutorPayRates',
+        component: () => import('./pages/employee/ExecutorPayRateListPage.vue'),
+        // 执行人员管理：仅员工角色="项目负责人"，见 store/auth.js canAccessExecutorPayRateManagement
+        meta: { executorPayRateAccess: true }
+      },
       {
         path: 'exchange-rates',
         name: 'ExchangeRates',
@@ -104,6 +117,16 @@ router.beforeEach((to, from, next) => {
   }
   // 品牌方管理：严格按员工角色，只有"管理层"
   if (to.meta.brandAccess && employeeRole !== '管理层') {
+    next('/collaborations')
+    return
+  }
+  // 员工管理：ADMIN 或员工角色="管理层"
+  if (to.meta.employeeManagementAccess && role !== 'ADMIN' && employeeRole !== '管理层') {
+    next('/collaborations')
+    return
+  }
+  // 执行人员管理：仅员工角色="项目负责人"
+  if (to.meta.executorPayRateAccess && employeeRole !== '项目负责人') {
     next('/collaborations')
     return
   }

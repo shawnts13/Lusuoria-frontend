@@ -344,13 +344,23 @@
       @confirm="onRequirementLinked"
     />
   </a-modal>
+
+  <!-- 2026-07 新增：该项目负责人还没给选中的执行人员配置过费率梯度时，视频链接+状态+
+       执行人员+执行成本需要合并成一次性提交，见 checkNeedsExecutorCostBeforeSave() -->
+  <CollaborationExecutorCostModal
+    v-model:visible="preSaveCostModalVisible"
+    :record="preSaveCostRecord"
+    :pre-save="true"
+    @confirm-amount="onPreSaveAmountConfirmed"
+  />
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import RequirementLinkPickerModal from '../requirement/RequirementLinkPickerModal.vue'
-import { collaborationApi } from '../../api/index'
+import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
+import { collaborationApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
 import { formatDate } from '../../utils/dateFormat'
@@ -621,61 +631,120 @@ watch(availableBrands, (opts) => {
 
 function close() { emit('update:visible', false) }
 
+function buildPayload() {
+  return {
+    id:            form.id,
+    internalRequirementNo: form.internalRequirementNo || null,
+    brandId:       form.brandId,
+    teamId:        form.teamId,
+    influencerId:  form.influencerId,
+    countryMarket: form.countryMarket || null,
+    platform:      form.platforms.join('\n') || null,
+    demandContent: form.demandContent || null,
+    publishLink:   form.publishLinks.map(l => l.trim()).filter(Boolean).join('\n') || null,
+    publishDate:   form.publishDate || null,
+    progress:      form.progress || null,
+    influencerPaymentProgress: paymentProgressEnabled.value ? (form.influencerPaymentProgress || null) : null,
+    videoType:     form.videoType || null,
+    oldMaterialSourceLink: form.videoType === 'OLD_MATERIAL_REPOST' ? (form.oldMaterialSourceLink || null) : null,
+    clientOrderId: form.clientOrderId || null,
+    clientPaymentBatch: form.clientPaymentBatch || null,
+    projectManagerId: form.projectManagerId || null,
+    executorId: form.executorId || null,
+    influencerCost: form.influencerCost,
+    clientPrice:    form.clientPrice,
+    exchangeRate:   form.exchangeRate,
+    otherExternalCost:     form.otherExternalCost,
+    otherExternalCostNote: form.otherExternalCostNote || null,
+    internalExecutionCost: form.internalExecutionCost,
+    commissionRate:        form.commissionRate,
+    notes:          form.notes
+  }
+}
+
+async function submitPayload(payload) {
+  const res = await collaborationApi.save(payload)
+
+  // 后端用特殊 code 表示：去重命中
+  if (res.code === 4091) {
+    Modal.warning({ title: '无法保存', content: res.message })
+    return
+  }
+
+  message.success('保存成功')
+  emit('saved')
+  close()
+
+  // 编辑时如果因为填写了"视频发布链接"触发了自动流转到"已发布（未结算）"，
+  // 后端会跟正常状态流转一样判断要不要弹"设置内部执行成本"，这里按标记弹出即可
+  // （accountName/executorName 由上层列表页统一按 id 补齐，这里传原始记录即可）
+  if (res.data?.needExecutorCost) {
+    emit('need-executor-cost', res.data)
+  }
+}
+
+// 2026-07 新增：编辑时首次填视频链接会触发后端 doSave() 的 autoTransitionedToPublished
+// 自动流转（见 CollaborationTrackingService），这里镜像同一个判断条件，用来决定要不要在
+// 提交保存前先确认执行人员薪酬
+const QUALIFYING_PROGRESS_FOR_TRANSITION = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+function willAutoTransitionOnSave() {
+  if (!form.id || !props.record) return false
+  const oldLink = props.record.publishLink || null
+  const newLink = form.publishLinks.map(l => l.trim()).filter(Boolean).join('\n') || null
+  if (oldLink === newLink || !newLink) return false
+  return !QUALIFYING_PROGRESS_FOR_TRANSITION.includes(props.record.progress)
+}
+
+// 该项目负责人还没给选中的执行人员配置过费率梯度时，需要在提交前先弹窗确认金额，
+// 视频链接+状态+执行人员+执行成本合并成一次性提交（"取消=整个操作一次性取消"）
+const preSaveCostModalVisible = ref(false)
+const preSaveCostRecord = ref(null)
+const pendingPayload = ref(null)
+
+async function needsExecutorCostBeforeSave() {
+  if (!form.executorId || !form.projectManagerId) return false
+  if (props.record?.executorCostNotApplicable) return false
+  if (!willAutoTransitionOnSave()) return false
+  const res = await executorPayRateApi.check(form.projectManagerId, form.executorId)
+  return !res.data
+}
+
 async function doSave() {
   if (saving.value) return   // 防止连续点击导致重复提交
   saving.value = true
   try {
-    const payload = {
-      id:            form.id,
-      internalRequirementNo: form.internalRequirementNo || null,
-      brandId:       form.brandId,
-      teamId:        form.teamId,
-      influencerId:  form.influencerId,
-      countryMarket: form.countryMarket || null,
-      platform:      form.platforms.join('\n') || null,
-      demandContent: form.demandContent || null,
-      publishLink:   form.publishLinks.map(l => l.trim()).filter(Boolean).join('\n') || null,
-      publishDate:   form.publishDate || null,
-      progress:      form.progress || null,
-      influencerPaymentProgress: paymentProgressEnabled.value ? (form.influencerPaymentProgress || null) : null,
-      videoType:     form.videoType || null,
-      oldMaterialSourceLink: form.videoType === 'OLD_MATERIAL_REPOST' ? (form.oldMaterialSourceLink || null) : null,
-      clientOrderId: form.clientOrderId || null,
-      clientPaymentBatch: form.clientPaymentBatch || null,
-      projectManagerId: form.projectManagerId || null,
-      executorId: form.executorId || null,
-      influencerCost: form.influencerCost,
-      clientPrice:    form.clientPrice,
-      exchangeRate:   form.exchangeRate,
-      otherExternalCost:     form.otherExternalCost,
-      otherExternalCostNote: form.otherExternalCostNote || null,
-      internalExecutionCost: form.internalExecutionCost,
-      commissionRate:        form.commissionRate,
-      notes:          form.notes
-    }
-    const res = await collaborationApi.save(payload)
-
-    // 后端用特殊 code 表示：去重命中
-    if (res.code === 4091) {
-      saving.value = false
-      Modal.warning({ title: '无法保存', content: res.message })
+    if (await needsExecutorCostBeforeSave()) {
+      pendingPayload.value = buildPayload()
+      const executor = props.employees.find(e => e.id === form.executorId)
+      preSaveCostRecord.value = {
+        id: form.id,
+        internalProjectNo: form.internalProjectNo,
+        executorId: form.executorId,
+        executorName: executor?.name || ''
+      }
+      preSaveCostModalVisible.value = true
       return
     }
-
-    message.success('保存成功')
-    emit('saved')
-    close()
-
-    // 编辑时如果因为填写了"视频发布链接"触发了自动流转到"已发布（未结算）"，
-    // 后端会跟正常状态流转一样判断要不要弹"设置内部执行成本"，这里按标记弹出即可
-    // （accountName/executorName 由上层列表页统一按 id 补齐，这里传原始记录即可）
-    if (res.data?.needExecutorCost) {
-      emit('need-executor-cost', res.data)
-    }
+    await submitPayload(buildPayload())
   } catch (e) {
     message.error(e?.response?.data?.message || '保存失败')
   } finally {
     saving.value = false
+  }
+}
+
+// preSave 弹窗确认了金额：把金额并入同一份保存请求，一次性提交（视频链接+状态+执行人员+
+// 执行成本一起落库）；弹窗取消/关闭则完全不会触发这个回调，什么都不会保存
+async function onPreSaveAmountConfirmed(amount) {
+  if (!pendingPayload.value) return
+  saving.value = true
+  try {
+    await submitPayload({ ...pendingPayload.value, internalExecutionCost: amount })
+  } catch (e) {
+    message.error(e?.response?.data?.message || '保存失败')
+  } finally {
+    saving.value = false
+    pendingPayload.value = null
   }
 }
 

@@ -46,6 +46,12 @@
           <template v-if="column.key === 'amount'">
             <span style="color:#237804;font-weight:600">{{ fmtAmount(record.amount) }}</span>
           </template>
+          <template v-if="column.key === 'bonusAmount'">
+            <span style="color:#d46b08">{{ fmtAmount(record.bonusAmount) }}</span>
+          </template>
+          <template v-if="column.key === 'totalAmount'">
+            <span style="color:#237804;font-weight:600">{{ fmtAmount(record.totalAmount) }}</span>
+          </template>
           <template v-if="column.key === 'videoCount'">
             {{ record.videoCount }}
           </template>
@@ -56,6 +62,12 @@
             <a-table-summary-cell v-if="metric === 'video'">
               <b>{{ totalVideoCount }}</b>
             </a-table-summary-cell>
+            <template v-else-if="metric === 'commission'">
+              <a-table-summary-cell><b>{{ totalVideoCount }}</b></a-table-summary-cell>
+              <a-table-summary-cell><b>{{ fmtAmount(totalAmount) }}</b></a-table-summary-cell>
+              <a-table-summary-cell><b>{{ fmtAmount(totalBonusAmount) }}</b></a-table-summary-cell>
+              <a-table-summary-cell><b>{{ fmtAmount(totalTotalAmount) }}</b></a-table-summary-cell>
+            </template>
             <template v-else>
               <a-table-summary-cell><b>{{ totalVideoCount }}</b></a-table-summary-cell>
               <a-table-summary-cell><b>{{ fmtAmount(totalAmount) }}</b></a-table-summary-cell>
@@ -102,13 +114,22 @@ const columns = computed(() => {
   if (props.metric === 'video') {
     return [dimCol, { title: '视频数量', key: 'videoCount', dataIndex: 'videoCount' }]
   }
-  // 金额类下钻也把对应的订单笔数（或人数）列出来，方便核对
-  return [dimCol, { title: props.countLabel, key: 'videoCount', dataIndex: 'videoCount', width: 90 },
-    { title: '金额', key: 'amount', dataIndex: 'amount' }]
+  const countCol = { title: props.countLabel, key: 'videoCount', dataIndex: 'videoCount', width: 90 }
+  // "负责人提成明细"：金额列改名"提成金额"，追加 bonus、总金额两列
+  if (props.metric === 'commission') {
+    return [dimCol, countCol,
+      { title: '提成金额', key: 'amount', dataIndex: 'amount' },
+      { title: 'bonus', key: 'bonusAmount', dataIndex: 'bonusAmount' },
+      { title: '总金额', key: 'totalAmount', dataIndex: 'totalAmount' }]
+  }
+  // 其余金额类下钻也把对应的订单笔数（或人数）列出来，方便核对
+  return [dimCol, countCol, { title: '金额', key: 'amount', dataIndex: 'amount' }]
 })
 
 const totalVideoCount = computed(() => rows.value.reduce((sum, r) => sum + (Number(r.videoCount) || 0), 0))
 const totalAmount = computed(() => rows.value.reduce((sum, r) => sum + (Number(r.amount) || 0), 0))
+const totalBonusAmount = computed(() => rows.value.reduce((sum, r) => sum + (Number(r.bonusAmount) || 0), 0))
+const totalTotalAmount = computed(() => rows.value.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0))
 
 function close() { emit('update:visible', false) }
 

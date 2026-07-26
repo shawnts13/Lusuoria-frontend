@@ -41,9 +41,14 @@
           <template #icon><ShopOutlined /></template>品牌方管理
         </a-menu-item>
 
-        <!-- 员工管理仅 ADMIN 可见 -->
-        <a-menu-item v-if="authStore.isAdmin" key="/employees">
+        <!-- 员工管理：ADMIN 或员工角色="管理层" 可见 -->
+        <a-menu-item v-if="authStore.canAccessEmployeeManagement" key="/employees">
           <template #icon><UserOutlined /></template>员工管理
+        </a-menu-item>
+
+        <!-- 执行人员管理：仅员工角色="项目负责人" 可见 -->
+        <a-menu-item v-if="authStore.canAccessExecutorPayRateManagement" key="/executor-pay-rates">
+          <template #icon><UserOutlined /></template>执行人员管理
         </a-menu-item>
 
         <!-- 账号管理仅 ADMIN 可见 -->
@@ -172,6 +177,7 @@ const pageTitleMap = {
   '/pending':        '待处理',
   '/brands':         '品牌方管理',
   '/employees':      '员工管理',
+  '/executor-pay-rates': '执行人员管理',
   '/users':          '账号管理'
 }
 const pageTitle = computed(() => pageTitleMap[currentRoute.value] || 'Lusuoria')

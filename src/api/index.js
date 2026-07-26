@@ -104,9 +104,18 @@ export const employeeApi = {
   getById: (id)   => http.get(`/api/employees/${id}`),
   save:    (data) => http.post('/api/employees', data),
   delete:  (id)   => http.delete(`/api/employees/${id}`),
+  getBonusTiers: (id) => http.get(`/api/employees/${id}/bonus-tiers`),
 
   exportExcel: (role) => downloadWithAuth(
     `${BASE}/api/employees/export/excel${role ? '?role=' + role : ''}`, '员工.xlsx')
+}
+
+// ===== Executor Pay Rates（执行人员薪资梯度，按(项目负责人,执行人员)独立维护） =====
+export const executorPayRateApi = {
+  // managerId 不传时，后端 STAFF 账号自动用当前登录人自己的员工id；ADMIN 不传则默认取"管理层"
+  list:  (managerId) => http.get('/api/executor-pay-rates', { params: { managerId } }),
+  check: (managerId, executorId) => http.get('/api/executor-pay-rates/check', { params: { managerId, executorId } }),
+  save:  (data) => http.post('/api/executor-pay-rates', data)
 }
 
 // ===== Influencer Payments =====

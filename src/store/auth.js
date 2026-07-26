@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.70.3'
-export const APP_VERSION_TIME = '2026-07-26 17:34'
+export const APP_VERSION = '1.71.0'
+export const APP_VERSION_TIME = '2026-07-26 18:33'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -90,7 +90,12 @@ export const useAuthStore = defineStore('auth', {
     // 新建"红人合作跟踪"时，项目负责人默认填成自己的资格：员工角色是"项目负责人"或"管理层"，
     // 且账号确实关联了员工（没关联员工的账号，比如纯 ADMIN 账号，不会被当成某个具体员工）
     canDefaultAsProjectManager: (state) =>
-      state.employeeId != null && ['项目负责人', '管理层'].includes(state.employeeRole)
+      state.employeeId != null && ['项目负责人', '管理层'].includes(state.employeeRole),
+    // "员工管理"页面：2026-07 起放开给"管理层" STAFF 账号（跟 ADMIN 一样看全部、能删除），
+    // 执行人员费率梯度那块在这个页面里代表"管理层"维护
+    canAccessEmployeeManagement: (state) => state.role === 'ADMIN' || state.employeeRole === '管理层',
+    // "执行人员管理"页面：2026-07 新增，仅"项目负责人"角色可见，只维护自己那份执行人员费率梯度
+    canAccessExecutorPayRateManagement: (state) => state.employeeRole === '项目负责人'
   },
 
   actions: {

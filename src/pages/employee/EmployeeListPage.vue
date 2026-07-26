@@ -40,13 +40,7 @@
               {{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}
             </template>
             <template v-else-if="isExecutorRole(record.role)">
-              <div style="font-size:12px;line-height:1.6">
-                <div>实拍新视频：{{ fmtRate(record.rateRealShotNew) }}</div>
-                <div>AI新素材：{{ fmtRate(record.rateAiNewMaterial) }}</div>
-                <div>旧素材重发(1-50)：{{ fmtRate(record.rateOldMaterialTier1) }}</div>
-                <div>旧素材重发(51-100)：{{ fmtRate(record.rateOldMaterialTier2) }}</div>
-                <div>旧素材重发(101+)：{{ fmtRate(record.rateOldMaterialTier3) }}，封顶{{ record.oldMaterialMonthlyCap ? '¥' + fmtNum(record.oldMaterialMonthlyCap) : '—' }}/月</div>
-              </div>
+              <span style="color:#888;font-size:12px">薪资标准由各项目负责人在"执行人员管理"/"员工管理"里各自维护，见编辑弹窗</span>
             </template>
             <span v-else style="color:#bbb">薪资规则待定</span>
           </template>
@@ -89,18 +83,43 @@
           <a-date-picker v-model:value="form.resignDate" value-format="YYYY-MM-DD" style="width:100%" allow-clear />
         </a-form-item>
 
-        <!-- 项目负责人 / 管理层：默认提成比例 -->
-        <a-form-item v-if="isCommissionRole(form.role)" label="默认提成比例">
-          <a-input-number
-            v-model:value="form.commissionRateDisplay"
-            style="width:100%" :min="0" :max="100" :precision="0"
-            :formatter="v => v + '%'" :parser="v => v.replace('%','')"
-            @change="v => form.defaultCommissionRate = v / 100"
-          />
-          <div style="font-size:12px; color:#888; margin-top:4px">
-            可在具体项目中覆盖此比例
+        <!-- 项目负责人 / 管理层：默认提成比例 + bonus 阶梯 -->
+        <template v-if="isCommissionRole(form.role)">
+          <a-form-item label="默认提成比例">
+            <a-input-number
+              v-model:value="form.commissionRateDisplay"
+              style="width:100%" :min="0" :max="100" :precision="0"
+              :formatter="v => v + '%'" :parser="v => v.replace('%','')"
+              @change="v => form.defaultCommissionRate = v / 100"
+            />
+            <div style="font-size:12px; color:#888; margin-top:4px">
+              可在具体项目中覆盖此比例
+            </div>
+          </a-form-item>
+
+          <a-divider orientation="left" style="font-size:13px">提成 Bonus 阶梯</a-divider>
+          <a-form-item label="判档币种">
+            <a-radio-group v-model:value="form.bonusTierCurrency">
+              <a-radio value="RMB">人民币</a-radio>
+              <a-radio value="USD">美元</a-radio>
+            </a-radio-group>
+            <div style="font-size:12px; color:#888; margin-top:4px">
+              按该负责人某时间范围内的提成总额（换算成这个币种后）判档，命中区间额外奖励对应比例
+            </div>
+          </a-form-item>
+          <div v-for="(tier, idx) in form.bonusTiers" :key="idx"
+            style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+            <a-input-number v-model:value="tier.minAmount" placeholder="最低金额" :min="0" :precision="2" style="width:120px" />
+            <span>~</span>
+            <a-input-number v-model:value="tier.maxAmount" placeholder="不封顶" :min="0" :precision="2" style="width:120px" />
+            <a-input-number v-model:value="tier.bonusRateDisplay" :min="0" :max="100" :precision="0"
+              :formatter="v => v + '%'" :parser="v => v.replace('%','')"
+              @change="v => tier.bonusRate = v / 100"
+              style="width:90px" />
+            <a-button type="text" danger @click="form.bonusTiers.splice(idx, 1)">删除</a-button>
           </div>
-        </a-form-item>
+          <a-button type="dashed" block @click="addBonusTier" style="margin-bottom:16px">+ 新增档位</a-button>
+        </template>
 
         <!-- 财务 / IT后勤：固定月薪 -->
         <a-form-item v-if="isFixedSalaryRole(form.role)" label="固定月薪（人民币）">
@@ -108,37 +127,11 @@
             style="width:100%" :min="0" :precision="2" addon-after="元/月" />
         </a-form-item>
 
-        <!-- 执行人员：按项目视频类型/件计算工资 -->
-        <template v-if="isExecutorRole(form.role)">
-          <a-divider orientation="left" style="font-size:13px">工资标准（按项目视频类型/件计算）</a-divider>
-          <a-form-item label="实拍新视频">
-            <a-input-number v-model:value="form.rateRealShotNew"
-              style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-          </a-form-item>
-          <a-form-item label="AI新素材">
-            <a-input-number v-model:value="form.rateAiNewMaterial"
-              style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-          </a-form-item>
-          <a-form-item label="旧素材重发(1-50条)">
-            <a-input-number v-model:value="form.rateOldMaterialTier1"
-              style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-          </a-form-item>
-          <a-form-item label="旧素材重发(51-100条)">
-            <a-input-number v-model:value="form.rateOldMaterialTier2"
-              style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-          </a-form-item>
-          <a-form-item label="旧素材重发(101条+)单价">
-            <a-input-number v-model:value="form.rateOldMaterialTier3"
-              style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-          </a-form-item>
-          <a-form-item label="该部分当月封顶">
-            <a-input-number v-model:value="form.oldMaterialMonthlyCap"
-              style="width:100%" :min="0" :precision="2" addon-after="元/月封顶" />
-            <div style="font-size:12px; color:#888; margin-top:4px">
-              第101条及以上部分按单价计算后，当月该部分金额封顶该数值
-            </div>
-          </a-form-item>
-        </template>
+        <!-- 执行人员：薪资标准改由各项目负责人独立维护，员工管理页面里编辑执行人员时，
+             代表"管理层"（这里的登录账号本身就是ADMIN或管理层）维护自己那份 -->
+        <ExecutorRateFields v-if="isExecutorRole(form.role) && form.id" ref="executorRateFieldsRef" :executor-id="form.id" />
+        <a-alert v-if="isExecutorRole(form.role) && !form.id"
+          type="info" show-icon message="请先保存该员工，再编辑其薪资标准" style="margin-bottom:16px" />
 
         <a-alert v-if="form.role && !isCommissionRole(form.role) && !isFixedSalaryRole(form.role) && !isExecutorRole(form.role)"
           type="info" show-icon message="该角色的工资规则待补充，暂无需填写薪资信息" style="margin-bottom:16px" />
@@ -159,6 +152,7 @@ import { employeeApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
+import ExecutorRateFields from './ExecutorRateFields.vue'
 
 const { getOptions } = useOptions()
 
@@ -176,17 +170,20 @@ const modalVisible = ref(false)
 const editing  = ref(null)
 const saving   = ref(false)
 const formRef  = ref()
+const executorRateFieldsRef = ref()
 
 const emptyForm = () => ({
   id: null, name: '', role: '项目负责人', email: '',
   contactPhone: '', hireDate: null, resignDate: null,
   defaultCommissionRate: null, commissionRateDisplay: 0,
+  bonusTierCurrency: 'RMB', bonusTiers: [],
   fixedMonthlySalary: null,
-  rateRealShotNew: null, rateAiNewMaterial: null,
-  rateOldMaterialTier1: null, rateOldMaterialTier2: null, rateOldMaterialTier3: null,
-  oldMaterialMonthlyCap: null,
   notes: ''
 })
+
+function addBonusTier() {
+  form.bonusTiers.push({ minAmount: null, maxAmount: null, bonusRate: null, bonusRateDisplay: 0 })
+}
 
 const form = reactive(emptyForm())
 
@@ -217,7 +214,6 @@ const columns = [
 function salaryValue(record) {
   if (isCommissionRole(record.role))  return record.defaultCommissionRate != null ? parseFloat(record.defaultCommissionRate) : -1
   if (isFixedSalaryRole(record.role)) return record.fixedMonthlySalary   != null ? parseFloat(record.fixedMonthlySalary)   : -1
-  if (isExecutorRole(record.role))    return record.rateRealShotNew     != null ? parseFloat(record.rateRealShotNew)      : -1
   return -1
 }
 
@@ -232,10 +228,6 @@ function fmtNum(val) {
   if (val == null) return '—'
   return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-function fmtRate(val) {
-  return val != null ? '¥' + fmtNum(val) : '—'
-}
-
 async function loadData() {
   loading.value = true
   try {
@@ -250,7 +242,7 @@ function openCreate() {
   modalVisible.value = true
 }
 
-function openEdit(r) {
+async function openEdit(r) {
   editing.value = r
   Object.assign(form, {
     ...emptyForm(),
@@ -258,9 +250,18 @@ function openEdit(r) {
     hireDate:   r.hireDate   ? formatDate(r.hireDate)   : null,
     resignDate: r.resignDate ? formatDate(r.resignDate) : null,
     commissionRateDisplay: r.defaultCommissionRate != null
-      ? +(parseFloat(r.defaultCommissionRate) * 100).toFixed(0) : 0
+      ? +(parseFloat(r.defaultCommissionRate) * 100).toFixed(0) : 0,
+    bonusTierCurrency: r.bonusTierCurrency || 'RMB',
+    bonusTiers: []
   })
   modalVisible.value = true
+  if (isCommissionRole(r.role)) {
+    const res = await employeeApi.getBonusTiers(r.id)
+    form.bonusTiers = (res.data || []).map(t => ({
+      ...t,
+      bonusRateDisplay: t.bonusRate != null ? +(parseFloat(t.bonusRate) * 100).toFixed(0) : 0
+    }))
+  }
 }
 
 async function handleDelete(id) {
@@ -275,6 +276,9 @@ async function handleSave() {
   saving.value = true
   try {
     await employeeApi.save({ ...form })
+    if (isExecutorRole(form.role) && executorRateFieldsRef.value) {
+      await executorRateFieldsRef.value.save()
+    }
     message.success(form.id ? '更新成功' : '创建成功')
     modalVisible.value = false
     loadData()

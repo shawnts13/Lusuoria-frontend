@@ -14,7 +14,8 @@
         <a-select v-model:value="progress" placeholder="选择视频项目进度">
           <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value"
             :disabled="(FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress)
-              || (!authStore.canWrite && !QUALIFYING_PROGRESS.includes(o.value))">
+              || (!authStore.canWrite && !QUALIFYING_PROGRESS.includes(o.value))
+              || (blockedByMissingLink && QUALIFYING_PROGRESS.includes(o.value))">
             {{ o.label }}
           </a-select-option>
         </a-select>
@@ -25,6 +26,10 @@
           财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"之间流转
         </div>
       </a-form-item>
+      <div v-if="blockedByMissingLink" style="margin-bottom:12px;color:#ff4d4f;font-size:12px">
+        该记录尚未填写视频发布链接，无法手动流转到"已发布（未结算）"/"已加入客户未结算列表"/
+        "客户已结算"这三个阶段，请先在编辑表单中设置视频发布链接（链接会自动带动进度流转）。
+      </div>
       <div v-if="willAutoSetPayment" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」，不需要在这里手动选
       </div>
@@ -98,6 +103,12 @@ const autoPaymentLabel = computed(() => {
 // 流转到满足前置条件的状态、且当前还没有视频发布时间时，系统才会自动填今天的日期
 const willAutoFillPublishDate = computed(() =>
   qualifies(progress.value) && !qualifies(original.progress) && !props.record?.publishDate
+)
+
+// 2026-07 新增：跟后端 updateStatus() 新增的拦截规则保持一致——视频发布链接为空时，
+// 不允许手动从不满足前置条件的状态流转进已发布相关的三个阶段
+const blockedByMissingLink = computed(() =>
+  !qualifies(original.progress) && !props.record?.publishLink
 )
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
