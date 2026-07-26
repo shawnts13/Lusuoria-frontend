@@ -242,9 +242,14 @@ const contractModalRecord     = ref(null)   // 正在编辑的合同记录，nul
 
 // 这个红人关联的、且品牌方是"一年签一次合同"的 (品牌方,团队) 对——上传合同时只能选这些，
 // 用当前表单里实时编辑的 brandTeamPairs（不是保存前的旧值），这样刚加的品牌方-团队关联
-// 不用先保存整个红人表单就能马上选
+// 不用先保存整个红人表单就能马上选。form.brandTeamPairs 本身只存 brandId/teamId（不带
+// teamName——顶部"品牌方-团队"那组下拉框是靠 props.teams 单独查名字展示的，不依赖这个
+// 字段），这里额外用 teamNameById 把团队名字解出来，供 InfluencerContractModal 的团队
+// 下拉框展示用（那个弹窗自己没有完整的 teams 列表可查）
 const annualBrandTeamPairs = computed(() =>
-  form.brandTeamPairs.filter(p => p.brandId != null && isAnnualBrand(p.brandId)))
+  form.brandTeamPairs
+    .filter(p => p.brandId != null && isAnnualBrand(p.brandId))
+    .map(p => ({ brandId: p.brandId, teamId: p.teamId, teamName: teamNameById(p.teamId) })))
 const hasAnyAnnualBrand = computed(() => annualBrandTeamPairs.value.length > 0)
 
 function isAnnualBrand(brandId) {
