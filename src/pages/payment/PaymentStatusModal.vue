@@ -42,6 +42,14 @@ watch(() => props.visible, v => {
   }
 })
 
+// 操作人在弹窗里把状态从"待付款"切换成"已付款"时，自动带出今天的日期（仍然可以手动改），
+// 省得每次都要再多选一次日期；只在还没填日期时才带默认值，不覆盖已经选好的
+watch(paymentStatus, val => {
+  if (val === 'PAID' && !actualPaymentDate.value) {
+    actualPaymentDate.value = dayjs().format('YYYY-MM-DD')
+  }
+})
+
 function close() { emit('update:visible', false) }
 
 function handleSave() {
