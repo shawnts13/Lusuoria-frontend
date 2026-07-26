@@ -247,6 +247,22 @@ export const dashboardApi = {
     http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } })
 }
 
+// ===== 工资单 =====
+export const payslipApi = {
+  // 管理层视角：按月+可选角色筛选（不含管理层自己）
+  list: (yearMonth, role, currency) => http.get('/api/payslips', { params: { yearMonth, role, currency } }),
+  management: (yearMonth, currency) => http.get('/api/payslips/management', { params: { yearMonth, currency } }),
+  me: (yearMonth, currency) => http.get('/api/payslips/me', { params: { yearMonth, currency } }),
+  detail: (employeeId, yearMonth, currency) =>
+    http.get(`/api/payslips/${employeeId}/detail`, { params: { yearMonth, currency } }),
+  setExtraBonus: (employeeId, yearMonth, amount, currency) =>
+    http.post(`/api/payslips/${employeeId}/extra-bonus`, { yearMonth, amount, currency }),
+  setLegalSalary: (employeeId, yearMonth, amountRmb) =>
+    http.post(`/api/payslips/${employeeId}/legal-salary`, { yearMonth, amountRmb }),
+  confirm: (employeeId, yearMonth) => http.post(`/api/payslips/${employeeId}/confirm`, { yearMonth }),
+  unconfirm: (employeeId, yearMonth) => http.post(`/api/payslips/${employeeId}/unconfirm`, { yearMonth })
+}
+
 // ===== Exchange Rates (人工维护) =====
 export const exchangeRateApi = {
   getOne:  (yearMonth) => http.get(`/api/exchange-rates/${yearMonth}`),

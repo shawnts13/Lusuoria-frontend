@@ -34,6 +34,11 @@
           <template #icon><PayCircleOutlined /></template>3. 红人结款
         </a-menu-item>
 
+        <!-- 工资单：不对访客开放，管理层看全体+确认，其余角色只看自己那份 -->
+        <a-menu-item v-if="!authStore.isGuest" key="/payslips">
+          <template #icon><WalletOutlined /></template>工资单
+        </a-menu-item>
+
         <a-menu-divider />
 
         <!-- 品牌方管理：严格按员工角色，只有"管理层"可见（2026-07 起） -->
@@ -139,7 +144,7 @@ import {
   DashboardOutlined, PayCircleOutlined,
   SolutionOutlined, DollarOutlined, ExclamationCircleOutlined,
   ShopOutlined, TeamOutlined, UserOutlined, SafetyOutlined, FileTextOutlined,
-  MenuFoldOutlined, MenuUnfoldOutlined,
+  MenuFoldOutlined, MenuUnfoldOutlined, WalletOutlined,
   DownOutlined, LogoutOutlined, LockOutlined
 } from '@ant-design/icons-vue'
 import { useAuthStore, clearAllCache } from '../../store/auth'
@@ -174,6 +179,7 @@ const pageTitleMap = {
   '/requirements':   '1. 红人需求管理',
   '/collaborations': '2. 红人合作跟踪',
   '/payments':       '3. 红人结款',
+  '/payslips':       '工资单',
   '/pending':        '待处理',
   '/brands':         '品牌方管理',
   '/employees':      '员工管理',

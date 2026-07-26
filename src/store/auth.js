@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.78.0'
-export const APP_VERSION_TIME = '2026-07-27 05:12'
+export const APP_VERSION = '1.79.0'
+export const APP_VERSION_TIME = '2026-07-27 06:34'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -95,7 +95,10 @@ export const useAuthStore = defineStore('auth', {
     // 执行人员费率梯度那块在这个页面里代表"管理层"维护
     canAccessEmployeeManagement: (state) => state.role === 'ADMIN' || state.employeeRole === '管理层',
     // "执行人员管理"页面：2026-07 新增，仅"项目负责人"角色可见，只维护自己那份执行人员费率梯度
-    canAccessExecutorPayRateManagement: (state) => state.employeeRole === '项目负责人'
+    canAccessExecutorPayRateManagement: (state) => state.employeeRole === '项目负责人',
+    // "工资单"模块的管理视角（看全体员工、设置奖金、确认）：ADMIN 或员工角色="管理层"，
+    // 跟"员工管理"页面的访问权限判定（canAccessEmployeeManagement）保持一致
+    canManagePayslips: (state) => state.role === 'ADMIN' || state.employeeRole === '管理层'
   },
 
   actions: {

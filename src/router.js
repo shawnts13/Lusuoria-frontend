@@ -59,6 +59,13 @@ const routes = [
         meta: { executorPayRateAccess: true }
       },
       {
+        path: 'payslips',
+        name: 'Payslips',
+        component: () => import('./pages/payslip/PayslipListPage.vue'),
+        // 工资单：管理层看全体+自己确认，普通员工看自己那份，访客不开放，见 store/auth.js canManagePayslips
+        meta: { payslipAccess: true }
+      },
+      {
         path: 'exchange-rates',
         name: 'ExchangeRates',
         component: () => import('./pages/exchange-rate/ExchangeRateListPage.vue'),
@@ -127,6 +134,11 @@ router.beforeEach((to, from, next) => {
   }
   // 执行人员管理：仅员工角色="项目负责人"
   if (to.meta.executorPayRateAccess && employeeRole !== '项目负责人') {
+    next('/collaborations')
+    return
+  }
+  // 工资单：不对访客开放，其余角色都能进（管理视角/自己视角由页面内部判断）
+  if (to.meta.payslipAccess && role === 'GUEST') {
     next('/collaborations')
     return
   }
