@@ -119,7 +119,7 @@ const columns = [
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 },
   { title: '内部需求编号', key: 'internalRequirementNo', width: 190 },
   { title: '品牌方', key: 'brandName', width: 110 },
-  { title: '红人团队', key: 'teamName', width: 100 },
+  { title: '红人团队', key: 'teamName', width: 160 },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 150 },
   { title: '需求内容', dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true,
     customRender: ({ text }) => text || '—' },

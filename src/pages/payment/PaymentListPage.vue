@@ -144,7 +144,7 @@ const paymentStatuses = [
 const columns = [
   { title: '结款单号',   dataIndex: 'paymentNo',       key: 'paymentNo',       width: 200 },
   { title: '品牌方',     key: 'brand', width: 120 },
-  { title: '红人团队',   key: 'team', width: 120 },
+  { title: '红人团队',   key: 'team', width: 220, ellipsis: true },
   { title: '结算月份',   dataIndex: 'settlementMonth', key: 'settlementMonth', width: 90, sorter: true },
   { title: '合作数量',   dataIndex: 'cooperationQuantity', key: 'qty', width: 80, sorter: true },
   { title: '查看涉及的红人视频项目', key: 'items', width: 180 },

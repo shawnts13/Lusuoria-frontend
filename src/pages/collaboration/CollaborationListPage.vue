@@ -345,7 +345,7 @@ const allColumns = [
     customRender: ({ text }) => text || '—' },
   { title: '内部项目编号',  dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 200, sorter: true },
   { title: '品牌方',        key: 'brand',          width: 120 },
-  { title: '红人团队',      key: 'team',            width: 100 },
+  { title: '红人团队',      key: 'team',            width: 160 },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
   { title: '红人社媒完整名字', key: 'accountName', width: 160, sorter: true },
   { title: '合作平台',      key: 'platform',       width: 120 },

@@ -211,7 +211,7 @@ const columns = [
   { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200, sorter: true },
   { title: '需求月份', dataIndex: 'requirementMonth', key: 'requirementMonth', width: 110, sorter: true },
   { title: '品牌方', key: 'brandName', width: 130 },
-  { title: '红人团队', key: 'teamName', width: 110 },
+  { title: '红人团队', key: 'teamName', width: 160 },
   { title: '服务国家/市场', dataIndex: 'countryMarket', key: 'countryMarket', width: 120, sorter: true },
   { title: '红人社媒完整名字', key: 'accountName', width: 150, sorter: true },
   { title: '完整需求内容', key: 'fullRequirementContent', width: 150 },
