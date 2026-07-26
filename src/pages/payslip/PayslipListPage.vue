@@ -9,6 +9,16 @@
           <a-radio-button value="USD">USD</a-radio-button>
           <a-radio-button value="RMB">RMB</a-radio-button>
         </a-radio-group>
+        <span v-if="exchangeRateInfo?.isMissing" class="exchange-rate-error">
+          该月份汇率未维护，金额暂按 USD 展示
+          <router-link v-if="authStore.isAdmin" to="/exchange-rates">去维护 ›</router-link>
+        </span>
+        <span v-else-if="exchangeRateInfo?.usdToCny" class="exchange-rate-display">
+          汇率：1 USD = {{ exchangeRateInfo.usdToCny }} CNY
+          <span class="rate-updated-by" v-if="exchangeRateInfo.updatedBy">
+            （{{ exchangeRateInfo.updatedBy }} 维护）
+          </span>
+        </span>
       </a-space>
     </div>
 
@@ -176,7 +186,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
-import { payslipApi } from '../../api/index'
+import { payslipApi, exchangeRateApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
 import PayslipDetailModal from './PayslipDetailModal.vue'
@@ -186,6 +196,7 @@ const authStore = useAuthStore()
 const selectedMonth = ref(dayjs().format('YYYYMM'))
 const currency = ref('USD')
 const roleFilter = ref(undefined)
+const exchangeRateInfo = ref(null)
 
 const loadingManagement = ref(false)
 const loadingList = ref(false)
@@ -261,7 +272,18 @@ async function loadSelf() {
   }
 }
 
+async function loadExchangeRateInfo() {
+  if (!selectedMonth.value) return
+  try {
+    const res = await exchangeRateApi.getOne(selectedMonth.value)
+    exchangeRateInfo.value = res.data || null
+  } catch {
+    exchangeRateInfo.value = null
+  }
+}
+
 function loadAll() {
+  loadExchangeRateInfo()
   if (authStore.canManagePayslips) {
     loadManagement()
     loadList()
@@ -384,6 +406,22 @@ onMounted(loadAll)
 }
 .filter-bar {
   margin-bottom: 12px;
+}
+.exchange-rate-display {
+  font-size: 13px;
+  color: #666;
+}
+.exchange-rate-display a, .rate-updated-by {
+  color: #999;
+  margin-left: 4px;
+}
+.exchange-rate-error {
+  font-size: 13px;
+  color: #ff4d4f;
+}
+.exchange-rate-error a {
+  color: #1677ff;
+  margin-left: 4px;
 }
 .empty-hint {
   color: #888;
