@@ -95,13 +95,14 @@
       :fetcher="fetchVideoDrilldown"
     />
 
-    <!-- 客户合作价格下钻：品牌方 + 红人团队 -->
+    <!-- 客户合作价格下钻：品牌方/红人团队，或项目负责人 可切换 -->
     <DrilldownModal
       v-model:visible="modals.clientPrice"
-      title="客户合作价格明细（按品牌方 / 红人团队）"
+      title="客户合作价格明细"
       metric="client-price"
       :default-month="selectedMonth"
       :show-currency-toggle="true"
+      :dimension-options="clientPriceDimensionOptions"
       :fetcher="fetchClientPriceDrilldown"
     />
 
@@ -116,25 +117,25 @@
       :fetcher="fetchInfluencerCostDrilldown"
     />
 
-    <!-- 项目毛利下钻：品牌方/团队/品牌方-团队/账号/类型 可切换 -->
+    <!-- 项目毛利下钻：品牌方/团队/品牌方-团队/账号/类型/项目负责人 可切换 -->
     <DrilldownModal
       v-model:visible="modals.grossProfit"
       title="项目毛利明细"
       metric="gross-profit"
       :default-month="selectedMonth"
       :show-currency-toggle="true"
-      :dimension-options="dimensionOptions"
+      :dimension-options="dimensionOptionsWithManager"
       :fetcher="fetchGrossProfitDrilldown"
     />
 
-    <!-- 公司利润下钻：品牌方/团队/品牌方-团队/账号/类型 可切换 -->
+    <!-- 公司利润下钻：品牌方/团队/品牌方-团队/账号/类型/项目负责人 可切换 -->
     <DrilldownModal
       v-model:visible="modals.companyProfit"
       title="公司利润明细"
       metric="company-profit"
       :default-month="selectedMonth"
       :show-currency-toggle="true"
-      :dimension-options="dimensionOptions"
+      :dimension-options="dimensionOptionsWithManager"
       :fetcher="fetchCompanyProfitDrilldown"
     />
 
@@ -197,6 +198,16 @@ const dimensionOptions = [
   { value: 'account',    label: '按红人账号' },
   { value: 'type',       label: '按红人类型' }
 ]
+// 项目毛利/公司利润专用：在通用维度基础上追加"按项目负责人"，不影响红人成本明细的可选维度
+const dimensionOptionsWithManager = [
+  ...dimensionOptions,
+  { value: 'manager', label: '按项目负责人' }
+]
+
+const clientPriceDimensionOptions = [
+  { value: 'brand_team', label: '按品牌方/红人团队' },
+  { value: 'manager',    label: '按项目负责人' }
+]
 
 const executionCostDimensionOptions = [
   { value: 'manager',            label: '按项目负责人' },
@@ -206,6 +217,7 @@ const executionCostDimensionOptions = [
 
 const videoDimensionOptions = [
   { value: 'brand_team',    label: '按品牌方/红人团队' },
+  { value: 'manager',       label: '按项目负责人' },
   { value: 'publish_month', label: '按项目视频发布时间' }
 ]
 
@@ -242,8 +254,8 @@ function fmt(val) {
 function fetchVideoDrilldown(start, end, cur, dim) {
   return dashboardApi.drilldownVideoCount(start, end, dim)
 }
-function fetchClientPriceDrilldown(start, end, cur) {
-  return dashboardApi.drilldownClientPrice(start, end, cur)
+function fetchClientPriceDrilldown(start, end, cur, dim) {
+  return dashboardApi.drilldownClientPrice(start, end, cur, dim)
 }
 function fetchInfluencerCostDrilldown(start, end, cur, dim) {
   return dashboardApi.drilldownInfluencerCost(start, end, cur, dim)

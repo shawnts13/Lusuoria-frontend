@@ -223,8 +223,8 @@ export const dashboardApi = {
   drilldownVideoCount: (startMonth, endMonth, dimension) =>
     http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth, dimension } }),
 
-  drilldownClientPrice: (startMonth, endMonth, currency) =>
-    http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency } }),
+  drilldownClientPrice: (startMonth, endMonth, currency, dimension) =>
+    http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency, dimension } }),
 
   drilldownInfluencerCost: (startMonth, endMonth, currency, dimension) =>
     http.get('/api/dashboard/drilldown/influencer-cost', { params: { startMonth, endMonth, currency, dimension } }),
