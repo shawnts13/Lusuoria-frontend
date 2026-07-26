@@ -30,10 +30,18 @@
           </template>
           <template v-if="column.key === 'salaryInfo'">
             <template v-if="isCommissionRole(record.role)">
-              <span style="color:#888;font-size:12px">默认提成：</span>
-              {{ record.defaultCommissionRate != null
-                ? (parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%'
-                : '—' }}
+              <div style="font-size:12px;line-height:1.6">
+                <div>
+                  <span style="color:#888">默认提成：</span>
+                  {{ record.defaultCommissionRate != null
+                    ? (parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%'
+                    : '—' }}
+                </div>
+                <div v-if="bonusTierSummary(record.id)" style="color:#666">
+                  <span style="color:#888">Bonus（{{ record.bonusTierCurrency === 'RMB' ? '¥' : '$' }}）：</span>
+                  {{ bonusTierSummary(record.id) }}
+                </div>
+              </div>
             </template>
             <template v-else-if="isFixedSalaryRole(record.role)">
               <span style="color:#888;font-size:12px">固定月薪：</span>
@@ -211,6 +219,21 @@ function tierSummary(executorId, videoType) {
 function hasAnyRate(executorId) {
   return VIDEO_TYPES.some(type => tierSummary(executorId, type))
 }
+
+// 项目负责人/管理层的提成 bonus 阶梯，key 为员工 id，value 为该员工配置的档位列表，
+// 供列表"薪资信息"列直接展示已配置的 bonus 规则，不用打开编辑弹窗才能看到
+const bonusTiersByEmployeeId = ref({})
+
+function bonusTierSummary(employeeId) {
+  const tiers = bonusTiersByEmployeeId.value[employeeId]
+  if (!tiers || !tiers.length) return null
+  const sorted = [...tiers].sort((a, b) => (a.minAmount || 0) - (b.minAmount || 0))
+  return sorted.map(t => {
+    const range = t.maxAmount == null ? `${fmtNum(t.minAmount)}+` : `${fmtNum(t.minAmount)}-${fmtNum(t.maxAmount)}`
+    const pct = (parseFloat(t.bonusRate) * 100).toFixed(0) + '%'
+    return `${range}→${pct}`
+  }).join('，')
+}
 const modalVisible = ref(false)
 const editing  = ref(null)
 const saving   = ref(false)
@@ -288,6 +311,14 @@ async function loadData() {
       map[t.executorId][t.videoType].push(t)
     }
     executorRates.value = map
+
+    const commissionIds = list.value.filter(e => isCommissionRole(e.role)).map(e => e.id)
+    if (commissionIds.length) {
+      const bonusRes = await employeeApi.getBonusTiersBulk(commissionIds)
+      bonusTiersByEmployeeId.value = bonusRes.data || {}
+    } else {
+      bonusTiersByEmployeeId.value = {}
+    }
   } finally { loading.value = false }
 }
 

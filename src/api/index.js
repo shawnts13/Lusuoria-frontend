@@ -105,6 +105,7 @@ export const employeeApi = {
   save:    (data) => http.post('/api/employees', data),
   delete:  (id)   => http.delete(`/api/employees/${id}`),
   getBonusTiers: (id) => http.get(`/api/employees/${id}/bonus-tiers`),
+  getBonusTiersBulk: (employeeIds) => http.get('/api/employees/bonus-tiers', { params: { employeeIds: employeeIds.join(',') } }),
 
   exportExcel: (role) => downloadWithAuth(
     `${BASE}/api/employees/export/excel${role ? '?role=' + role : ''}`, '员工.xlsx')
