@@ -12,6 +12,16 @@
             <span v-if="record.email">{{ record.email }}</span>
             <span v-else style="color:#bbb">—</span>
           </template>
+          <template v-if="column.key === 'salaryInfo'">
+            <div v-if="executorRates[record.id]" style="font-size:12px;line-height:1.6">
+              <div>实拍新视频：{{ fmtRate(executorRates[record.id].rateRealShotNew) }}</div>
+              <div>AI新素材：{{ fmtRate(executorRates[record.id].rateAiNewMaterial) }}</div>
+              <div>旧素材重发(1-50)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier1) }}</div>
+              <div>旧素材重发(51-100)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier2) }}</div>
+              <div>旧素材重发(101+)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier3) }}，封顶{{ executorRates[record.id].oldMaterialMonthlyCap ? '¥' + fmtNum(executorRates[record.id].oldMaterialMonthlyCap) : '—' }}/月</div>
+            </div>
+            <span v-else style="color:#c00000;font-size:12px">请项目负责人设置对应执行人员的薪资规则</span>
+          </template>
           <template v-if="column.key === 'action'">
             <a @click="openEdit(record)">编辑薪资标准</a>
           </template>
@@ -36,11 +46,13 @@
  */
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { employeeApi } from '../../api/index'
+import { employeeApi, executorPayRateApi } from '../../api/index'
 import ExecutorRateFields from './ExecutorRateFields.vue'
 
 const loading = ref(false)
 const list = ref([])
+// key 为执行人员的员工 id，供列表"薪资标准"列直接展示当前登录人（自己）已配置的费率
+const executorRates = ref({})
 const modalVisible = ref(false)
 const editing = ref(null)
 const saving = ref(false)
@@ -50,6 +62,7 @@ const columns = [
   { title: '姓名', dataIndex: 'name', key: 'name', width: 140,
     sorter: (a, b) => (a.name || '').localeCompare(b.name || '', 'zh') },
   { title: '邮箱', dataIndex: 'email', key: 'email', width: 200 },
+  { title: '薪资标准', key: 'salaryInfo', width: 260 },
   { title: '操作', key: 'action', width: 120 }
 ]
 
@@ -60,11 +73,25 @@ const tablePagination = {
   showTotal: t => `共 ${t} 条`
 }
 
+function fmtNum(val) {
+  if (val == null) return '—'
+  return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+function fmtRate(val) {
+  return val != null ? '¥' + fmtNum(val) : '—'
+}
+
 async function loadData() {
   loading.value = true
   try {
-    const res = await employeeApi.list('执行人员')
-    list.value = res.data || []
+    const [empRes, rateRes] = await Promise.all([
+      employeeApi.list('执行人员'),
+      executorPayRateApi.list()
+    ])
+    list.value = empRes.data || []
+    const map = {}
+    for (const r of (rateRes.data || [])) map[r.executorId] = r
+    executorRates.value = map
   } finally { loading.value = false }
 }
 
@@ -80,6 +107,7 @@ async function handleSave() {
     await ratesRef.value.save()
     message.success('保存成功')
     modalVisible.value = false
+    loadData()
   } finally { saving.value = false }
 }
 

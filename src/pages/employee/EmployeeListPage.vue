@@ -40,7 +40,17 @@
               {{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}
             </template>
             <template v-else-if="isExecutorRole(record.role)">
-              <span style="color:#888;font-size:12px">薪资标准由各项目负责人在"执行人员管理"/"员工管理"里各自维护，见编辑弹窗</span>
+              <div v-if="executorRates[record.id]" style="font-size:12px;line-height:1.6">
+                <div>实拍新视频：{{ fmtRate(executorRates[record.id].rateRealShotNew) }}</div>
+                <div>AI新素材：{{ fmtRate(executorRates[record.id].rateAiNewMaterial) }}</div>
+                <div>旧素材重发(1-50)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier1) }}</div>
+                <div>旧素材重发(51-100)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier2) }}</div>
+                <div>旧素材重发(101+)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier3) }}，封顶{{ executorRates[record.id].oldMaterialMonthlyCap ? '¥' + fmtNum(executorRates[record.id].oldMaterialMonthlyCap) : '—' }}/月</div>
+              </div>
+              <span v-else style="color:#c00000;font-size:12px">请项目负责人设置对应执行人员的薪资规则</span>
+            </template>
+            <template v-else-if="isLegalRole(record.role)">
+              <span style="color:#888;font-size:12px">法务每月薪资由管理层手动在"工资单"模块设置</span>
             </template>
             <span v-else style="color:#bbb">薪资规则待定</span>
           </template>
@@ -148,7 +158,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import { employeeApi } from '../../api/index'
+import { employeeApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
@@ -159,13 +169,18 @@ const { getOptions } = useOptions()
 const COMMISSION_ROLES  = ['项目负责人', '管理层']
 const FIXED_SALARY_ROLES = ['财务', 'IT后勤']
 const EXECUTOR_ROLE = '执行人员'
+const LEGAL_ROLE = '法务'
 
 function isCommissionRole(role)  { return COMMISSION_ROLES.includes(role) }
 function isFixedSalaryRole(role) { return FIXED_SALARY_ROLES.includes(role) }
 function isExecutorRole(role)    { return role === EXECUTOR_ROLE }
+function isLegalRole(role)       { return role === LEGAL_ROLE }
 
 const loading = ref(false)
 const list    = ref([])
+// 执行人员薪资标准（这里代表"管理层"那份 ExecutorPayRate，见 ExecutorRateFields 的 managerId 解析规则），
+// key 为执行人员的员工 id，供列表"薪资信息"列直接展示当前已配置的费率
+const executorRates = ref({})
 const modalVisible = ref(false)
 const editing  = ref(null)
 const saving   = ref(false)
@@ -228,11 +243,21 @@ function fmtNum(val) {
   if (val == null) return '—'
   return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+function fmtRate(val) {
+  return val != null ? '¥' + fmtNum(val) : '—'
+}
+
 async function loadData() {
   loading.value = true
   try {
-    const res = await employeeApi.list()
-    list.value = res.data || []
+    const [empRes, rateRes] = await Promise.all([
+      employeeApi.list(),
+      executorPayRateApi.list()
+    ])
+    list.value = empRes.data || []
+    const map = {}
+    for (const r of (rateRes.data || [])) map[r.executorId] = r
+    executorRates.value = map
   } finally { loading.value = false }
 }
 
