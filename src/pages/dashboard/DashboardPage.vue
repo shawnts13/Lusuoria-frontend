@@ -52,6 +52,11 @@
           <div class="value">{{ fmt(summary.totalOtherExternalCost) }}</div>
         </div>
 
+        <div class="summary-card warning clickable" @click="openDrilldown('commission')">
+          <div class="label">负责人提成合计 <span class="drill-hint">点击查看明细 ›</span></div>
+          <div class="value">{{ fmt(summary.totalCommissionAmount) }}</div>
+        </div>
+
         <div class="summary-card clickable" @click="openDrilldown('execution-cost')">
           <div class="label">内部执行人力成本 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalInternalExecutionCost) }}</div>
@@ -70,11 +75,6 @@
         <div class="summary-card success">
           <div class="label">可分配利润</div>
           <div class="value">{{ fmt(summary.totalDistributableProfit) }}</div>
-        </div>
-
-        <div class="summary-card warning clickable" @click="openDrilldown('commission')">
-          <div class="label">负责人提成合计 <span class="drill-hint">点击查看明细 ›</span></div>
-          <div class="value">{{ fmt(summary.totalCommissionAmount) }}</div>
         </div>
 
         <div class="summary-card highlight clickable" @click="openDrilldown('company-profit')">
@@ -164,7 +164,7 @@
     <!-- 负责人提成下钻：仅负责人维度 -->
     <DrilldownModal
       v-model:visible="modals.commission"
-      title="负责人提成明细"
+      title="项目负责人提成明细"
       metric="commission"
       :default-month="selectedMonth"
       :show-currency-toggle="true"
