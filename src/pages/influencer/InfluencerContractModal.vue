@@ -10,10 +10,25 @@
       </a>
     </div>
     <a-form layout="vertical">
-      <a-form-item label="年份">
-        <span v-if="yearFixed" style="font-size:14px">{{ year }}年</span>
-        <a-date-picker v-else v-model:value="yearStr" picker="year" format="YYYY" value-format="YYYY"
-          placeholder="选择年份" style="width:200px" />
+      <a-form-item label="品牌方">
+        <a-select v-model:value="brandId" placeholder="选择品牌方" style="width:100%"
+          :disabled="!!contract">
+          <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id">{{ b.name }}</a-select-option>
+        </a-select>
+        <div style="font-size:12px;color:#888;margin-top:2px">
+          只列出这个红人关联过的"一年签一次合同"品牌方；"一次需求签一次合同"的品牌方请在红人需求管理处上传
+        </div>
+      </a-form-item>
+      <a-form-item label="团队" v-if="brandId">
+        <a-select v-model:value="teamId" placeholder="团队（可不选）" style="width:100%"
+          allow-clear :disabled="!!contract || availableTeams.length <= 1">
+          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId">
+            {{ t.teamName || '（不涉及团队）' }}
+          </a-select-option>
+        </a-select>
+      </a-form-item>
+      <a-form-item label="合同有效期">
+        <a-range-picker v-model:value="dateRange" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
       <a-form-item label="合同链接">
         <a-input v-model:value="contractLink" placeholder="粘贴上传好后的合同链接" />
@@ -27,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { LinkOutlined } from '@ant-design/icons-vue'
 import { influencerContractApi } from '../../api/index'
@@ -36,33 +51,51 @@ const props = defineProps({
   visible:      { type: Boolean, default: false },
   influencerId: { type: [Number, String], default: null },
   contract:     { type: Object, default: null },   // 编辑时传入已有记录，新增时为 null
-  yearFixed:    { type: Boolean, default: false }   // true="新增本年度合同"：年份固定不可选
+  // 这个红人关联的、且品牌方是"一年签一次合同"的 (品牌方,团队) 对，供级联选择
+  brandTeamPairs: { type: Array, default: () => [] },
+  brands:       { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
 const saving = ref(false)
-const year = ref(new Date().getFullYear())
-const yearStr = ref(String(new Date().getFullYear()))
+const brandId = ref(null)
+const teamId = ref(null)
+const dateRange = ref([])
 const contractLink = ref('')
+
+const availableBrandIds = computed(() => [...new Set(props.brandTeamPairs.map(p => p.brandId))])
+const availableBrands = computed(() => props.brands.filter(b => availableBrandIds.value.includes(b.id)))
+const availableTeams = computed(() => props.brandTeamPairs.filter(p => p.brandId === brandId.value))
+
+// 该品牌方下只有一个团队选项（含"不涉及团队"这一个选项）时自动带入
+watch(availableTeams, opts => {
+  if (opts.length === 1) teamId.value = opts[0].teamId ?? null
+})
 
 watch(() => props.visible, v => {
   if (!v) return
   if (props.contract) {
-    year.value = props.contract.year
+    brandId.value = props.contract.brandId
+    teamId.value = props.contract.teamId ?? null
+    dateRange.value = [props.contract.startDate, props.contract.endDate]
     contractLink.value = props.contract.contractLink || ''
   } else {
-    year.value = new Date().getFullYear()
+    brandId.value = availableBrands.value.length === 1 ? availableBrands.value[0].id : null
+    teamId.value = null
+    dateRange.value = []
     contractLink.value = ''
   }
-  yearStr.value = String(year.value)
 })
-watch(yearStr, v => { if (v) year.value = parseInt(v, 10) })
 
 function close() { emit('update:visible', false) }
 
 async function handleSave() {
-  if (!year.value) {
-    message.warning('请选择合同年份')
+  if (!brandId.value) {
+    message.warning('请选择品牌方')
+    return
+  }
+  if (!dateRange.value || dateRange.value.length !== 2) {
+    message.warning('请选择合同有效期')
     return
   }
   if (!contractLink.value || !contractLink.value.trim()) {
@@ -71,7 +104,14 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    const payload = { influencerId: props.influencerId, year: year.value, contractLink: contractLink.value.trim() }
+    const payload = {
+      influencerId: props.influencerId,
+      brandId: brandId.value,
+      teamId: teamId.value ?? null,
+      startDate: dateRange.value[0],
+      endDate: dateRange.value[1],
+      contractLink: contractLink.value.trim()
+    }
     if (props.contract) {
       await influencerContractApi.update(props.contract.id, payload)
     } else {

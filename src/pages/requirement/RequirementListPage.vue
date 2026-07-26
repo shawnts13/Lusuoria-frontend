@@ -186,8 +186,9 @@ const invoiceModalRequirement = ref(null)
 const contractModalVisible = ref(false)
 const contractModalRequirement = ref(null)
 
-// 红人合同数据（按红人id批量拉取，key=influencerId，value={year: contractLink}），
-// 供"合同链接"列/按钮判断品牌方"一年签一次合同"时，该需求年份红人是否已经在"红人管理"上传过合同
+// 红人合同数据（按红人id批量拉取，key=influencerId，value=该红人名下的合同列表，每条含
+// brandId/teamId/startDate/endDate/contractLink），供"合同链接"列/按钮判断品牌方
+// "一年签一次合同"时，该需求的品牌方/团队/需求月份是否命中"红人管理"里维护的某条合同
 const influencerContractsByInfluencerId = ref({})
 
 const sortState = reactive({ field: 'id', order: 'descend' })
@@ -286,16 +287,28 @@ function invoiceButtonState(record) {
 function getTeamName(id) { return teams.value.find(t => t.id === id)?.name }
 function getInfluencerName(id) { return influencers.value.find(i => i.id === id)?.accountName }
 
-// 需求年份：需求月份（yyyyMM）取年份，品牌方"一年签一次合同"时用来匹配红人管理里对应年份的合同
-function requirementYear(record) {
-  if (!record.requirementMonth || record.requirementMonth.length < 4) return null
-  const year = parseInt(record.requirementMonth.slice(0, 4), 10)
-  return Number.isNaN(year) ? null : year
+// 判断"需求月份"（yyyyMM）是否落在合同有效期 [startDate, endDate] 内：只要这个月里有任意
+// 一天落在区间内就算覆盖（比如合同 2025-08-15 至 2026-08-14，需求月份 202508 也算覆盖）
+function monthOverlapsContractRange(yyyymm, startDate, endDate) {
+  if (!yyyymm || yyyymm.length < 6 || !startDate || !endDate) return false
+  const y = parseInt(yyyymm.slice(0, 4), 10)
+  const m = parseInt(yyyymm.slice(4, 6), 10)
+  if (Number.isNaN(y) || Number.isNaN(m)) return false
+  const monthStart = new Date(y, m - 1, 1)
+  const monthEnd = new Date(y, m, 0)
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  return monthStart <= end && start <= monthEnd
 }
-function matchedInfluencerContractLink(record) {
-  const year = requirementYear(record)
-  if (year == null) return null
-  return influencerContractsByInfluencerId.value[record.influencerId]?.[year] || null
+// 按这条需求的 (品牌方,团队,需求月份) 去匹配红人管理里维护的、这个品牌方这个团队下
+// "需求月份落在有效期内"的那条合同（品牌方"一年签一次合同"场景）
+function matchedInfluencerContract(record) {
+  const contracts = influencerContractsByInfluencerId.value[record.influencerId] || []
+  return contracts.find(c =>
+    c.brandId === record.brandId &&
+    (c.teamId ?? null) === (record.teamId ?? null) &&
+    monthOverlapsContractRange(record.requirementMonth, c.startDate, c.endDate)
+  ) || null
 }
 async function loadInfluencerContracts() {
   const ids = [...new Set(tableData.value.map(r => r.influencerId).filter(Boolean))]
@@ -305,35 +318,36 @@ async function loadInfluencerContracts() {
 }
 
 // "合同链接"列的展示状态：品牌方"每次需求签一次合同"时看需求自己的 contractLink；
-// "一年签一次合同"时按需求自己的年份去匹配红人管理里对应年份的合同，匹配上就直接展示真实链接，
-// 没匹配上则展示可点击的引导文案（点击效果等同操作列的"上传合同"按钮跳转红人管理）
+// "一年签一次合同"时按需求自己的品牌方/团队/需求月份去匹配红人管理里对应的合同，
+// 匹配上就直接展示真实链接，没匹配上则展示可点击的引导文案（点击效果等同操作列的
+// "上传合同"按钮跳转红人管理）
 function contractCellState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
   if (!isAnnual) {
     return record.contractLink ? { mode: 'link', href: record.contractLink } : { mode: 'none' }
   }
-  const matchedLink = matchedInfluencerContractLink(record)
-  if (matchedLink) return { mode: 'link', href: matchedLink }
+  const matched = matchedInfluencerContract(record)
+  if (matched) return { mode: 'link', href: matched.contractLink }
   return { mode: 'gotoInfluencer', text: '该品牌方是一年签一次合同，请在红人管理处上传' }
 }
 
-// "上传合同"操作按钮的三态：每次需求签一次合同 -> 始终可点的"上传合同"；一年签一次合同且该
-// 需求年份红人已有合同 -> 置灰的"该红人已有XXXX年的合同"；一年签一次合同且该年份还没合同 ->
-// 文案同样是"上传合同"（跟第一种状态统一按钮宽度，避免表格排版参差不齐），
-// 但保留 contract-btn-goto 的不起眼配色跟真正能直接上传的那种区分开，点击后跳转红人管理
+// "上传合同"操作按钮的三态：每次需求签一次合同 -> 始终可点的"上传合同"；一年签一次合同且
+// 该品牌方该团队下已有一条"需求月份落在有效期内"的合同 -> 置灰的"上传合同"（文案统一，
+// 不再按年份报文案，跟第一种状态保持一致的按钮宽度，避免表格排版参差不齐）；一年签一次合同
+// 且没匹配上任何合同 -> 同样是"上传合同"，但保留 contract-btn-goto 的不起眼配色跟真正能
+// 直接上传的那种区分开，点击后跳转红人管理
 function contractButtonState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
   if (!isAnnual) {
     return { disabled: false, mode: 'upload', label: '上传合同', tooltip: null }
   }
-  const year = requirementYear(record)
-  const matchedLink = matchedInfluencerContractLink(record)
-  if (matchedLink) {
+  const matched = matchedInfluencerContract(record)
+  if (matched) {
     return {
-      disabled: true, mode: 'matched', label: `该红人已有${year}年的合同`,
-      tooltip: `该红人已有${year}年的合同，若合同上传有误，请在红人管理模块更新合同链接`
+      disabled: true, mode: 'matched', label: '上传合同',
+      tooltip: '该红人已存在还在有效期内的合同，若合同上传有误，请在红人管理模块更新合同链接。'
     }
   }
   return {

@@ -147,18 +147,28 @@
 
           <a-form-item label="已签署合同" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
             <template v-if="props.record?.id">
-              <div v-if="contracts.length" style="margin-bottom:8px">
-                <div v-for="c in contracts" :key="c.id"
-                  style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-                  <span style="width:56px">{{ c.year }}年</span>
-                  <a :href="c.contractLink" target="_blank" style="flex:1;font-size:12px">查看合同</a>
-                  <a @click="openContractModal(c)">编辑</a>
+              <template v-if="!hasAnyAnnualBrand">
+                <span style="color:#888;font-size:12px">
+                  此红人的合同是一需求一签，请在红人需求管理处查看对应需求的合同
+                </span>
+              </template>
+              <template v-else>
+                <div v-if="contracts.length" style="margin-bottom:8px">
+                  <div v-for="c in contracts" :key="c.id"
+                    style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+                    <span style="width:160px;font-size:12px">
+                      {{ brandNameById(c.brandId) }}{{ c.teamId ? '/' + teamNameById(c.teamId) : '' }}
+                    </span>
+                    <span style="width:200px;font-size:12px;color:#888">
+                      {{ formatDate(c.startDate) }} 至 {{ formatDate(c.endDate) }}
+                    </span>
+                    <a :href="c.contractLink" target="_blank" style="flex:1;font-size:12px">查看合同</a>
+                    <a @click="openContractModal(c)">编辑</a>
+                  </div>
                 </div>
-              </div>
-              <span v-else style="color:#bbb;font-size:12px;display:block;margin-bottom:8px">还没有已签署的合同记录</span>
-              <a-button size="small" @click="openContractModal(null)">
-                {{ hasCurrentYearContract ? '新增其他年份合同' : '新增本年度合同' }}
-              </a-button>
+                <span v-else style="color:#bbb;font-size:12px;display:block;margin-bottom:8px">还没有已签署的合同记录</span>
+                <a-button size="small" @click="openContractModal(null)">上传合同</a-button>
+              </template>
             </template>
             <span v-else style="color:#bbb;font-size:12px">保存红人后才能维护已签署合同</span>
           </a-form-item>
@@ -192,7 +202,8 @@
     </a-form>
 
     <InfluencerContractModal v-model:visible="contractModalVisible" :influencer-id="props.record?.id"
-      :contract="contractModalRecord" :year-fixed="contractModalYearFixed" @saved="loadContracts" />
+      :contract="contractModalRecord" :brand-team-pairs="annualBrandTeamPairs" :brands="props.brands"
+      @saved="loadContracts" />
   </a-modal>
 </template>
 
@@ -202,6 +213,7 @@ import { message } from 'ant-design-vue'
 import { influencerApi, employeeApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
+import { formatDate } from '../../utils/dateFormat'
 import InfluencerContractModal from './InfluencerContractModal.vue'
 
 const props = defineProps({
@@ -222,13 +234,23 @@ const newTeamName      = ref('')
 const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
 
-// 已签署合同（2026-07 新增，一个红人可以有多条，一年一条）
+// 已签署合同（一个红人可以有多条，按品牌方+团队各自维护有效期区间，仅"一年签一次合同"的
+// 品牌方才需要在这里维护——"一次需求签一次合同"的品牌方合同挂在具体需求上，见红人需求管理）
 const contracts               = ref([])
 const contractModalVisible    = ref(false)
 const contractModalRecord     = ref(null)   // 正在编辑的合同记录，null 表示新增
-const contractModalYearFixed  = ref(false)  // true="新增本年度合同"（年份固定不可选），false=年份可选
-const CURRENT_YEAR = new Date().getFullYear()
-const hasCurrentYearContract = computed(() => contracts.value.some(c => c.year === CURRENT_YEAR))
+
+// 这个红人关联的、且品牌方是"一年签一次合同"的 (品牌方,团队) 对——上传合同时只能选这些，
+// 用当前表单里实时编辑的 brandTeamPairs（不是保存前的旧值），这样刚加的品牌方-团队关联
+// 不用先保存整个红人表单就能马上选
+const annualBrandTeamPairs = computed(() =>
+  form.brandTeamPairs.filter(p => p.brandId != null && isAnnualBrand(p.brandId)))
+const hasAnyAnnualBrand = computed(() => annualBrandTeamPairs.value.length > 0)
+
+function isAnnualBrand(brandId) {
+  const b = props.brands.find(b => b.id === brandId)
+  return b?.contractCycleType === 'ANNUAL'
+}
 
 async function loadContracts() {
   if (!props.record?.id) { contracts.value = []; return }
@@ -237,7 +259,6 @@ async function loadContracts() {
 }
 function openContractModal(existing) {
   contractModalRecord.value = existing || null
-  contractModalYearFixed.value = !existing && !hasCurrentYearContract.value
   contractModalVisible.value = true
 }
 
