@@ -107,28 +107,50 @@
             </div>
           </a-form-item>
 
-          <a-divider orientation="left" style="font-size:13px">提成 Bonus 阶梯</a-divider>
-          <a-form-item label="判档币种">
-            <a-radio-group v-model:value="form.bonusTierCurrency">
-              <a-radio value="RMB">人民币</a-radio>
-              <a-radio value="USD">美元</a-radio>
-            </a-radio-group>
-            <div style="font-size:12px; color:#888; margin-top:4px">
+          <div class="bonus-section">
+            <div class="bonus-section-header">提成 Bonus 阶梯</div>
+
+            <div class="bonus-currency-row">
+              <label>判档币种</label>
+              <a-radio-group v-model:value="form.bonusTierCurrency">
+                <a-radio value="RMB">人民币</a-radio>
+                <a-radio value="USD">美元</a-radio>
+              </a-radio-group>
+            </div>
+            <div class="bonus-section-hint" style="margin-bottom:10px">
               按该负责人某时间范围内的提成总额（换算成这个币种后）判档，命中区间额外奖励对应比例
             </div>
-          </a-form-item>
-          <div v-for="(tier, idx) in form.bonusTiers" :key="idx"
-            style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
-            <a-input-number v-model:value="tier.minAmount" placeholder="最低金额" :min="0" :precision="2" style="width:120px" />
-            <span>~</span>
-            <a-input-number v-model:value="tier.maxAmount" placeholder="不封顶" :min="0" :precision="2" style="width:120px" />
-            <a-input-number v-model:value="tier.bonusRateDisplay" :min="0" :max="100" :precision="0"
-              :formatter="v => v + '%'" :parser="v => v.replace('%','')"
-              @change="v => tier.bonusRate = v / 100"
-              style="width:90px" />
-            <a-button type="text" danger @click="form.bonusTiers.splice(idx, 1)">删除</a-button>
+
+            <div v-if="!form.bonusTiers.length" class="bonus-empty">尚未配置，点击下方按钮新增档位</div>
+
+            <div v-for="(tier, idx) in form.bonusTiers" :key="idx" class="bonus-card">
+              <div class="bonus-card-top">
+                <span class="bonus-badge">第 {{ idx + 1 }} 档</span>
+                <a-button type="text" danger size="small" @click="form.bonusTiers.splice(idx, 1)">删除</a-button>
+              </div>
+              <div class="bonus-fields">
+                <div class="bonus-field">
+                  <label>最低金额</label>
+                  <a-input-number v-model:value="tier.minAmount" :min="0" :precision="2" style="width:100%" />
+                </div>
+                <div class="bonus-field">
+                  <label>最高金额<span class="bonus-field-hint">留空=不封顶</span></label>
+                  <a-input-number v-model:value="tier.maxAmount" :min="0" :precision="2" style="width:100%" placeholder="不封顶" />
+                </div>
+                <div class="bonus-field">
+                  <label>bonus 比例</label>
+                  <a-input-number v-model:value="tier.bonusRateDisplay" :min="0" :max="100" :precision="0"
+                    :formatter="v => v + '%'" :parser="v => v.replace('%','')"
+                    @change="v => tier.bonusRate = v / 100"
+                    style="width:100%" />
+                </div>
+              </div>
+            </div>
+
+            <a-button type="dashed" block size="small" @click="addBonusTier">
+              <template #icon><PlusOutlined /></template>新增档位
+            </a-button>
           </div>
-          <a-button type="dashed" block @click="addBonusTier" style="margin-bottom:16px">+ 新增档位</a-button>
         </template>
 
         <!-- 财务 / IT后勤：固定月薪 -->
@@ -320,3 +342,89 @@ async function handleSave() {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.bonus-section {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+  margin-bottom: 16px;
+}
+.bonus-section-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #262626;
+  padding-left: 10px;
+  border-left: 3px solid #1677ff;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+.bonus-currency-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.bonus-currency-row label {
+  font-size: 12px;
+  color: #595959;
+}
+.bonus-section-hint {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+}
+.bonus-empty {
+  font-size: 12px;
+  color: #999;
+  background: #fff;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.bonus-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.bonus-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bonus-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1677ff;
+  background: #e6f4ff;
+  border-radius: 4px;
+  padding: 1px 8px;
+}
+.bonus-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bonus-field {
+  flex: 1;
+  min-width: 110px;
+}
+.bonus-field label {
+  display: block;
+  font-size: 12px;
+  color: #595959;
+  margin-bottom: 4px;
+}
+.bonus-field-hint {
+  color: #bbb;
+  font-weight: normal;
+  margin-left: 4px;
+}
+</style>
