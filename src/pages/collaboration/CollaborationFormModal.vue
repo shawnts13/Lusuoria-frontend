@@ -551,6 +551,18 @@ function onRequirementLinked(data) {
   form.countryMarket = data.countryMarket
   form.platforms = data.platform || []
   form.videoType = data.videoType
+
+  // 项目负责人默认值只在"新建"时才跟着关联的需求联动（编辑已有记录时改联的需求，
+  // 不应该覆盖已经确定下来的项目负责人）：新建的人自己是"项目负责人"角色时，仍然优先
+  // 填自己（哪怕需求配置了别的默认负责人）；只有新建的人不是"项目负责人"（比如执行人员）
+  // 时，才采用这条需求配置的"默认项目负责人"；需求没配默认负责人时保留原先算好的默认值
+  if (!form.id) {
+    if (authStore.employeeRole === '项目负责人') {
+      form.projectManagerId = authStore.employeeId
+    } else if (data.defaultProjectManagerId != null) {
+      form.projectManagerId = data.defaultProjectManagerId
+    }
+  }
 }
 
 // "解绑"：还没保存过的新记录只是本地暂存的值，直接清空即可；已经保存过的记录，

@@ -126,6 +126,7 @@
       :record="editingRecord"
       :brands="brands"
       :influencers="influencers"
+      :employees="employees"
       @saved="loadData"
     />
 
@@ -146,7 +147,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import { requirementApi, brandApi, influencerApi, influencerTeamApi, influencerContractApi } from '../../api/index'
+import { requirementApi, brandApi, influencerApi, influencerTeamApi, influencerContractApi, employeeApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDateTime } from '../../utils/dateFormat'
@@ -167,6 +168,7 @@ const tableData   = ref([])
 const brands      = ref([])
 const teams       = ref([])
 const influencers = ref([])
+const employees   = ref([])
 
 const modalVisible  = ref(false)
 const editingRecord = ref(null)
@@ -450,10 +452,13 @@ function openInvoiceModal(record) {
 }
 
 onMounted(async () => {
-  const [b, t, i] = await Promise.all([brandApi.list(), influencerTeamApi.list(), influencerApi.simple()])
+  const [b, t, i, e] = await Promise.all([
+    brandApi.list(), influencerTeamApi.list(), influencerApi.simple(), employeeApi.list()
+  ])
   brands.value      = b.data || []
   teams.value       = t.data || []
   influencers.value = i.data || []
+  employees.value   = e.data || []
   loadData()
 })
 </script>

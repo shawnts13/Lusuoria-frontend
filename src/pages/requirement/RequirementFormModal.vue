@@ -81,6 +81,19 @@
         </a-col>
       </a-row>
 
+      <a-form-item label="默认项目负责人（可选）">
+        <a-select v-model:value="form.defaultProjectManagerId" allow-clear show-search
+          option-filter-prop="label" placeholder="不选则不设默认值">
+          <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">
+            {{ e.name }}
+          </a-select-option>
+        </a-select>
+        <div style="font-size:12px;color:#888;margin-top:2px">
+          "红人合作跟踪"关联这条需求新建具体视频记录时，项目负责人会默认带入这里配置的人（新建的人自己是
+          项目负责人时优先填自己），可以再改
+        </div>
+      </a-form-item>
+
       <a-form-item label="备注">
         <a-textarea v-model:value="form.notes" :rows="2" placeholder="记录一些特殊情况" />
       </a-form-item>
@@ -174,6 +187,7 @@ import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { requirementApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
 import { videoTypeColor } from '../../utils/enumColors'
 
@@ -181,11 +195,13 @@ const props = defineProps({
   visible: { type: Boolean, default: false },
   record: { type: Object, default: null },
   brands: { type: Array, default: () => [] },
-  influencers: { type: Array, default: () => [] }
+  influencers: { type: Array, default: () => [] },
+  employees: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
 const { getOptions } = useOptions()
+const authStore = useAuthStore()
 const formRef = ref()
 const saving  = ref(false)
 const parsing = ref(false)
@@ -200,9 +216,14 @@ const form = reactive({
   teamId: null,
   countryMarket: null,
   requirementMonth: currentMonth(),
+  defaultProjectManagerId: null,
   notes: '',
   items: []
 })
+
+// 默认项目负责人候选：跟"红人合作跟踪"项目负责人选择器的候选范围保持一致（项目负责人/管理层）
+const projectManagerCandidates = computed(() =>
+  props.employees.filter(e => e.role === '项目负责人' || e.role === '管理层'))
 
 function currentMonth() {
   const d = new Date()
@@ -383,6 +404,7 @@ watch(() => props.visible, (v) => {
         teamId: rec.teamId || null,
         countryMarket: rec.countryMarket || null,
         requirementMonth: rec.requirementMonth || currentMonth(),
+        defaultProjectManagerId: rec.defaultProjectManagerId || null,
         notes: rec.notes || '',
         items: []
       })
@@ -391,7 +413,10 @@ watch(() => props.visible, (v) => {
       Object.assign(form, {
         id: null, internalRequirementNo: null, fullRequirementContent: '',
         influencerId: null, brandId: null, teamId: null, countryMarket: null,
-        requirementMonth: currentMonth(), notes: '', items: []
+        requirementMonth: currentMonth(),
+        // 新建时，创建人自己是"项目负责人"角色才自动带入自己，依然可以改
+        defaultProjectManagerId: authStore.employeeRole === '项目负责人' ? authStore.employeeId : null,
+        notes: '', items: []
       })
     }
   }
@@ -432,6 +457,7 @@ async function handleSave() {
       teamId: form.teamId,
       countryMarket: form.countryMarket,
       requirementMonth: form.requirementMonth,
+      defaultProjectManagerId: form.defaultProjectManagerId || null,
       fullRequirementContent: form.fullRequirementContent || null,
       notes: form.notes || null,
       items: form.items.map(i => ({
