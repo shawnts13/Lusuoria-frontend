@@ -174,6 +174,7 @@
     <RequirementLinkPickerModal
       v-model:visible="linkPickerVisible"
       :influencer-id="panes[linkPickerPaneIndex]?.influencerId"
+      :preset-requirement="linkPickerPresetRequirement"
       @confirm="data => onRequirementLinked(linkPickerPaneIndex, data)"
     />
   </a-modal>
@@ -204,6 +205,8 @@ const activeIndex = ref(0)
 const formRefs = ref([])
 const linkPickerVisible = ref(false)
 const linkPickerPaneIndex = ref(0)
+// 从"红人需求管理"页面点击"新建合作跟踪"打开时，指定跳过第一步、直接选这条需求的子项
+const linkPickerPresetRequirement = ref(null)
 let paneSeq = 0
 
 function createPane() {
@@ -282,6 +285,7 @@ function removePane(idx) {
 
 function openLinkPicker(idx) {
   linkPickerPaneIndex.value = idx
+  linkPickerPresetRequirement.value = null
   linkPickerVisible.value = true
 }
 function onRequirementLinked(idx, data) {
@@ -295,6 +299,28 @@ function onRequirementLinked(idx, data) {
   pane.videoType = data.videoType
   pane.influencerCost = data.influencerUnitCostPrice ?? null
   pane.clientPrice = data.clientUnitPrice ?? null
+  // 项目负责人默认值联动：创建人自己是"项目负责人"角色时仍优先填自己；否则采用需求配置的
+  // 默认项目负责人；都没有则保留原先算好的默认值。跟 CollaborationFormModal.vue 的同名逻辑保持一致
+  if (authStore.employeeRole === '项目负责人') {
+    pane.projectManagerId = authStore.employeeId
+  } else if (data.defaultProjectManagerId != null) {
+    pane.projectManagerId = data.defaultProjectManagerId
+  }
+}
+
+// "红人需求管理"页面"新建合作跟踪"按钮的入口：跳过手动选红人/关联需求这两步，直接定位到
+// 这条需求，只需要用户选一个需求子项，然后正常填写其余字段
+function openForRequirement(record) {
+  resetPanes()
+  const pane = panes[0]
+  pane.influencerId = record.influencerId
+  pane.brandId = record.brandId
+  pane.teamId = record.teamId
+  pane.countryMarket = record.countryMarket
+  linkPickerPaneIndex.value = 0
+  linkPickerPresetRequirement.value = record
+  linkPickerVisible.value = true
+  emit('update:visible', true)
 }
 
 function close() { emit('update:visible', false) }
@@ -343,7 +369,7 @@ function resetPanes() {
   formRefs.value = []
 }
 
-defineExpose({ resetPanes })
+defineExpose({ resetPanes, openForRequirement })
 </script>
 
 <style scoped>

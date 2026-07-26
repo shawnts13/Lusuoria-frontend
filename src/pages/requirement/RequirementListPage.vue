@@ -103,6 +103,13 @@
                 </span>
               </a-tooltip>
               <a-divider type="vertical" />
+              <a-tooltip :title="isRequirementComplete(record) ? '该需求已实施完成（进度100%），无需再新建合作跟踪' : ''">
+                <span>
+                  <a-button size="small" :disabled="isRequirementComplete(record)"
+                    @click="openBatchCreateForRequirement(record)">新建合作跟踪</a-button>
+                </span>
+              </a-tooltip>
+              <a-divider type="vertical" />
               <a-tooltip :title="contractButtonState(record).tooltip">
                 <span>
                   <a-button size="small" :disabled="contractButtonState(record).disabled"
@@ -143,6 +150,16 @@
 
     <RequirementContractModal v-model:visible="contractModalVisible" :requirement="contractModalRequirement"
       @saved="loadData" />
+
+    <CollaborationBatchCreateModal
+      ref="batchCreateModalRef"
+      v-model:visible="batchCreateModalVisible"
+      :brands="brands"
+      :influencers="influencers"
+      :employees="employees"
+      :can-view-baseline-financials="authStore.canViewBaselineFinancials"
+      @saved="loadData"
+    />
   </div>
 </template>
 
@@ -161,6 +178,7 @@ import RequirementItemsViewModal from './RequirementItemsViewModal.vue'
 import RequirementProgressModal from './RequirementProgressModal.vue'
 import RequirementInvoiceModal from './RequirementInvoiceModal.vue'
 import RequirementContractModal from './RequirementContractModal.vue'
+import CollaborationBatchCreateModal from '../collaboration/CollaborationBatchCreateModal.vue'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -191,6 +209,9 @@ const invoiceModalRequirement = ref(null)
 
 const contractModalVisible = ref(false)
 const contractModalRequirement = ref(null)
+
+const batchCreateModalVisible = ref(false)
+const batchCreateModalRef = ref(null)
 
 // 红人合同数据（按红人id批量拉取，key=influencerId，value=该红人名下的合同列表，每条含
 // brandId/teamId/startDate/endDate/contractLink），供"合同链接"列/按钮判断品牌方
@@ -233,7 +254,7 @@ const columns = [
   { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
   { title: 'Invoice链接', key: 'invoiceLink', width: 110 },
   { title: '合同链接', key: 'contractLink', width: 220 },
-  { title: '操作', key: 'action', width: 260, fixed: 'right' }
+  { title: '操作', key: 'action', width: 360, fixed: 'right' }
 ]
 const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
@@ -274,6 +295,15 @@ function progressColor(record) {
   if (ratio >= 1) return '#52c41a'
   if (ratio > 0.5) return '#faad14'
   return '#fa8c16'
+}
+// "新建合作跟踪"按钮的可点条件：跟 onlyIncomplete 筛选、后端 pageIncomplete 用的是同一套
+// "需求完成进度"判定——total>0 且 completed>=total 才算完成，条目总数为0（0%）不算完成
+function isRequirementComplete(record) {
+  const total = record.totalItemCount ?? 0
+  return total > 0 && (record.completedCount ?? 0) >= total
+}
+function openBatchCreateForRequirement(record) {
+  batchCreateModalRef.value?.openForRequirement(record)
 }
 function getBrand(id) { return brands.value.find(b => b.id === id) }
 function getBrandName(id) { return getBrand(id)?.name }

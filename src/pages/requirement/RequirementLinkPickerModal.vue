@@ -42,7 +42,7 @@
         </template>
       </a-list>
       <div style="margin-top:16px;text-align:right">
-        <a-button style="margin-right:8px" @click="step = 1">上一步</a-button>
+        <a-button v-if="!presetRequirement" style="margin-right:8px" @click="step = 1">上一步</a-button>
         <a-button type="primary" :disabled="!selectedItem" @click="confirmSelection">确定</a-button>
       </div>
     </template>
@@ -55,7 +55,10 @@ import { requirementApi } from '../../api/index'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  influencerId: { type: [Number, String], default: null }
+  influencerId: { type: [Number, String], default: null },
+  // 从"红人需求管理"页面点击"新建合作跟踪"时传入：跳过第一步的需求列表，直接进入第二步
+  // 选这条已经确定的需求下的子项
+  presetRequirement: { type: Object, default: null }
 })
 const emit = defineEmits(['update:visible', 'confirm'])
 
@@ -81,24 +84,32 @@ async function loadRequirements() {
   }
 }
 
-async function goToStep2() {
-  if (!selectedRequirement.value) return
+async function loadItems(requirementId) {
   step.value = 2
   selectedItem.value = null
   loadingStep2.value = true
   try {
-    const res = await requirementApi.items(selectedRequirement.value.id)
+    const res = await requirementApi.items(requirementId)
     items.value = res.data || []
   } finally {
     loadingStep2.value = false
   }
 }
 
+async function goToStep2() {
+  if (!selectedRequirement.value) return
+  await loadItems(selectedRequirement.value.id)
+}
+
 watch(() => props.visible, v => {
-  if (v) {
+  if (!v) return
+  selectedItem.value = null
+  if (props.presetRequirement) {
+    selectedRequirement.value = props.presetRequirement
+    loadItems(props.presetRequirement.id)
+  } else {
     step.value = 1
     selectedRequirement.value = null
-    selectedItem.value = null
     loadRequirements()
   }
 })
