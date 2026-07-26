@@ -3,7 +3,7 @@
     <div class="page-header">
       <span class="page-title">1. 红人需求管理</span>
       <a-space>
-        <a-button :type="filters.onlyIncomplete ? 'primary' : 'default'" @click="toggleOnlyIncomplete">
+        <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyIncomplete }" @click="toggleOnlyIncomplete">
           <template #icon><FilterOutlined /></template>
           {{ filters.onlyIncomplete ? '查看全部需求' : '查看未完成的需求' }}
         </a-button>
@@ -103,7 +103,7 @@
                 </span>
               </a-tooltip>
               <a-divider type="vertical" />
-              <a-tooltip :title="isRequirementComplete(record) ? '该需求已实施完成（进度100%），无需再新建合作跟踪' : ''">
+              <a-tooltip :title="isRequirementComplete(record) ? '该需求下所有条目都已建立跟踪记录，无需再新建合作跟踪' : ''">
                 <span>
                   <a-button size="small" :disabled="isRequirementComplete(record)"
                     @click="openBatchCreateForRequirement(record)">新建合作跟踪</a-button>
@@ -298,9 +298,13 @@ function progressColor(record) {
 }
 // "新建合作跟踪"按钮的可点条件：跟 onlyIncomplete 筛选、后端 pageIncomplete 用的是同一套
 // "需求完成进度"判定——total>0 且 completed>=total 才算完成，条目总数为0（0%）不算完成
+// "新建合作跟踪"按钮是否禁用：看这条需求下的条目是不是都已经建立了跟踪记录
+// （establishedCount，不看 progress 状态），而不是看"需求完成进度"（completedCount，
+// 只看已发布/已结算/折损这几个终态）——后者没到100%也可能每个条目的名额都已经被
+// 建立的跟踪记录占满了，此时不该再允许新建
 function isRequirementComplete(record) {
   const total = record.totalItemCount ?? 0
-  return total > 0 && (record.completedCount ?? 0) >= total
+  return total > 0 && (record.establishedCount ?? 0) >= total
 }
 function openBatchCreateForRequirement(record) {
   batchCreateModalRef.value?.openForRequirement(record)
@@ -523,5 +527,26 @@ onMounted(async () => {
   color: #999 !important;
   border-color: #e8e8e8 !important;
   background: #fafafa !important;
+}
+
+/* "查看未完成的需求"筛选按钮：常态就用醒目的橙色描边，让人一眼注意到这里能筛选；
+   激活（正在只看未完成）时切换成实心橙色背景，跟应用里"待处理/进行中"惯用的橙色系一致 */
+.incomplete-filter-btn {
+  color: #fa8c16;
+  border-color: #fa8c16;
+}
+.incomplete-filter-btn:hover {
+  color: #ffa940 !important;
+  border-color: #ffa940 !important;
+}
+.incomplete-filter-btn.active {
+  color: #fff;
+  background: #fa8c16;
+  border-color: #fa8c16;
+}
+.incomplete-filter-btn.active:hover {
+  color: #fff !important;
+  background: #ffa940 !important;
+  border-color: #ffa940 !important;
 }
 </style>

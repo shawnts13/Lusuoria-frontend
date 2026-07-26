@@ -30,6 +30,14 @@
           <a @click="goToTracking(record)">查看详情</a>
         </template>
       </template>
+      <template #summary>
+        <a-table-summary-row v-if="filteredRecords.length">
+          <a-table-summary-cell :col-span="columns.length">
+            共 {{ filteredRecords.length }} 条记录，其中已完成（视频项目进度已发布/已结算/折损）
+            <b>{{ completedCount }}</b> 条
+          </a-table-summary-cell>
+        </a-table-summary-row>
+      </template>
     </a-table>
   </a-modal>
 </template>
@@ -61,6 +69,12 @@ const filteredRecords = computed(() => {
   if (itemIndexFilter.value == null) return records.value
   return records.value.filter(r => r.itemIndex === itemIndexFilter.value)
 })
+
+// 跟后端"需求完成进度"分子的口径保持一致（countCompletedByRequirementNos）：
+// 已发布(未结算)/已加入客户未结算列表/客户已结算/折损 这四个状态算"已完成"
+const COMPLETED_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'DELAYED']
+const completedCount = computed(() =>
+  filteredRecords.value.filter(r => COMPLETED_PROGRESS.includes(r.progress)).length)
 
 const columns = [
   { title: '需求条目', key: 'itemIndex', width: 90 },
