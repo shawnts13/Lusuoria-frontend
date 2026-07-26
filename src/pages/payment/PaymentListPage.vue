@@ -45,10 +45,19 @@
         @change="handleTableChange">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'brand'">
-            {{ getBrandName(record.brandId) || '—' }}
+            <a-tag v-if="getBrandName(record.brandId)" :color="colorForValue(getBrandName(record.brandId))">
+              {{ getBrandName(record.brandId) }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'team'">
-            {{ teamNamesLabel(record.teamIds) }}
+            <template v-if="record.teamIds && record.teamIds.length">
+              <a-tag v-for="(tid, idx) in record.teamIds" :key="idx"
+                :color="colorForValue(teamLabelOf(tid))" style="margin:2px">
+                {{ teamLabelOf(tid) }}
+              </a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'items'">
             <a @click="openItemsView(record)">查看涉及的红人视频项目</a>
@@ -109,6 +118,7 @@ import { paymentApi, brandApi, influencerTeamApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
 import PaymentFormModal from './PaymentFormModal.vue'
 import PaymentStatusModal from './PaymentStatusModal.vue'
 import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
@@ -179,10 +189,10 @@ function getBrandName(brandId) {
 function getTeamName(teamId) {
   return teams.value.find(t => t.id === teamId)?.name || ''
 }
-// 一条结款记录支持跨团队合并结算，teamIds 是个数组（元素可能是 null，代表"不涉及团队"也在范围内）
-function teamNamesLabel(teamIds) {
-  if (!teamIds || !teamIds.length) return '—'
-  return teamIds.map(id => id == null ? '—' : (getTeamName(id) || id)).join('、')
+// 一条结款记录支持跨团队合并结算，teamIds 是个数组（元素可能是 null，代表"不涉及团队"也在范围内），
+// 每个团队各自渲染成一个带颜色的标签，跟其他模块的"品牌方/团队"展示风格保持一致
+function teamLabelOf(teamId) {
+  return teamId == null ? '（不涉及团队）' : (getTeamName(teamId) || teamId)
 }
 
 async function loadData() {
