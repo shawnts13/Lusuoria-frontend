@@ -110,11 +110,16 @@ export const employeeApi = {
     `${BASE}/api/employees/export/excel${role ? '?role=' + role : ''}`, '员工.xlsx')
 }
 
-// ===== Executor Pay Rates（执行人员薪资梯度，按(项目负责人,执行人员)独立维护） =====
+// ===== Executor Pay Rates（执行人员薪资梯度，按(项目负责人,执行人员,视频类型)独立维护，
+// 每个视频类型都是一份"按当月累计条数分档"的梯度——"每条固定价"就是只配置一档、不封顶） =====
 export const executorPayRateApi = {
-  // managerId 不传时，后端 STAFF 账号自动用当前登录人自己的员工id；ADMIN 不传则默认取"管理层"
+  // managerId 不传时，后端 STAFF 账号自动用当前登录人自己的员工id；ADMIN 不传则默认取"管理层"。
+  // 返回该负责人名下所有执行人员/所有视频类型的档位平铺列表，前端自行按 executorId+videoType 分组
   list:  (managerId) => http.get('/api/executor-pay-rates', { params: { managerId } }),
-  check: (managerId, executorId) => http.get('/api/executor-pay-rates/check', { params: { managerId, executorId } }),
+  // 2026-07 起配置按视频类型分开，必须精确到 videoType 才能判断某个类型是否已配置
+  check: (managerId, executorId, videoType) =>
+    http.get('/api/executor-pay-rates/check', { params: { managerId, executorId, videoType } }),
+  // data: { managerId, executorId, tiersByType: { REAL_SHOT_NEW: [...], ... } }，整批替换
   save:  (data) => http.post('/api/executor-pay-rates', data)
 }
 

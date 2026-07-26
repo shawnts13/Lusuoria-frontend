@@ -40,12 +40,12 @@
               {{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}
             </template>
             <template v-else-if="isExecutorRole(record.role)">
-              <div v-if="executorRates[record.id]" style="font-size:12px;line-height:1.6">
-                <div>实拍新视频：{{ fmtRate(executorRates[record.id].rateRealShotNew) }}</div>
-                <div>AI新素材：{{ fmtRate(executorRates[record.id].rateAiNewMaterial) }}</div>
-                <div>旧素材重发(1-50)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier1) }}</div>
-                <div>旧素材重发(51-100)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier2) }}</div>
-                <div>旧素材重发(101+)：{{ fmtRate(executorRates[record.id].rateOldMaterialTier3) }}，封顶{{ executorRates[record.id].oldMaterialMonthlyCap ? '¥' + fmtNum(executorRates[record.id].oldMaterialMonthlyCap) : '—' }}/月</div>
+              <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.6">
+                <div v-for="type in VIDEO_TYPES" :key="type">
+                  <template v-if="tierSummary(record.id, type)">
+                    {{ VIDEO_TYPE_LABELS[type] }}：{{ tierSummary(record.id, type) }}
+                  </template>
+                </div>
               </div>
               <span v-else style="color:#c00000;font-size:12px">请项目负责人设置对应执行人员的薪资规则</span>
             </template>
@@ -162,6 +162,7 @@ import { employeeApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
+import { VIDEO_TYPES, VIDEO_TYPE_LABELS, formatVideoTypeTiers } from '../../utils/executorRateFormat'
 import ExecutorRateFields from './ExecutorRateFields.vue'
 
 const { getOptions } = useOptions()
@@ -178,9 +179,16 @@ function isLegalRole(role)       { return role === LEGAL_ROLE }
 
 const loading = ref(false)
 const list    = ref([])
-// 执行人员薪资标准（这里代表"管理层"那份 ExecutorPayRate，见 ExecutorRateFields 的 managerId 解析规则），
-// key 为执行人员的员工 id，供列表"薪资信息"列直接展示当前已配置的费率
+// 执行人员薪资标准（这里代表"管理层"那份配置，见 ExecutorRateFields 的 managerId 解析规则），
+// 结构：{ [executorId]: { [videoType]: [tier, ...] } }，供列表"薪资信息"列直接展示当前已配置的档位
 const executorRates = ref({})
+
+function tierSummary(executorId, videoType) {
+  return formatVideoTypeTiers(executorRates.value[executorId]?.[videoType])
+}
+function hasAnyRate(executorId) {
+  return VIDEO_TYPES.some(type => tierSummary(executorId, type))
+}
 const modalVisible = ref(false)
 const editing  = ref(null)
 const saving   = ref(false)
@@ -243,10 +251,6 @@ function fmtNum(val) {
   if (val == null) return '—'
   return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-function fmtRate(val) {
-  return val != null ? '¥' + fmtNum(val) : '—'
-}
-
 async function loadData() {
   loading.value = true
   try {
@@ -256,7 +260,11 @@ async function loadData() {
     ])
     list.value = empRes.data || []
     const map = {}
-    for (const r of (rateRes.data || [])) map[r.executorId] = r
+    for (const t of (rateRes.data || [])) {
+      if (!map[t.executorId]) map[t.executorId] = {}
+      if (!map[t.executorId][t.videoType]) map[t.executorId][t.videoType] = []
+      map[t.executorId][t.videoType].push(t)
+    }
     executorRates.value = map
   } finally { loading.value = false }
 }

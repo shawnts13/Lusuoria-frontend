@@ -1,44 +1,19 @@
 <template>
   <div>
-    <a-divider orientation="left" style="font-size:13px">工资标准（按项目视频类型/件计算）</a-divider>
     <a-spin :spinning="loading">
-      <a-form layout="vertical">
-        <a-form-item label="实拍新视频">
-          <a-input-number v-model:value="form.rateRealShotNew"
-            style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-        </a-form-item>
-        <a-form-item label="AI新素材">
-          <a-input-number v-model:value="form.rateAiNewMaterial"
-            style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-        </a-form-item>
-        <a-form-item label="旧素材重发(1-50条)">
-          <a-input-number v-model:value="form.rateOldMaterialTier1"
-            style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-        </a-form-item>
-        <a-form-item label="旧素材重发(51-100条)">
-          <a-input-number v-model:value="form.rateOldMaterialTier2"
-            style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-        </a-form-item>
-        <a-form-item label="旧素材重发(101条+)单价">
-          <a-input-number v-model:value="form.rateOldMaterialTier3"
-            style="width:100%" :min="0" :precision="2" addon-after="元/条" />
-        </a-form-item>
-        <a-form-item label="该部分当月封顶">
-          <a-input-number v-model:value="form.oldMaterialMonthlyCap"
-            style="width:100%" :min="0" :precision="2" addon-after="元/月封顶" />
-          <div style="font-size:12px; color:#888; margin-top:4px">
-            第101条及以上部分按单价计算后，当月该部分金额封顶该数值
-          </div>
-        </a-form-item>
-      </a-form>
+      <RateTierEditor v-model="tiersByType.REAL_SHOT_NEW" label="实拍新视频" />
+      <RateTierEditor v-model="tiersByType.REAL_SHOT_NEW_PHOTO" label="实拍新图片" />
+      <RateTierEditor v-model="tiersByType.AI_NEW_MATERIAL" label="AI新素材" />
+      <RateTierEditor v-model="tiersByType.OLD_MATERIAL_REPOST" label="旧素材重发" />
     </a-spin>
   </div>
 </template>
 
 <script setup>
 /**
- * 执行人员薪资梯度 - 共享编辑区块，由 (managerId, executorId) 唯一确定一份。
- * 供两处复用：
+ * 执行人员薪资梯度 - 共享编辑区块，由 (managerId, executorId) 唯一确定一份，四个视频类型
+ * （实拍新视频/实拍新图片/AI新素材/旧素材重发）各自独立维护一份"按当月累计条数分档"的梯度
+ * （"每条固定价"就是只维护一档、且不设最高条数）。供两处复用：
  *   - EmployeeListPage.vue（ADMIN/管理层"员工管理"页面编辑某个执行人员时，
  *     managerId 固定传系统里唯一的"管理层"员工 id）
  *   - ExecutorPayRateListPage.vue（项目负责人"执行人员管理"页面，managerId 不传，
@@ -47,27 +22,41 @@
  */
 import { reactive, ref, watch } from 'vue'
 import { executorPayRateApi } from '../../api/index'
+import RateTierEditor from './RateTierEditor.vue'
 
 const props = defineProps({
   executorId: { type: [Number, String], default: null },
   managerId: { type: [Number, String], default: null } // 不传时后端自动用当前登录账号自己的员工id
 })
 
+const VIDEO_TYPES = ['REAL_SHOT_NEW', 'REAL_SHOT_NEW_PHOTO', 'AI_NEW_MATERIAL', 'OLD_MATERIAL_REPOST']
+
 const loading = ref(false)
-const emptyRate = () => ({
-  rateRealShotNew: null, rateAiNewMaterial: null,
-  rateOldMaterialTier1: null, rateOldMaterialTier2: null, rateOldMaterialTier3: null,
-  oldMaterialMonthlyCap: null
+const tiersByType = reactive({
+  REAL_SHOT_NEW: [], REAL_SHOT_NEW_PHOTO: [], AI_NEW_MATERIAL: [], OLD_MATERIAL_REPOST: []
 })
-const form = reactive(emptyRate())
+
+function emptyTiers() {
+  return { REAL_SHOT_NEW: [], REAL_SHOT_NEW_PHOTO: [], AI_NEW_MATERIAL: [], OLD_MATERIAL_REPOST: [] }
+}
 
 async function load() {
-  if (!props.executorId) { Object.assign(form, emptyRate()); return }
+  Object.assign(tiersByType, emptyTiers())
+  if (!props.executorId) return
   loading.value = true
   try {
     const res = await executorPayRateApi.list(props.managerId)
-    const mine = (res.data || []).find(r => r.executorId === props.executorId)
-    Object.assign(form, emptyRate(), mine || {})
+    const mine = (res.data || []).filter(t => t.executorId === props.executorId)
+    for (const t of mine) {
+      if (tiersByType[t.videoType]) {
+        tiersByType[t.videoType].push({
+          minCount: t.minCount, maxCount: t.maxCount, rate: t.rate, monthlyCap: t.monthlyCap
+        })
+      }
+    }
+    for (const type of VIDEO_TYPES) {
+      tiersByType[type].sort((a, b) => (a.minCount || 0) - (b.minCount || 0))
+    }
   } finally { loading.value = false }
 }
 
@@ -76,10 +65,14 @@ watch(() => [props.executorId, props.managerId], load, { immediate: true })
 /** 保存这份费率，供父组件在整体表单保存时调用 */
 async function save() {
   if (!props.executorId) return
+  const tiersByTypeToSave = {}
+  for (const type of VIDEO_TYPES) {
+    tiersByTypeToSave[type] = tiersByType[type].filter(t => t.minCount != null && t.rate != null)
+  }
   await executorPayRateApi.save({
     managerId: props.managerId || null,
     executorId: props.executorId,
-    ...form
+    tiersByType: tiersByTypeToSave
   })
 }
 

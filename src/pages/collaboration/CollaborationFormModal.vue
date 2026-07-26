@@ -702,10 +702,11 @@ const preSaveCostRecord = ref(null)
 const pendingPayload = ref(null)
 
 async function needsExecutorCostBeforeSave() {
-  if (!form.executorId || !form.projectManagerId) return false
+  if (!form.executorId || !form.projectManagerId || !form.videoType) return false
   if (props.record?.executorCostNotApplicable) return false
   if (!willAutoTransitionOnSave()) return false
-  const res = await executorPayRateApi.check(form.projectManagerId, form.executorId)
+  // 2026-07 起费率按视频类型分开配置，必须精确到这条记录的具体视频类型才能判断
+  const res = await executorPayRateApi.check(form.projectManagerId, form.executorId, form.videoType)
   return !res.data
 }
 
