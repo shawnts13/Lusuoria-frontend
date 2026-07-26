@@ -51,6 +51,18 @@
           </div>
         </div>
 
+        <div v-if="detail.type === 'MANAGEMENT'" class="formula-box">
+          <div class="formula-line">
+            公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计（含Bonus） − 内部其他员工成本 − 奖金合计
+          </div>
+          <div class="formula-line formula-data">
+            = {{ fmt(detail.grossProfit) }} − {{ fmt(detail.executorPayTotal) }}
+            − {{ fmt(detail.managerCommissionTotal) }} − {{ fmt(detail.otherStaffCost) }}
+            − {{ fmt(detail.extraBonusPayoutTotal) }}
+            = <b>{{ fmt(detail.totalAmount) }}</b>
+          </div>
+        </div>
+
         <div class="footer-hint">
           {{ detail.confirmed ? '以上为已确认的工资单快照' : '以上为工资单预计（实时更新）' }}
         </div>
@@ -150,6 +162,22 @@ function close() { emit('update:visible', false) }
   border-top: 1px solid #f0f0f0;
   margin-top: 4px;
   padding-top: 8px;
+}
+.formula-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.formula-line {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.8;
+}
+.formula-line.formula-data {
+  color: #333;
+  font-family: 'Consolas', monospace;
 }
 .footer-hint {
   margin-top: 8px;

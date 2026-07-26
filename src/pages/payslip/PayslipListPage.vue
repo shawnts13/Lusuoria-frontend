@@ -52,6 +52,17 @@
             <div v-if="managementRow.blockedReason && !managementRow.confirmed" class="mgmt-hint">
               {{ managementRow.blockedReason }}
             </div>
+            <div class="formula-box">
+              <div class="formula-line">
+                公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计（含Bonus） − 内部其他员工成本 − 奖金合计
+              </div>
+              <div class="formula-line formula-data">
+                = {{ fmt(managementRow.grossProfit) }} − {{ fmt(managementRow.executorPayTotal) }}
+                − {{ fmt(managementRow.managerCommissionTotal) }} − {{ fmt(managementRow.otherStaffCost) }}
+                − {{ fmt(managementRow.extraBonusPayoutTotal) }}
+                = <b>{{ fmt(managementRow.totalAmount) }}</b>
+              </div>
+            </div>
           </template>
         </a-spin>
       </div>
@@ -406,6 +417,22 @@ onMounted(loadAll)
 }
 .filter-bar {
   margin-bottom: 12px;
+}
+.formula-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fff;
+}
+.formula-line {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.8;
+}
+.formula-line.formula-data {
+  color: #333;
+  font-family: 'Consolas', monospace;
 }
 .exchange-rate-display {
   font-size: 13px;

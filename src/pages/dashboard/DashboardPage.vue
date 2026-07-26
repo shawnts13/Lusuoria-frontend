@@ -82,6 +82,15 @@
           <div class="value">{{ fmt(summary.totalCompanyProfit) }}</div>
         </div>
       </div>
+
+      <div v-if="summary.totalCompanyProfit != null" class="formula-box">
+        <div class="formula-line">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计 − 内部其他员工成本</div>
+        <div class="formula-line formula-data">
+          = {{ fmt(summary.totalGrossProfit) }} − {{ fmt(summary.totalInternalExecutionCost) }}
+          − {{ fmt(summary.totalCommissionAmount) }} − {{ fmt(summary.totalOtherStaffCost) }}
+          = <b>{{ fmt(summary.totalCompanyProfit) }}</b>
+        </div>
+      </div>
     </a-spin>
 
     <!-- 视频项目数量下钻：品牌方 + 红人团队，无币种切换 -->
@@ -308,5 +317,21 @@ onMounted(loadSummary)
 .exchange-rate-error a {
   color: #1677ff;
   margin-left: 4px;
+}
+.formula-box {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.formula-line {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.8;
+}
+.formula-line.formula-data {
+  color: #333;
+  font-family: 'Consolas', monospace;
 }
 </style>
