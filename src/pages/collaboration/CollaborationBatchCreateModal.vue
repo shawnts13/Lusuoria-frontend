@@ -22,16 +22,6 @@
         <a-form v-for="(pane, idx) in panes" v-show="idx === activeIndex" :key="pane.key"
           :ref="el => { if (el) formRefs[idx] = el }" :model="pane" layout="vertical">
 
-          <a-form-item label="内部需求编号">
-            <a-input-group compact style="display:flex">
-              <a-input :value="pane.internalRequirementNo" disabled placeholder="未关联" style="flex:1" />
-              <a-button :disabled="!pane.influencerId" @click="openLinkPicker(idx)">关联红人需求</a-button>
-            </a-input-group>
-            <div style="font-size:12px;color:#c00000;margin-top:2px">
-              没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
-            </div>
-          </a-form-item>
-
           <a-row :gutter="16">
             <a-col :span="12">
               <a-form-item label="红人社媒完整名字" name="influencerId"
@@ -89,6 +79,16 @@
           <div v-if="pane.influencerId" style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
             找不到品牌方、红人团队？请先维护"红人管理"模块下该红人的数据。
           </div>
+
+          <a-form-item label="内部需求编号">
+            <a-input-group compact style="display:flex">
+              <a-input :value="pane.internalRequirementNo" disabled placeholder="未关联" style="flex:1" />
+              <a-button :disabled="!pane.influencerId" @click="openLinkPicker(idx)">关联红人需求</a-button>
+            </a-input-group>
+            <div style="font-size:12px;color:#c00000;margin-top:2px">
+              没有内部需求编号？请先在"1.红人需求管理"模块里新增对应红人的需求
+            </div>
+          </a-form-item>
 
           <a-form-item label="合作平台">
             <a-select v-model:value="pane.platforms" mode="multiple" allow-clear placeholder="可多选">
