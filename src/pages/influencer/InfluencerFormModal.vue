@@ -154,16 +154,17 @@
               </template>
               <template v-else>
                 <div v-if="contracts.length" style="margin-bottom:8px">
-                  <div v-for="c in contracts" :key="c.id"
-                    style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-                    <span style="width:160px;font-size:12px">
-                      {{ brandNameById(c.brandId) }}{{ c.teamId ? '/' + teamNameById(c.teamId) : '' }}
-                    </span>
-                    <span style="width:200px;font-size:12px;color:#888">
-                      {{ formatDate(c.startDate) }} 至 {{ formatDate(c.endDate) }}
-                    </span>
-                    <a :href="c.contractLink" target="_blank" style="flex:1;font-size:12px">查看合同</a>
-                    <a @click="openContractModal(c)">编辑</a>
+                  <div v-for="c in contracts" :key="c.id" class="contract-card">
+                    <div class="contract-card-tags">
+                      <a-tag :color="colorForValue(brandNameById(c.brandId))">{{ brandNameById(c.brandId) }}</a-tag>
+                      <a-tag v-if="c.teamId" :color="colorForValue(teamNameById(c.teamId))">{{ teamNameById(c.teamId) }}</a-tag>
+                      <span v-else class="contract-no-team">不涉及团队</span>
+                    </div>
+                    <div class="contract-card-range">{{ formatDate(c.startDate) }} 至 {{ formatDate(c.endDate) }}</div>
+                    <div class="contract-card-actions">
+                      <a :href="c.contractLink" target="_blank">查看合同</a>
+                      <a @click="openContractModal(c)">编辑</a>
+                    </div>
                   </div>
                 </div>
                 <span v-else style="color:#bbb;font-size:12px;display:block;margin-bottom:8px">还没有已签署的合同记录</span>
@@ -214,6 +215,7 @@ import { influencerApi, employeeApi, domainApi, influencerTeamApi, influencerCon
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
 import InfluencerContractModal from './InfluencerContractModal.vue'
 
 const props = defineProps({
@@ -471,3 +473,38 @@ onMounted(async () => {
   employees.value = empRes.data || []
 })
 </script>
+
+<style scoped>
+.contract-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.contract-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 160px;
+}
+.contract-no-team {
+  font-size: 12px;
+  color: #999;
+}
+.contract-card-range {
+  font-size: 12px;
+  color: #595959;
+  font-weight: 500;
+}
+.contract-card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+}
+</style>

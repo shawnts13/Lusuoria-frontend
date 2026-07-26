@@ -27,8 +27,11 @@
           </a-select-option>
         </a-select>
       </a-form-item>
-      <a-form-item label="合同有效期">
-        <a-range-picker v-model:value="dateRange" value-format="YYYY-MM-DD" style="width:100%" />
+      <a-form-item label="合同生效日期">
+        <a-date-picker v-model:value="startDate" value-format="YYYY-MM-DD" style="width:100%" />
+      </a-form-item>
+      <a-form-item label="合同失效日期">
+        <a-date-picker v-model:value="endDate" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
       <a-form-item label="合同链接">
         <a-input v-model:value="contractLink" placeholder="粘贴上传好后的合同链接" />
@@ -60,7 +63,8 @@ const emit = defineEmits(['update:visible', 'saved'])
 const saving = ref(false)
 const brandId = ref(null)
 const teamId = ref(null)
-const dateRange = ref([])
+const startDate = ref(null)
+const endDate = ref(null)
 const contractLink = ref('')
 
 const availableBrandIds = computed(() => [...new Set(props.brandTeamPairs.map(p => p.brandId))])
@@ -81,14 +85,16 @@ watch(() => props.visible, v => {
   if (props.contract) {
     brandId.value = props.contract.brandId
     teamId.value = props.contract.teamId ?? null
-    dateRange.value = [props.contract.startDate, props.contract.endDate]
+    startDate.value = props.contract.startDate
+    endDate.value = props.contract.endDate
     contractLink.value = props.contract.contractLink || ''
   } else {
     brandId.value = availableBrands.value.length === 1 ? availableBrands.value[0].id : null
     // 直接同步读取 availableTeams（不依赖上面的 watch(brandId,...) 异步触发），
     // 避免 brandId 被赋成跟上次打开时相同的值导致 watch 不触发、团队漏填
     teamId.value = availableTeams.value.length === 1 ? (availableTeams.value[0].teamId ?? null) : null
-    dateRange.value = []
+    startDate.value = null
+    endDate.value = null
     contractLink.value = ''
   }
 })
@@ -100,8 +106,12 @@ async function handleSave() {
     message.warning('请选择品牌方')
     return
   }
-  if (!dateRange.value || dateRange.value.length !== 2) {
-    message.warning('请选择合同有效期')
+  if (!startDate.value || !endDate.value) {
+    message.warning('请选择合同生效日期和失效日期')
+    return
+  }
+  if (startDate.value > endDate.value) {
+    message.warning('合同生效日期不能晚于失效日期')
     return
   }
   if (!contractLink.value || !contractLink.value.trim()) {
@@ -114,8 +124,8 @@ async function handleSave() {
       influencerId: props.influencerId,
       brandId: brandId.value,
       teamId: teamId.value ?? null,
-      startDate: dateRange.value[0],
-      endDate: dateRange.value[1],
+      startDate: startDate.value,
+      endDate: endDate.value,
       contractLink: contractLink.value.trim()
     }
     if (props.contract) {
