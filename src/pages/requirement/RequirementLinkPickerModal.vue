@@ -115,6 +115,8 @@ function confirmSelection() {
     countryMarket: selectedRequirement.value.countryMarket,
     platform: (selectedItem.value.platform || '').split('\n').filter(Boolean),
     videoType: selectedItem.value.videoType,
+    influencerUnitCostPrice: selectedItem.value.influencerUnitCostPrice,
+    clientUnitPrice: selectedItem.value.clientUnitPrice,
     defaultProjectManagerId: selectedRequirement.value.defaultProjectManagerId
   })
   close()

@@ -90,6 +90,30 @@
             </div>
           </a-form-item>
 
+          <a-form-item label="项目视频类型">
+            <a-select v-model:value="pane.videoType" allow-clear placeholder="选择视频类型" :disabled="!!pane.internalRequirementNo">
+              <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+            </a-select>
+            <div v-if="pane.internalRequirementNo" style="font-size:12px;color:#888;margin-top:2px">
+              已根据关联的需求子项自动填入，如需修改请重新点击"关联红人需求"选择其他子项
+            </div>
+          </a-form-item>
+
+          <a-row :gutter="16" v-if="canViewBaselineFinancials">
+            <a-col :span="12">
+              <a-form-item label="红人视频制作与发布成本（美金）">
+                <a-input-number v-model:value="pane.influencerCost" style="width:100%" :precision="2"
+                  placeholder="金额" :disabled="!!pane.internalRequirementNo" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="客户合作价格（美金）">
+                <a-input-number v-model:value="pane.clientPrice" style="width:100%" :precision="2"
+                  placeholder="金额" :disabled="!!pane.internalRequirementNo" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
           <a-form-item label="合作平台">
             <a-select v-model:value="pane.platforms" mode="multiple" allow-clear placeholder="可多选">
               <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
@@ -109,19 +133,12 @@
           </a-form-item>
 
           <a-row :gutter="16">
-            <a-col :span="8">
-              <a-form-item label="项目视频类型">
-                <a-select v-model:value="pane.videoType" allow-clear placeholder="选择视频类型">
-                  <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :span="8">
+            <a-col :span="12">
               <a-form-item label="客户方的项目订单">
                 <a-input v-model:value="pane.clientOrderId" placeholder="拿到后填写" />
               </a-form-item>
             </a-col>
-            <a-col :span="8">
+            <a-col :span="12">
               <a-form-item label="客户方付款批次">
                 <a-input v-model:value="pane.clientPaymentBatch" />
               </a-form-item>
@@ -143,19 +160,6 @@
                   :filter-option="(input, opt) => opt.label.includes(input)" placeholder="选择执行人员">
                   <a-select-option v-for="e in executorCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
                 </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-row :gutter="16" v-if="canViewBaselineFinancials">
-            <a-col :span="12">
-              <a-form-item label="红人视频制作与发布成本（美金）">
-                <a-input-number v-model:value="pane.influencerCost" style="width:100%" :precision="2" placeholder="金额" />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="客户合作价格（美金）">
-                <a-input-number v-model:value="pane.clientPrice" style="width:100%" :precision="2" placeholder="金额" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -289,6 +293,8 @@ function onRequirementLinked(idx, data) {
   pane.countryMarket = data.countryMarket
   pane.platforms = data.platform || []
   pane.videoType = data.videoType
+  pane.influencerCost = data.influencerUnitCostPrice ?? null
+  pane.clientPrice = data.clientUnitPrice ?? null
 }
 
 function close() { emit('update:visible', false) }
