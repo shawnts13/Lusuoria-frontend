@@ -163,20 +163,17 @@
             </span>
           </template>
 
-          <template v-if="column.key === 'projects'">
-            <a v-if="projectCounts[record.id] > 0" @click="goToProjects(record.accountName)">
-              查看（{{ projectCounts[record.id] }}个）
+          <template v-if="column.key === 'activeProjects'">
+            <a v-if="projectCounts[record.id]?.activeCount > 0" @click="openCollabModal(record, 'ACTIVE')">
+              查看（{{ projectCounts[record.id].activeCount }}个）
             </a>
             <span v-else style="color:#bbb">—</span>
           </template>
 
-          <template v-if="column.key === 'casesLinks'">
-            <div v-if="record.casesLinks">
-              <a v-for="(link, idx) in splitMulti(record.casesLinks)" :key="idx"
-                :href="link" target="_blank" style="display:block;font-size:12px;word-break:break-all">
-                {{ link }}
-              </a>
-            </div>
+          <template v-if="column.key === 'completedProjects'">
+            <a v-if="projectCounts[record.id]?.completedCount > 0" @click="openCollabModal(record, 'COMPLETED')">
+              查看（{{ projectCounts[record.id].completedCount }}个）
+            </a>
             <span v-else style="color:#bbb">—</span>
           </template>
 
@@ -191,9 +188,15 @@
           </template>
 
           <template v-if="column.key === 'contractLink'">
-            <a v-if="latestContract(record.id)" :href="latestContract(record.id).contractLink" target="_blank" style="font-size:12px">
-              查看{{ latestContract(record.id).year }}年合同
-            </a>
+            <template v-if="influencerContracts[record.id]?.length">
+              <div v-for="c in influencerContracts[record.id]" :key="c.id" class="contract-mini-card">
+                <a-tag :color="colorForValue(brandNameById(c.brandId))">{{ brandNameById(c.brandId) }}</a-tag>
+                <a-tag v-if="c.teamId" :color="colorForValue(teamNameById(c.teamId))">{{ teamNameById(c.teamId) }}</a-tag>
+                <span v-else class="contract-no-team">不涉及团队</span>
+                <div class="contract-mini-range">{{ formatDate(c.startDate) }} 至 {{ formatDate(c.endDate) }}</div>
+                <a :href="c.contractLink" target="_blank">查看合同</a>
+              </div>
+            </template>
             <span v-else style="color:#bbb">—</span>
           </template>
 
@@ -223,6 +226,13 @@
       @domain-added="loadDomains"
     />
 
+    <InfluencerCollaborationModal
+      v-model:visible="collabModalVisible"
+      :influencer-id="collabModalInfluencerId"
+      :category="collabModalCategory"
+      :title="collabModalTitle"
+    />
+
   </div>
 </template>
 
@@ -236,7 +246,9 @@ import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { colorForValue } from '../../utils/tagColor'
+import { formatDate } from '../../utils/dateFormat'
 import InfluencerFormModal from './InfluencerFormModal.vue'
+import InfluencerCollaborationModal from './InfluencerCollaborationModal.vue'
 
 const authStore = useAuthStore()
 const router    = useRouter()
@@ -251,8 +263,13 @@ const domains   = ref([])
 const teams     = ref([])
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
-const projectCounts       = ref({})
-const influencerContracts = ref({})  // 已签署合同（2026-07 新增），key=influencerId，value={year: contractLink}
+const projectCounts       = ref({})  // key=influencerId，value={activeCount, completedCount}
+const influencerContracts = ref({})  // 已签署合同，key=influencerId，value=该红人全部合同记录数组
+
+const collabModalVisible       = ref(false)
+const collabModalInfluencerId  = ref(null)
+const collabModalCategory      = ref('ACTIVE')
+const collabModalTitle         = ref('')
 
 // 排序状态
 const sortState = reactive({ field: 'accountName', order: 'ascend' })
@@ -270,29 +287,30 @@ const filters = reactive({
   keyword: undefined
 })
 
-// 列定义（按新顺序）
+// 列定义（按新顺序，2026-07 重新排布宽度：标签类字段按实际最长标签留够空间就好，
+// 不再统一给一个偏宽的固定值；"合作中项目"/"已完结项目"紧跟在红人社媒完整名字后面）
 const allColumns = [
-  { title: '品牌方-团队',   key: 'brandTeamPairs',  width: 220 },
+  { title: '品牌方-团队',   key: 'brandTeamPairs',  width: 200 },
   // 宽度按最长标签"境外红人（在华）"留够空间（tag 组件不换行，太窄会被裁切显示不全）
-  { title: '红人类型',      key: 'influencerType',  width: 150, sorter: true, dataIndex: 'influencerType' },
+  { title: '红人类型',      key: 'influencerType',  width: 130, sorter: true, dataIndex: 'influencerType' },
   { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 160, sorter: true },
-  { title: '服务国家/市场', key: 'countryMarket', width: 160 },
-  { title: '平台',          key: 'platform',        width: 120 },
-  { title: '主页链接',      key: 'links',           width: 220 },
-  { title: '所属领域',      key: 'domains',         width: 130 },
+  { title: '合作中项目',    key: 'activeProjects',  width: 110 },
+  { title: '已完结项目',    key: 'completedProjects', width: 110 },
+  { title: '服务国家/市场', key: 'countryMarket', width: 150 },
+  { title: '平台',          key: 'platform',        width: 110 },
+  { title: '主页链接',      key: 'links',           width: 200 },
+  { title: '所属领域',      key: 'domains',         width: 120 },
   { title: '粉丝量',        key: 'followerCount',   width: 90,  sorter: true, dataIndex: 'followerCount' },
   // 宽度按最长标签"已回复开发信"留够空间
-  { title: '建联情况',      key: 'contactStatus',   width: 140, sorter: true, dataIndex: 'contactStatus' },
+  { title: '建联情况',      key: 'contactStatus',   width: 120, sorter: true, dataIndex: 'contactStatus' },
   { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90, sorter: true },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
-  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180, sensitive: true },
-  { title: '视频投流成本（$）',           key: 'adSpendCost',    width: 150, sensitive: true },
-  { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 150, sensitive: true },
-  { title: '合作项目',      key: 'projects',        width: 100 },
-  { title: '合作案例',      key: 'casesLinks',      width: 220 },
+  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 170, sensitive: true },
+  { title: '视频投流成本（$）',           key: 'adSpendCost',    width: 140, sensitive: true },
+  { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 140, sensitive: true },
   { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160, sorter: true },
-  { title: '联系方式',      key: 'contacts',        width: 160 },
-  { title: '已签署合同',    key: 'contractLink',    width: 100 },
+  { title: '联系方式',      key: 'contacts',        width: 150 },
+  { title: '已签署合同',    key: 'contractLink',    width: 280 },
   { title: '操作',          key: 'action',          width: 120, fixed: 'right' }
 ]
 
@@ -311,14 +329,12 @@ function contactTypeLabel(type) {
   const m = { phone:'电话', whatsapp:'WhatsApp', line:'Line', telegram:'Telegram' }
   return m[type] || type
 }
-// "已签署合同"列：展示这个红人年份最新的一条合同（可能有多条，一年一条）
-function latestContract(influencerId) {
-  const byYear = influencerContracts.value[influencerId]
-  if (!byYear) return null
-  const years = Object.keys(byYear).map(Number)
-  if (!years.length) return null
-  const latestYear = Math.max(...years)
-  return { year: latestYear, contractLink: byYear[latestYear] }
+// "已签署合同"列：跟编辑弹窗里的展示保持一致，需要按 id 解出品牌方/团队名字
+function brandNameById(id) {
+  return brands.value.find(b => b.id === id)?.name || '未知品牌'
+}
+function teamNameById(id) {
+  return teams.value.find(t => t.id === id)?.name || ''
 }
 
 async function loadData() {
@@ -399,10 +415,12 @@ async function handleImport(file) {
   } catch {}
   return false
 }
-function goToProjects(accountName) {
-  // "项目订单"模块已废弃，改为跳转到红人合作跟踪列表；那边的筛选只支持"红人社媒完整名字"
-  // 文本搜索（没有按 influencerId 精确筛选的参数），所以这里传账号名而不是 id
-  router.push({ path: '/collaborations', query: { accountName } })
+// "合作中项目"/"已完结项目"下钻弹窗（2026-07 新增）：category 'ACTIVE' 或 'COMPLETED'
+function openCollabModal(record, category) {
+  collabModalInfluencerId.value = record.id
+  collabModalCategory.value = category
+  collabModalTitle.value = `${record.accountName} - ${category === 'COMPLETED' ? '已完结项目' : '合作中项目'}`
+  collabModalVisible.value = true
 }
 
 function splitMulti(str) {
@@ -450,3 +468,25 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.contract-mini-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.contract-mini-card:last-child {
+  margin-bottom: 0;
+}
+.contract-no-team {
+  color: #999;
+  margin-left: 2px;
+}
+.contract-mini-range {
+  color: #595959;
+  font-weight: 500;
+  margin: 4px 0;
+}
+</style>

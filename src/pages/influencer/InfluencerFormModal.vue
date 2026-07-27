@@ -136,14 +136,8 @@
             <a-button type="dashed" size="small" @click="form.links.push('')">+ 添加链接</a-button>
           </a-form-item>
 
-          <a-form-item label="合作案例链接">
-            <div v-for="(link, idx) in form.casesLinks" :key="'case-' + idx"
-              style="display:flex;gap:8px;margin-bottom:6px">
-              <a-input v-model:value="form.casesLinks[idx]" placeholder="https://..." style="flex:1" />
-              <a-button danger size="small" @click="form.casesLinks.splice(idx, 1)">删除</a-button>
-            </div>
-            <a-button type="dashed" size="small" @click="form.casesLinks.push('')">+ 添加案例链接</a-button>
-          </a-form-item>
+          <!-- "合作案例链接"手动维护的入口 2026-07 起去掉了：红人管理列表页的"已完结项目"
+               已经是从红人合作跟踪数据自动算出来的"客户已结算"记录，不再需要手动维护一份案例链接 -->
 
           <a-form-item label="已签署合同" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
             <template v-if="props.record?.id">

@@ -351,14 +351,20 @@ const pagination = reactive({
 const filters = reactive({
   brandId: undefined, teamId: undefined, countryMarket: undefined,
   accountName: route.query.accountName || undefined,
-  platform: undefined, progress: undefined, influencerPaymentProgress: undefined, videoType: undefined,
+  // 红人管理"合作中项目/已完结项目"下钻弹窗"查看全部"深链专用，精确按红人 id 筛选
+  // （accountName 是模糊匹配，账号名互为子串的红人会串号，这个参数不受影响；不在筛选栏
+  // 展示成下拉框，纯粹是深链参数，用户手动改别的筛选条件不会保留它）
+  influencerId: route.query.influencerId ? Number(route.query.influencerId) : undefined,
+  platform: undefined,
+  progress: route.query.progress || undefined,
+  influencerPaymentProgress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined,
   onlyMyResponsibility: false,
   // "查看未完成的记录"：视频项目进度不是"客户已结算"也不是"折损"（这两个是终态，不用再跟进）
-  onlyIncomplete: false
+  onlyIncomplete: route.query.onlyIncomplete === 'true'
 })
 
 const allColumns = [
@@ -464,6 +470,7 @@ async function loadData() {
       teamId:             filters.teamId      || undefined,
       countryMarket:      filters.countryMarket,
       accountName:        filters.accountName?.trim() || undefined,
+      influencerId:       filters.influencerId,
       platform:           filters.platform,
       progress:           filters.progress,
       influencerPaymentProgress: filters.influencerPaymentProgress,
@@ -502,7 +509,7 @@ function handleTableChange(pag, _f, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamId:undefined, countryMarket:undefined,
-    accountName:undefined, platform:undefined, progress:undefined, influencerPaymentProgress:undefined, videoType:undefined,
+    accountName:undefined, influencerId:undefined, platform:undefined, progress:undefined, influencerPaymentProgress:undefined, videoType:undefined,
     videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined,

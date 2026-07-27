@@ -75,7 +75,7 @@ export const influencerApi = {
   save:    (data)  => http.post('/api/influencers', data),
   delete:  (id)    => http.delete(`/api/influencers/${id}`),
 
-  // 批量查询红人的合作项目数量（红人管理列表"合作项目"列用）
+  // 批量查询红人的"合作中项目"/"已完结项目"数量（返回 {activeCount, completedCount}）
   projectCounts: (influencerIds) => http.post('/api/influencers/project-counts', influencerIds),
 
   exportExcel:      (type) => downloadWithAuth(
@@ -158,6 +158,10 @@ export const collaborationApi = {
   setExecutorCost:     (id, payload) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, payload),
   unlinkRequirement:   (id) => http.patch(`/api/collaboration-trackings/${id}/unlink-requirement`),
   recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
+
+  // 红人管理"合作中项目/已完结项目"下钻弹窗用（2026-07 新增）：category 传 'ACTIVE' 或 'COMPLETED'
+  byInfluencer: (influencerId, category, page, size) => http.get('/api/collaboration-trackings/by-influencer',
+    { params: { influencerId, category, page, size } }),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(
