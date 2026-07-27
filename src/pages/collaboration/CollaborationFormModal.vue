@@ -722,10 +722,35 @@ function blockSaveForMissingExecutorRate() {
   })
 }
 
+// 2026-07 起：新建、或者换了项目负责人时，这位负责人必须已经在"员工管理"配置默认提成比例，
+// 不然直接挡住保存（跟后端 CollaborationTrackingService.doSave() 的同一条规则保持一致，这里
+// 提前拦截给出更明确的提示；负责人没变的普通编辑不受这条限制，历史上已经出问题的记录
+// 不会被这里的检查卡住，需要单独排查/修复）
+function needsCommissionRateCheck() {
+  if (!form.projectManagerId) return false
+  const isNew = !form.id
+  const managerChanged = props.record && props.record.projectManagerId !== form.projectManagerId
+  if (!isNew && !managerChanged) return false
+  const manager = props.employees.find(e => e.id === form.projectManagerId)
+  return !manager || manager.defaultCommissionRate == null
+}
+
+function blockSaveForMissingCommissionRate() {
+  const manager = props.employees.find(e => e.id === form.projectManagerId)
+  Modal.warning({
+    title: '无法保存',
+    content: `项目负责人"${manager?.name || ''}"还没有在"员工管理"配置默认提成比例，请先配置后再保存这条记录。`
+  })
+}
+
 async function doSave() {
   if (saving.value) return   // 防止连续点击导致重复提交
   saving.value = true
   try {
+    if (needsCommissionRateCheck()) {
+      blockSaveForMissingCommissionRate()
+      return
+    }
     if (await needsExecutorCostBeforeSave()) {
       blockSaveForMissingExecutorRate()
       return
