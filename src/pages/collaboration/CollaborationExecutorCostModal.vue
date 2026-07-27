@@ -20,7 +20,7 @@
         </div>
 
         <template v-if="!notApplicable">
-          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#262626">
+          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#262626; white-space:pre-line; line-height:1.6">
             {{ breakdown }}
           </div>
           <a-form-item label="内部执行成本（元）">
