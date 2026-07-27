@@ -30,14 +30,14 @@
           </template>
           <template v-if="column.key === 'salaryInfo'">
             <template v-if="isCommissionRole(record.role)">
-              <div style="font-size:12px;line-height:1.6">
+              <div style="font-size:12px;line-height:1.6;color:#262626">
                 <div>
                   <span style="color:#595959">默认提成：</span>
                   {{ record.defaultCommissionRate != null
                     ? (parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%'
                     : '—' }}
                 </div>
-                <div v-if="bonusTierSummary(record.id)" style="color:#262626">
+                <div v-if="bonusTierSummary(record.id)">
                   <span style="color:#595959">Bonus（{{ record.bonusTierCurrency === 'RMB' ? '¥' : '$' }}）：</span>
                   {{ bonusTierSummary(record.id) }}
                 </div>
@@ -45,10 +45,10 @@
             </template>
             <template v-else-if="isFixedSalaryRole(record.role)">
               <span style="color:#595959;font-size:12px">固定月薪：</span>
-              {{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}
+              <span style="color:#262626;font-size:12px">{{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}</span>
             </template>
             <template v-else-if="isExecutorRole(record.role)">
-              <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.6">
+              <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.6;color:#262626">
                 <div v-for="type in VIDEO_TYPES" :key="type">
                   <template v-if="tierSummary(record.id, type)">
                     {{ VIDEO_TYPE_LABELS[type] }}：{{ tierSummary(record.id, type) }}

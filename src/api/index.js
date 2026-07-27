@@ -263,12 +263,13 @@ export const payslipApi = {
     http.post(`/api/payslips/${employeeId}/legal-salary`, { yearMonth, amountRmb }),
   confirm: (employeeId, yearMonth) => http.post(`/api/payslips/${employeeId}/confirm`, { yearMonth }),
   unconfirm: (employeeId, yearMonth) => http.post(`/api/payslips/${employeeId}/unconfirm`, { yearMonth }),
-  // 项目负责人自己确认/取消确认名下执行人员的工资（跟上面对自己工资单的确认完全独立）；
-  // managerId 不传时后端会用当前登录账号自己关联的员工 id（项目负责人角色场景就是这样调用）
-  confirmExecutorWages: (yearMonth, managerId) =>
-    http.post('/api/payslips/executor-wages/confirm', { yearMonth, managerId }),
-  unconfirmExecutorWages: (yearMonth, managerId) =>
-    http.post('/api/payslips/executor-wages/unconfirm', { yearMonth, managerId })
+  // 项目负责人自己确认/取消确认名下某一个执行人员的工资（跟上面对自己工资单的确认完全独立，
+  // 2026-07 起按执行人员单独确认，必须传 executorId）；managerId 不传时后端会用当前登录账号
+  // 自己关联的员工 id（项目负责人角色场景就是这样调用）
+  confirmExecutorWages: (yearMonth, executorId, managerId) =>
+    http.post('/api/payslips/executor-wages/confirm', { yearMonth, executorId, managerId }),
+  unconfirmExecutorWages: (yearMonth, executorId, managerId) =>
+    http.post('/api/payslips/executor-wages/unconfirm', { yearMonth, executorId, managerId })
 }
 
 // ===== Exchange Rates (人工维护) =====

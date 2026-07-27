@@ -129,6 +129,11 @@
               <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
               <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
               <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+              <template v-if="column.key === 'confirmStatus' && record.isGroupSubtotal">
+                <a-tag :color="record.groupConfirmed ? 'green' : 'orange'">
+                  {{ record.groupConfirmed ? '已确认' : '预计' }}
+                </a-tag>
+              </template>
             </template>
           </a-table>
           <div class="summary-lines">
@@ -153,7 +158,7 @@ const props = defineProps({
   employeeId: { type: [Number, String], default: null },
   employeeName: { type: String, default: '' },
   yearMonth: { type: String, default: '' },
-  currency: { type: String, default: 'USD' }
+  currency: { type: String, default: 'RMB' }
 })
 const emit = defineEmits(['update:visible'])
 
@@ -192,7 +197,8 @@ const executorWageColumns = [
   { title: '品牌方/红人团队', key: 'brandTeam' },
   { title: '项目视频类型', key: 'videoTypeLabel' },
   { title: '视频数', key: 'videoCount', width: 80 },
-  { title: '薪酬金额', key: 'amount', width: 140 }
+  { title: '薪酬金额', key: 'amount', width: 140 },
+  { title: '确认状态', key: 'confirmStatus', width: 90 }
 ]
 
 const totalLineLabel = computed(() => {

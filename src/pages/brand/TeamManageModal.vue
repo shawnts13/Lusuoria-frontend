@@ -43,11 +43,12 @@
       </template>
     </a-table>
 
-    <!-- 新建/编辑团队 -->
-    <a-modal :open="teamFormVisible" :title="editingTeam ? '编辑团队' : '新建团队'"
+    <!-- 新建/编辑团队：label 用 vertical 布局，避免"特殊：每次需求签一次合同"这类长 label
+         在默认水平布局下被截断/挤压显示不全 -->
+    <a-modal :open="teamFormVisible" :title="editingTeam ? '编辑团队' : '新建团队'" width="480px"
       :confirm-loading="savingTeam" @ok="handleSaveTeam" @cancel="teamFormVisible = false"
       :destroy-on-close="true">
-      <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
+      <a-form layout="vertical">
         <a-form-item label="团队名称" required>
           <a-input v-model:value="teamForm.name" />
         </a-form-item>

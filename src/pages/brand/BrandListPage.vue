@@ -63,11 +63,12 @@
       </a-table>
     </div>
 
-    <!-- 新建/编辑弹窗 -->
-    <a-modal :open="modalVisible" :title="editing ? '编辑品牌方' : '新建品牌方'"
+    <!-- 新建/编辑弹窗：label 用 vertical 布局，避免"月底对账日后几天内结款（天）"这类长 label
+         在默认水平布局（label-col span 6）下被截断/挤压显示不全 -->
+    <a-modal :open="modalVisible" :title="editing ? '编辑品牌方' : '新建品牌方'" width="520px"
       :confirm-loading="saving" @ok="handleSave" @cancel="modalVisible = false"
       :destroy-on-close="true">
-      <a-form ref="formRef" :model="form" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
+      <a-form ref="formRef" :model="form" layout="vertical">
         <a-form-item label="品牌方名称" name="name"
           :rules="[{ required: true, message: '请填写品牌方名称' }]">
           <a-input v-model:value="form.name" />
@@ -92,8 +93,9 @@
           </a-select>
         </a-form-item>
         <template v-if="form.paymentCycleType === 'COST_THRESHOLD'">
-          <a-form-item label="成本阈值" extra="单笔「红人视频制作与发布成本」金额阈值，单位为上面选择的结算币种">
+          <a-form-item label="成本阈值">
             <a-input-number v-model:value="form.costThresholdAmount" style="width:100%" :precision="2" :min="0" />
+            <div class="hint-box">单笔「红人视频制作与发布成本」金额阈值，单位为上面选择的结算币种。</div>
           </a-form-item>
           <a-form-item label="≤ 阈值，几天内结款（天）">
             <a-input-number v-model:value="form.daysWithinThreshold" style="width:100%" :precision="0" :min="0" />
@@ -264,3 +266,16 @@ async function handleImport(file) {
 
 onMounted(loadData)
 </script>
+
+<style scoped>
+.hint-box {
+  font-size: 12px;
+  color: #614700;
+  line-height: 1.6;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-top: 6px;
+}
+</style>
