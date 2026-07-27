@@ -25,8 +25,8 @@
           <span v-else style="color:#8c8c8c">—</span>
         </template>
         <template v-if="column.key === 'defaultContractRange'">
-          <span v-if="isAnnualBrand && (record.defaultContractStartDate || record.defaultContractEndDate)" style="color:#262626">
-            {{ record.defaultContractStartDate || '?' }} ~ {{ record.defaultContractEndDate || '?' }}
+          <span v-if="isAnnualBrand && record.defaultContractEndDate" style="color:#262626">
+            {{ record.defaultContractEndDate }}
           </span>
           <span v-else style="color:#8c8c8c">—</span>
         </template>
@@ -52,7 +52,7 @@
           <a-input v-model:value="teamForm.name" />
         </a-form-item>
         <template v-if="isAnnualBrand">
-          <a-form-item label="特殊覆盖">
+          <a-form-item label="特殊：每次需求签一次合同">
             <a-switch v-model:checked="teamForm.forcePerRequirementContract" />
             <div class="hint-box">
               该品牌方整体是"一年签一次合同"，如果这个团队要按"每次需求单独签一次合同"处理
@@ -60,10 +60,10 @@
             </div>
           </a-form-item>
           <template v-if="!teamForm.forcePerRequirementContract">
-            <a-form-item label="兜底默认有效期">
-              <a-range-picker v-model:value="defaultRange" value-format="YYYY-MM-DD" style="width:100%" />
+            <a-form-item label="兜底默认合同到期日期">
+              <a-date-picker v-model:value="teamForm.defaultContractEndDate" value-format="YYYY-MM-DD" style="width:100%" />
               <div class="hint-box">
-                如果这个团队下的红人本人还没有单独关联合同，系统会按这个日期范围判断合同是否快到期。
+                如果这个团队下的红人本人还没有单独关联合同，系统会按这个合同到期日期判断合同是否快到期。
               </div>
             </a-form-item>
           </template>
@@ -99,7 +99,7 @@ const CONTRACT_CYCLE_LABELS = { ANNUAL: '一年签一次合同', PER_REQUIREMENT
 const columns = [
   { title: '团队名称', key: 'name' },
   { title: '合同周期覆盖', key: 'forcePerRequirementContract' },
-  { title: '兜底默认合同有效期', key: 'defaultContractRange' },
+  { title: '兜底默认合同到期日期', key: 'defaultContractRange' },
   { title: '操作', key: 'action', width: 140 }
 ]
 
@@ -108,12 +108,7 @@ const editingTeam = ref(null)
 const savingTeam = ref(false)
 const teamForm = reactive({
   id: null, name: '', forcePerRequirementContract: false,
-  defaultContractStartDate: null, defaultContractEndDate: null
-})
-const defaultRange = ref([])
-watch(defaultRange, (v) => {
-  teamForm.defaultContractStartDate = v?.[0] || null
-  teamForm.defaultContractEndDate = v?.[1] || null
+  defaultContractEndDate: null
 })
 
 async function loadTeams() {
@@ -132,8 +127,7 @@ watch(() => props.visible, v => { if (v) loadTeams() })
 function openCreateTeam() {
   editingTeam.value = null
   Object.assign(teamForm, { id: null, name: '', forcePerRequirementContract: false,
-    defaultContractStartDate: null, defaultContractEndDate: null })
-  defaultRange.value = []
+    defaultContractEndDate: null })
   teamFormVisible.value = true
 }
 
@@ -142,11 +136,8 @@ function openEditTeam(record) {
   Object.assign(teamForm, {
     id: record.id, name: record.name,
     forcePerRequirementContract: !!record.forcePerRequirementContract,
-    defaultContractStartDate: record.defaultContractStartDate || null,
     defaultContractEndDate: record.defaultContractEndDate || null
   })
-  defaultRange.value = record.defaultContractStartDate && record.defaultContractEndDate
-    ? [record.defaultContractStartDate, record.defaultContractEndDate] : []
   teamFormVisible.value = true
 }
 
@@ -162,7 +153,6 @@ async function handleSaveTeam() {
       name: teamForm.name.trim(),
       brandId: props.brand.id,
       forcePerRequirementContract: teamForm.forcePerRequirementContract,
-      defaultContractStartDate: teamForm.defaultContractStartDate,
       defaultContractEndDate: teamForm.defaultContractEndDate
     })
     message.success(teamForm.id ? '更新成功' : '创建成功')
