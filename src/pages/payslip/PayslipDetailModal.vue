@@ -7,12 +7,14 @@
           :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'projectManagerName'">
-              <a-tag v-if="record.projectManagerName && !record.isSummaryRow" :color="colorForValue(record.projectManagerName)">
+              <a-tag v-if="record.projectManagerName && !record.isSummaryRow && !record.isTierSummaryRow"
+                :color="colorForValue(record.projectManagerName)">
                 {{ record.projectManagerName }}
               </a-tag>
             </template>
             <template v-if="column.key === 'brandTeam'">
-              <template v-if="record.isSummaryRow">汇总</template>
+              <span v-if="record.isTierSummaryRow" style="color:#874d00;font-weight:600">{{ record.brandName }}</span>
+              <template v-else-if="record.isSummaryRow">汇总</template>
               <template v-else-if="record.isGroupSubtotal">
                 <b>{{ record.brandName }}</b>
                 <a-tag v-if="detail.type === 'EXECUTOR'" style="margin-left:6px"
@@ -25,10 +27,10 @@
                 <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
               </template>
             </template>
-            <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
-            <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
-            <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
-            <template v-if="column.key === 'amount2'">{{ fmt(record.amount2) }}</template>
+            <template v-if="column.key === 'videoTypeLabel'">{{ record.isTierSummaryRow ? '' : (record.videoTypeLabel || '—') }}</template>
+            <template v-if="column.key === 'videoCount'">{{ record.isTierSummaryRow ? '' : (record.videoCount ?? 0) }}</template>
+            <template v-if="column.key === 'amount'">{{ record.isTierSummaryRow ? '' : fmt(record.amount) }}</template>
+            <template v-if="column.key === 'amount2'">{{ record.isTierSummaryRow ? '' : fmt(record.amount2) }}</template>
           </template>
         </a-table>
 
