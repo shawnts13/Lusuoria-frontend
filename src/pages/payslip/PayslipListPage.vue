@@ -176,7 +176,7 @@
         <a-form-item label="币种">
           <a-radio-group v-model:value="extraBonusForm.currency">
             <a-radio-button value="USD">USD</a-radio-button>
-            <a-radio-button value="RMB">RMB</a-radio-button>
+            <a-radio-button value="RMB"><b style="color:#ff4d4f">RMB</b></a-radio-button>
           </a-radio-group>
         </a-form-item>
       </a-form>
