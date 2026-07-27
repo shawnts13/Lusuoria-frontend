@@ -4,11 +4,12 @@
     <div class="notice-list">
       <div v-for="n in list" :key="n.id" class="notice-card">
         <div class="notice-main">
-          <a-tag :color="n.category === 'PROGRESS_ROLLBACK' ? 'gold' : 'red'">
+          <a-tag :color="categoryColor(n.category)">
             {{ categoryLabel(n.category) }}
           </a-tag>
           <span class="notice-text">
             {{ n.targetSummary }}（{{ n.targetInternalProjectNo }}）：
+            <span v-if="n.category === 'EXECUTOR_COST_MODIFY'" style="color:#262626">{{ n.reason }}，</span>
             <span :style="{ color: n.status === 'APPROVED' ? '#237804' : '#cf1322', fontWeight: 600 }">
               {{ n.status === 'APPROVED' ? '已同意' : '已拒绝' }}
             </span>
@@ -36,7 +37,13 @@ const list = ref([])
 function categoryLabel(c) {
   if (c === 'DELETE_REQUEST') return '删除审核'
   if (c === 'PROGRESS_ROLLBACK') return '视频项目进度倒退审核'
+  if (c === 'EXECUTOR_COST_MODIFY') return '内部执行成本修改审核'
   return c
+}
+function categoryColor(c) {
+  if (c === 'PROGRESS_ROLLBACK') return 'gold'
+  if (c === 'EXECUTOR_COST_MODIFY') return 'purple'
+  return 'red'
 }
 
 async function loadData() {

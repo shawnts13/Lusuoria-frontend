@@ -215,6 +215,7 @@
                    要设置的话去"编辑"里手动填 -->
               <span v-else-if="!record.hasExecutorPayRateConfigured" style="visibility:hidden">设置执行成本</span>
               <a v-else @click="openExecutorCostModal(record)">设置执行成本</a>
+              <span v-if="record.hasPendingExecutorCostModifyRequest" style="color:#faad14;font-size:12px">（修改审核中）</span>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>

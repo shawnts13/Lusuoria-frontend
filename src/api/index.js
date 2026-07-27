@@ -153,6 +153,8 @@ export const collaborationApi = {
   // 现场选了人，传这个参数可以现算这个人的建议金额
   suggestExecutorCost: (id, executorId) => http.get(`/api/collaboration-trackings/${id}/executor-cost-suggestion`,
     { params: executorId ? { executorId } : {} }),
+  // 2026-07 起返回 { tracking, pendingApproval }：非首次修改且操作人不是项目负责人本人时
+  // pendingApproval=true，tracking 是改动前的原始记录（还没生效，已提交项目负责人审核）
   setExecutorCost:     (id, payload) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, payload),
   unlinkRequirement:   (id) => http.patch(`/api/collaboration-trackings/${id}/unlink-requirement`),
   recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
@@ -283,6 +285,9 @@ export const pendingApprovalApi = {
   reject:  (id, note)   => http.post(`/api/pending-approvals/${id}/reject`, { note }),
   // "处理结果通知"（2026-07 新增）：非管理员看自己相关记录已同意/已拒绝的通知
   myNotifications: () => http.get('/api/pending-approvals/my-notifications'),
+  // "待我审核"（2026-07 新增）：项目负责人看名下待自己审核的内部执行成本修改申请
+  myApprovals: () => http.get('/api/pending-approvals/my-approvals'),
+  // 2026-07 起是真正的数据库硬删除（等相关方都点过才真删），而不是软标记
   dismiss: (id) => http.post(`/api/pending-approvals/${id}/dismiss`)
 }
 

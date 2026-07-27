@@ -105,13 +105,8 @@
             <a-tag :color="detail.executorWageConfirmed ? 'green' : 'orange'" style="margin-left:8px">
               {{ detail.executorWageConfirmed ? '已确认' : '预计（实时更新）' }}
             </a-tag>
-            <a-space v-if="canManageExecutorWages" class="section-actions">
-              <a-button v-if="!detail.executorWageConfirmed" type="primary" size="small"
-                @click="doConfirmExecutorWages">确认执行人员工资</a-button>
-              <a-popconfirm v-else title="确认取消执行人员工资的确认？" @confirm="doUnconfirmExecutorWages">
-                <a-button size="small">取消确认</a-button>
-              </a-popconfirm>
-            </a-space>
+            <!-- 确认/取消确认这个动作 2026-07 起挪到"工资单"主页面的"手下执行人员工资"区块直接操作，
+                 跟管理层工资单的样式保持一致，这里只做只读展示，不再放确认按钮 -->
           </div>
           <a-table v-if="detail.executorWageRows && detail.executorWageRows.length"
             :columns="executorWageColumns" :data-source="detail.executorWageRows"
@@ -149,12 +144,8 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { message } from 'ant-design-vue'
 import { payslipApi } from '../../api/index'
-import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
-
-const authStore = useAuthStore()
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -218,12 +209,6 @@ const footerHint = computed(() => {
   return detail.value.confirmed ? '以上为已确认的工资单快照' : '以上为工资单预计（实时更新）'
 })
 
-// 只有项目负责人本人查看自己的工资单，才能确认/取消确认名下执行人员的工资
-const canManageExecutorWages = computed(() =>
-  detail.value?.type === 'PROJECT_MANAGER'
-  && authStore.employeeId != null
-  && String(authStore.employeeId) === String(props.employeeId))
-
 function rowClassName(record) {
   if (record.isSummaryRow) return 'summary-row'
   if (record.isGroupSubtotal) return 'subtotal-row'
@@ -258,25 +243,6 @@ watch(() => [props.visible, props.employeeId, props.yearMonth, props.currency], 
 }, { immediate: true })
 
 function close() { emit('update:visible', false) }
-
-async function doConfirmExecutorWages() {
-  try {
-    await payslipApi.confirmExecutorWages(props.yearMonth)
-    message.success('已确认')
-    load()
-  } catch (e) {
-    message.error(e?.response?.data?.message || '确认失败')
-  }
-}
-async function doUnconfirmExecutorWages() {
-  try {
-    await payslipApi.unconfirmExecutorWages(props.yearMonth)
-    message.success('已取消确认')
-    load()
-  } catch (e) {
-    message.error(e?.response?.data?.message || '取消确认失败')
-  }
-}
 </script>
 
 <style scoped>
@@ -293,9 +259,6 @@ async function doUnconfirmExecutorWages() {
   font-weight: 600;
   display: flex;
   align-items: center;
-}
-.section-actions {
-  margin-left: auto;
 }
 .line {
   display: flex;

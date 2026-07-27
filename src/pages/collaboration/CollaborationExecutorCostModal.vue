@@ -128,12 +128,16 @@ async function handleSave() {
   }
   saving.value = true
   try {
-    await collaborationApi.setExecutorCost(props.record.id, {
+    const res = await collaborationApi.setExecutorCost(props.record.id, {
       amount: notApplicable.value ? null : amount.value,
       executorId: notApplicable.value ? null : selectedExecutorId.value,
       notApplicable: notApplicable.value
     })
-    message.success(notApplicable.value ? '已确认不涉及执行人员' : '内部执行成本已保存')
+    if (res.data?.pendingApproval) {
+      message.success('该记录已设置过一次内部执行成本，这次修改已提交给项目负责人审核，同意后才会生效')
+    } else {
+      message.success(notApplicable.value ? '已确认不涉及执行人员' : '内部执行成本已保存')
+    }
     emit('saved')
     close()
   } finally { saving.value = false }

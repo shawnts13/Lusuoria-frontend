@@ -7,6 +7,9 @@
     <!-- 处理结果通知：所有非访客角色可见，内容为空时组件自己不渲染任何东西 -->
     <OperationResultNoticeList v-if="!authStore.isGuest" />
 
+    <!-- 待我审核（内部执行成本修改）：项目负责人审核自己名下的申请，内容为空时组件自己不渲染 -->
+    <MyExecutorCostApprovalList v-if="!authStore.isGuest" />
+
     <!-- 进度提醒：2026-07 起对所有非访客角色开放，具体能看到哪几类由后端按身份过滤 -->
     <ProgressReminderSection v-if="!authStore.isGuest" />
 
@@ -16,6 +19,7 @@
           allow-clear @change="loadData">
           <a-select-option value="DELETE_REQUEST">删除审核</a-select-option>
           <a-select-option value="PROGRESS_ROLLBACK">视频项目进度倒退审核</a-select-option>
+          <a-select-option value="EXECUTOR_COST_MODIFY">内部执行成本修改审核</a-select-option>
         </a-select>
         <a-button @click="loadData">刷新</a-button>
       </div>
@@ -41,7 +45,11 @@
               <a :href="detailLink(record)" target="_blank" rel="noopener">查看详情</a>
             </template>
             <template v-if="column.key === 'action'">
-              <a-space>
+              <!-- 内部执行成本修改审核只能由该记录的项目负责人本人处理，ADMIN 这里只能看、不能代批 -->
+              <span v-if="record.category === 'EXECUTOR_COST_MODIFY'" style="color:#595959;font-size:12px">
+                需项目负责人本人审核
+              </span>
+              <a-space v-else>
                 <a-popconfirm :title="approveConfirmText(record)" @confirm="handleApprove(record)">
                   <a style="color:#52c41a">同意</a>
                 </a-popconfirm>
@@ -73,6 +81,7 @@ import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
 import ProgressReminderSection from './ProgressReminderSection.vue'
 import OperationResultNoticeList from './OperationResultNoticeList.vue'
+import MyExecutorCostApprovalList from './MyExecutorCostApprovalList.vue'
 
 const authStore = useAuthStore()
 const { getLabel } = useOptions()
@@ -99,17 +108,19 @@ const columns = [
   { title: '发起时间',   dataIndex: 'createdAt', key: 'createdAt', width: 160,
     customRender: ({ text }) => text ? formatDateTime(text) : '—' },
   { title: '查看详情',   key: 'detail', width: 90 },
-  { title: '操作',       key: 'action', width: 120 }
+  { title: '操作',       key: 'action', width: 150 }
 ]
 
 function categoryLabel(c) {
   if (c === 'DELETE_REQUEST') return '删除审核'
   if (c === 'PROGRESS_ROLLBACK') return '视频项目进度倒退审核'
+  if (c === 'EXECUTOR_COST_MODIFY') return '内部执行成本修改审核'
   return c
 }
-// 两种申请类别，不是进度状态；删除是破坏性操作用红色区分，倒退是纠正性操作用金色
+// 三种申请类别，不是进度状态；删除是破坏性操作用红色区分，倒退是纠正性操作用金色，
+// 内部执行成本修改不是 ADMIN 审核（只能看）用紫色跟前两种区分开
 function categoryColor(c) {
-  const m = { DELETE_REQUEST: 'red', PROGRESS_ROLLBACK: 'gold' }
+  const m = { DELETE_REQUEST: 'red', PROGRESS_ROLLBACK: 'gold', EXECUTOR_COST_MODIFY: 'purple' }
   return m[c] || 'orange'
 }
 function moduleLabel(m) { return m === 'COLLABORATION_TRACKING' ? '红人合作跟踪' : m }

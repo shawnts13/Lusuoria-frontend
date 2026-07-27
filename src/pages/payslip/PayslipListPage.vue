@@ -163,6 +163,115 @@
       </a-table>
     </template>
 
+    <template v-else-if="authStore.employeeRole === '项目负责人'">
+      <!-- 项目负责人自己：跟管理层同一套"卡片 + 公式拆解"样式，不再是普通员工那种简单小卡片 -->
+      <a-spin :spinning="loadingSelf">
+        <template v-if="selfDetail">
+          <div class="management-card">
+            <div class="mgmt-top">
+              <span class="mgmt-title">{{ authStore.displayName }}（项目负责人）</span>
+              <a-tag :color="selfDetail.confirmed ? 'green' : 'orange'">
+                {{ selfDetail.confirmed ? '已确认' : '预计（实时更新）' }}
+              </a-tag>
+            </div>
+            <div class="mgmt-body">
+              <span class="mgmt-label">提成金额</span>
+              <a class="mgmt-amount" @click="openSelfDetail">{{ fmt(selfDetail.baseAmount) }}</a>
+              <a-space style="margin-left:24px">
+                <a-button size="small" @click="openSelfDetail">查看明细</a-button>
+                <a-tooltip :title="selfDetail.blockedReason">
+                  <span>
+                    <a-button v-if="!selfDetail.confirmed" type="primary" size="small"
+                      :disabled="!!selfDetail.blockedReason"
+                      @click="confirmRow({ employeeId: authStore.employeeId })">确认</a-button>
+                    <a-popconfirm v-else title="确认取消这份工资单的确认？"
+                      @confirm="unconfirmRow({ employeeId: authStore.employeeId })">
+                      <a-button size="small">取消确认</a-button>
+                    </a-popconfirm>
+                  </span>
+                </a-tooltip>
+              </a-space>
+            </div>
+            <div v-if="selfDetail.blockedReason && !selfDetail.confirmed" class="mgmt-hint">
+              {{ selfDetail.blockedReason }}
+            </div>
+            <div class="formula-box">
+              <div class="formula-title">管理层所发工资 = 提成金额 + 阶梯Bonus + 奖金</div>
+              <div class="formula-row">
+                <div class="formula-term">
+                  <div class="formula-label">提成金额</div>
+                  <div class="formula-value">{{ fmt(selfDetail.baseAmount) }}</div>
+                </div>
+                <div class="formula-op">+</div>
+                <div class="formula-term">
+                  <div class="formula-label">阶梯Bonus</div>
+                  <div class="formula-value">{{ selfDetail.tierBonusAmount != null ? fmt(selfDetail.tierBonusAmount) : '—' }}</div>
+                </div>
+                <div class="formula-op">+</div>
+                <div class="formula-term">
+                  <div class="formula-label">奖金</div>
+                  <div class="formula-value">{{ selfDetail.extraBonusAmount != null ? fmt(selfDetail.extraBonusAmount) : '—' }}</div>
+                </div>
+                <div class="formula-op">=</div>
+                <div class="formula-term formula-total">
+                  <div class="formula-label">管理层所发工资</div>
+                  <div class="formula-value">{{ fmt(selfDetail.totalAmount) }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="self-line" style="margin-top:12px">
+              <span>应发给执行人员的工资</span><span>{{ fmt(selfDetail.executorWageTotal) }}</span>
+            </div>
+            <div class="self-line total">
+              <span>最终净得工资</span><span>{{ fmt(selfDetail.finalNetWage) }}</span>
+            </div>
+          </div>
+
+          <!-- 手下执行人员工资（未确认版）：只有当月确实涉及给执行人员发薪酬时才显示，
+               普通项目负责人不需要（也不能）给执行人员发奖金，跟管理层的界面区分开 -->
+          <div v-if="selfDetail.executorWageRows && selfDetail.executorWageRows.length" class="management-card">
+            <div class="mgmt-top">
+              <span class="mgmt-title">手下执行人员工资</span>
+              <a-tag :color="selfDetail.executorWageConfirmed ? 'green' : 'orange'">
+                {{ selfDetail.executorWageConfirmed ? '已确认' : '预计（实时更新）' }}
+              </a-tag>
+              <a-space style="margin-left:auto">
+                <a-button v-if="!selfDetail.executorWageConfirmed" type="primary" size="small"
+                  @click="doConfirmExecutorWages">确认执行人员工资</a-button>
+                <a-popconfirm v-else title="确认取消执行人员工资的确认？" @confirm="doUnconfirmExecutorWages">
+                  <a-button size="small">取消确认</a-button>
+                </a-popconfirm>
+              </a-space>
+            </div>
+            <a-table :columns="executorWageColumns" :data-source="selfDetail.executorWageRows"
+              :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'executorName'">
+                  <a-tag v-if="record.executorName && !record.isSummaryRow" :color="colorForValue(record.executorName)">
+                    {{ record.executorName }}
+                  </a-tag>
+                </template>
+                <template v-if="column.key === 'brandTeam'">
+                  <template v-if="record.isSummaryRow">汇总</template>
+                  <template v-else-if="record.isGroupSubtotal"><b>{{ record.brandName }}</b></template>
+                  <template v-else>
+                    <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+                    <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+                  </template>
+                </template>
+                <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
+                <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
+                <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+              </template>
+            </a-table>
+            <div style="margin-top:8px;font-size:12px;color:#595959">
+              普通项目负责人不需要给执行人员发放奖金，奖金仅由管理层设置。
+            </div>
+          </div>
+        </template>
+      </a-spin>
+    </template>
+
     <template v-else>
       <!-- 普通员工自己 -->
       <a-spin :spinning="loadingSelf">
@@ -174,10 +283,7 @@
           </span>
           <a-tag v-else color="orange">工资单预计（实时更新）</a-tag>
 
-          <div v-if="selfDetail.type === 'PROJECT_MANAGER'" class="self-line">
-            <span>提成金额</span><span>{{ fmt(selfDetail.baseAmount) }}</span>
-          </div>
-          <div v-else-if="selfDetail.type === 'EXECUTOR'" class="self-line">
+          <div v-if="selfDetail.type === 'EXECUTOR'" class="self-line">
             <span>薪酬合计</span><span>{{ fmt(selfDetail.baseAmount) }}</span>
           </div>
           <div v-else class="self-line">
@@ -191,19 +297,7 @@
             <span>奖金</span><span>{{ fmt(selfDetail.extraBonusAmount) }}</span>
           </div>
 
-          <template v-if="selfDetail.type === 'PROJECT_MANAGER'">
-            <div class="self-line">
-              <span>管理层所发工资</span><span>{{ fmt(selfDetail.totalAmount) }}</span>
-            </div>
-            <div class="self-line">
-              <span>应发给执行人员的工资</span><span>{{ fmt(selfDetail.executorWageTotal) }}</span>
-            </div>
-            <div class="self-line total">
-              <span>最终净得工资</span>
-              <a @click="openSelfDetail">{{ fmt(selfDetail.finalNetWage) }}</a>
-            </div>
-          </template>
-          <div v-else class="self-line total">
+          <div class="self-line total">
             <span>总工资</span>
             <a v-if="selfDetail.type === 'EXECUTOR'" @click="openSelfDetail">{{ fmt(selfDetail.totalAmount) }}</a>
             <span v-else>{{ fmt(selfDetail.totalAmount) }}</span>
@@ -282,6 +376,20 @@ const columns = [
   { title: '总工资', key: 'total', width: 130 },
   { title: '状态/操作', key: 'confirm', width: 300 }
 ]
+
+// 项目负责人自己页面"手下执行人员工资"表格用（跟 PayslipDetailModal 里原来那份完全一致）
+const executorWageColumns = [
+  { title: '执行人员', key: 'executorName', width: 130 },
+  { title: '品牌方/红人团队', key: 'brandTeam' },
+  { title: '项目视频类型', key: 'videoTypeLabel' },
+  { title: '视频数', key: 'videoCount', width: 80 },
+  { title: '薪酬金额', key: 'amount', width: 140 }
+]
+function rowClassName(record) {
+  if (record.isSummaryRow) return 'summary-row'
+  if (record.isGroupSubtotal) return 'subtotal-row'
+  return ''
+}
 
 function fmt(val) {
   if (val == null) return '—'
@@ -367,6 +475,26 @@ async function confirmRow(record) {
 async function unconfirmRow(record) {
   try {
     await payslipApi.unconfirm(record.employeeId, selectedMonth.value)
+    message.success('已取消确认')
+    loadAll()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '取消确认失败')
+  }
+}
+
+// ===== 项目负责人自己确认/取消确认名下执行人员的工资（跟管理层对自己工资单的确认完全独立） =====
+async function doConfirmExecutorWages() {
+  try {
+    await payslipApi.confirmExecutorWages(selectedMonth.value)
+    message.success('已确认')
+    loadAll()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '确认失败')
+  }
+}
+async function doUnconfirmExecutorWages() {
+  try {
+    await payslipApi.unconfirmExecutorWages(selectedMonth.value)
     message.success('已取消确认')
     loadAll()
   } catch (e) {
@@ -571,5 +699,13 @@ onMounted(loadAll)
   font-size: 12px;
   color: #595959;
   text-align: right;
+}
+:deep(.summary-row) {
+  font-weight: 600;
+  background: #fafafa;
+}
+:deep(.subtotal-row) {
+  font-weight: 600;
+  background: #f7f7f7;
 }
 </style>
