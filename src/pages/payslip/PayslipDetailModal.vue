@@ -99,7 +99,9 @@
           </div>
         </div>
 
-        <template v-if="detail.type === 'PROJECT_MANAGER'">
+        <!-- 这个项目负责人当月压根没有涉及执行人员的记录时，整段执行人员相关内容都不展示，
+             不能让"执行人员工资预计"这类字眼出现在跟执行人员完全无关的项目负责人工资单里 -->
+        <template v-if="detail.type === 'PROJECT_MANAGER' && detail.executorWageRows && detail.executorWageRows.length">
           <div class="section-title">
             <span>执行人员薪酬明细</span>
             <a-tag :color="detail.executorWageConfirmed ? 'green' : 'orange'" style="margin-left:8px">
@@ -108,8 +110,7 @@
             <!-- 确认/取消确认这个动作 2026-07 起挪到"工资单"主页面的"手下执行人员工资"区块直接操作，
                  跟管理层工资单的样式保持一致，这里只做只读展示，不再放确认按钮 -->
           </div>
-          <a-table v-if="detail.executorWageRows && detail.executorWageRows.length"
-            :columns="executorWageColumns" :data-source="detail.executorWageRows"
+          <a-table :columns="executorWageColumns" :data-source="detail.executorWageRows"
             :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'executorName'">

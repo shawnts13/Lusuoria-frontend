@@ -34,7 +34,12 @@
       <div class="summary-grid">
         <div class="summary-card highlight clickable" @click="openDrilldown('video')">
           <div class="label">视频项目数量 <span class="drill-hint">点击查看明细 ›</span></div>
-          <div class="value">{{ summary.videoProjectCount ?? 0 }}</div>
+          <div class="value">
+            {{ summary.videoProjectCount ?? 0 }}笔
+            <span v-if="summary.damagedVideoProjectCount" class="damaged-note">
+              （其中{{ summary.damagedVideoProjectCount }}笔为折损）
+            </span>
+          </div>
         </div>
 
         <div class="summary-card clickable" @click="openDrilldown('client-price')">
@@ -322,6 +327,11 @@ onMounted(loadSummary)
   color: #1677ff;
   font-weight: normal;
   margin-left: 4px;
+}
+.damaged-note {
+  font-size: 13px;
+  font-weight: normal;
+  color: #fa8c16;
 }
 .exchange-rate-display {
   font-size: 13px;

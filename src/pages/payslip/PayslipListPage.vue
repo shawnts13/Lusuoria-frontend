@@ -150,7 +150,7 @@
               <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(record)">
                 <a-button size="small">取消确认</a-button>
               </a-popconfirm>
-              <a-tag v-if="record.employeeRole === '项目负责人'"
+              <a-tag v-if="record.employeeRole === '项目负责人' && record.hasExecutorWageWork"
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
@@ -219,12 +219,14 @@
                 </div>
               </div>
             </div>
-            <div class="self-line" style="margin-top:12px">
-              <span>应发给执行人员的工资</span><span>{{ fmt(selfDetail.executorWageTotal) }}</span>
-            </div>
-            <div class="self-line total">
-              <span>最终净得工资</span><span>{{ fmt(selfDetail.finalNetWage) }}</span>
-            </div>
+            <template v-if="selfDetail.executorWageRows && selfDetail.executorWageRows.length">
+              <div class="self-line" style="margin-top:12px">
+                <span>应发给执行人员的工资</span><span>{{ fmt(selfDetail.executorWageTotal) }}</span>
+              </div>
+              <div class="self-line total">
+                <span>最终净得工资</span><span>{{ fmt(selfDetail.finalNetWage) }}</span>
+              </div>
+            </template>
           </div>
 
           <!-- 手下执行人员工资（未确认版）：只有当月确实涉及给执行人员发薪酬时才显示，
