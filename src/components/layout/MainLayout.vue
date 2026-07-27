@@ -12,7 +12,7 @@
           <template #icon><DashboardOutlined /></template>数据看板
         </a-menu-item>
 
-        <!-- 待处理：ADMIN 能看审批列表，"管理层"员工角色能看进度提醒 -->
+        <!-- 待处理：对所有非访客角色开放（审批列表/进度提醒各自按身份过滤展示），见 store/auth.js canAccessPending -->
         <a-menu-item v-if="authStore.canAccessPending" key="/pending">
           <template #icon><ExclamationCircleOutlined /></template>待处理
         </a-menu-item>

@@ -30,6 +30,10 @@ const URGENCY_LABEL = { OVERDUE: '0天或已超期', NEAR: '1-3天', UPCOMING: '
 // 更明确的文案；结款相关的两类提醒（COLLAB_PAYMENT_DUE/BRAND_MONTH_END_PAYMENT_DUE）
 // 保持原样不变，没人反馈那两个有歧义
 const FINANCE_URGENCY_LABEL = { OVERDUE: '0天或已超期', NEAR: '距离超期还剩1-3天', UPCOMING: '距离超期还剩3-7天' }
+// "合同即将到期"也是同一套 ReminderUrgency，但语义是"距离合同到期还有几天"，窗口是0/14/30天
+// （不是原来的0/3/7天），颜色也换成黄/橙/红（跟简报要求一致），单独一套映射，不跟其他类别混用
+const CONTRACT_EXPIRY_URGENCY_LABEL = { OVERDUE: '0天或已过期', NEAR: '1-14天', UPCOMING: '14-30天' }
+const CONTRACT_EXPIRY_URGENCY_COLOR = { OVERDUE: 'red', NEAR: 'orange', UPCOMING: 'gold' }
 // 跟后端 OverdueUrgency 保持一致：1-3天=黄，3-7天=橙，超出7天=红（"超期提醒"方向，正数累加）
 const OVERDUE_COLOR = { MILD: 'gold', MODERATE: 'orange', SEVERE: 'red' }
 const OVERDUE_LABEL = { MILD: '1-3天', MODERATE: '3-7天', SEVERE: '超出7天' }
@@ -42,15 +46,19 @@ const CATEGORY_LABEL = {
   PM_EXECUTOR_PROGRESS_STALL: '进度滞留-项目',
   FINANCE_PROGRESS_STALL: '进度滞留-财务',
   REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期',
-  REQUIREMENT_CONTRACT_OVERDUE: '合同上传逾期'
+  REQUIREMENT_CONTRACT_OVERDUE: '合同上传逾期',
+  CONTRACT_EXPIRING_SOON: '合同即将到期'
 }
 
 function isOverdueStyle(r) { return r.overdueUrgency != null }
 function urgencyColor(r) {
-  return isOverdueStyle(r) ? (OVERDUE_COLOR[r.overdueUrgency] || 'default') : (URGENCY_COLOR[r.urgency] || 'default')
+  if (isOverdueStyle(r)) return OVERDUE_COLOR[r.overdueUrgency] || 'default'
+  if (r.category === 'CONTRACT_EXPIRING_SOON') return CONTRACT_EXPIRY_URGENCY_COLOR[r.urgency] || 'default'
+  return URGENCY_COLOR[r.urgency] || 'default'
 }
 function urgencyLabel(r) {
   if (isOverdueStyle(r)) return OVERDUE_LABEL[r.overdueUrgency] || r.overdueUrgency
+  if (r.category === 'CONTRACT_EXPIRING_SOON') return CONTRACT_EXPIRY_URGENCY_LABEL[r.urgency] || r.urgency
   const labels = r.category === 'FINANCE_PROGRESS_STALL' ? FINANCE_URGENCY_LABEL : URGENCY_LABEL
   return labels[r.urgency] || r.urgency
 }
@@ -58,8 +66,8 @@ function textColor(r) { return TEXT_COLOR[urgencyColor(r)] || '#333' }
 function categoryLabel(c) { return CATEGORY_LABEL[c] || c }
 // 分类小标签用中性色，跟严重度色（红/橙/黄/绿）区分开，不会互相干扰
 function categoryTagColor(c) {
-  return ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE', 'REQUIREMENT_CONTRACT_OVERDUE'].includes(c)
-    ? 'purple' : 'blue'
+  return ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE',
+    'REQUIREMENT_CONTRACT_OVERDUE', 'CONTRACT_EXPIRING_SOON'].includes(c) ? 'purple' : 'blue'
 }
 </script>
 

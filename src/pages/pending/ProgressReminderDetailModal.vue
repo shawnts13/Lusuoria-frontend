@@ -255,10 +255,28 @@ const CONTRACT_OVERDUE_COLUMNS = [
   { title: '操作',          key: 'action',                    width: 170 }
 ]
 
+// 合同即将到期：按 (红人,品牌方,团队) 这个组合整体展示（不是单条视频），阈值固定30天
+// （ProgressReminderService.CONTRACT_EXPIRY_WINDOW_DAYS），只针对"一年签一次合同"的场景
+const CONTRACT_EXPIRING_COLUMNS = [
+  { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
+  { title: '红人团队',      key: 'teamName',            width: 160 },
+  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
+  { title: '到期时间判断依据', dataIndex: 'demandContent',    key: 'demandContent',       width: 200,
+    customRender: ({ text }) => text || '—' },
+  { title: '当前合同到期时间', dataIndex: 'deadlineDate',      key: 'deadlineDate',        width: 130,
+    customRender: ({ text }) => text ? formatDate(text) : '—' },
+  { title: '提醒阈值', key: 'contractExpiryThreshold', width: 100,
+    customRender: () => '30天' },
+  { title: '超出/剩余天数', dataIndex: 'overdueDays',        key: 'overdueDays',         width: 110,
+    customRender: ({ text }) => text != null ? (text > 0 ? '已超期' + text + '天' : '未超期') : '—' },
+  { title: '操作',          key: 'action',                    width: 170 }
+]
+
 const columns = computed(() => {
   if (STALL_CATEGORIES.includes(props.category)) return STALL_COLUMNS
   if (props.category === 'REQUIREMENT_INVOICE_OVERDUE') return INVOICE_OVERDUE_COLUMNS
   if (props.category === 'REQUIREMENT_CONTRACT_OVERDUE') return CONTRACT_OVERDUE_COLUMNS
+  if (props.category === 'CONTRACT_EXPIRING_SOON') return CONTRACT_EXPIRING_COLUMNS
   return PAYMENT_DUE_COLUMNS
 })
 const scrollX = computed(() => columns.value.reduce((sum, c) => sum + (c.width || 120), 0))
@@ -309,7 +327,10 @@ function close() { emit('update:visible', false) }
 // Invoice逾期提醒的明细行没有单一对应的合作跟踪记录，跳转到"红人需求管理"按内部需求编号定位；
 // 其余几类（临近结款/进度滞留）跳转到"红人合作跟踪"按内部项目编号定位
 function goToDetail(record) {
-  if (record.internalRequirementNo) {
+  if (props.category === 'CONTRACT_EXPIRING_SOON') {
+    // requirementId 这一类借用来存红人 id（见后端 runContractExpiringSoon 的注释）
+    router.push({ path: '/influencers', query: { editInfluencerId: record.requirementId } })
+  } else if (record.internalRequirementNo) {
     router.push({ path: '/requirements', query: { internalRequirementNo: record.internalRequirementNo } })
   } else {
     router.push({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } })
