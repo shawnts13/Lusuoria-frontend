@@ -1,6 +1,11 @@
 <template>
-  <a-modal :open="visible" title="涉及的红人需求条目" :footer="null" width="720px" @cancel="close">
-    <a-table :columns="columns" :data-source="items" :loading="loading" :pagination="false" size="small" row-key="id">
+  <a-modal :open="visible" title="涉及的红人需求条目" :footer="null" width="820px" @cancel="close">
+    <div class="table-card" ref="tableWrapperRef">
+      <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
+        <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
+      </div>
+      <a-table :columns="columns" :data-source="items" :loading="loading" :pagination="false"
+        size="small" row-key="id" :scroll="{ x: scrollX }">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'videoType'">
           <a-tag v-if="record.videoType" :color="videoTypeColor(record.videoType)">{{ record.videoTypeLabel || '—' }}</a-tag>
@@ -24,21 +29,36 @@
           </span>
         </template>
       </template>
-    </a-table>
+      <template #summary>
+        <a-table-summary-row v-if="items.length">
+          <a-table-summary-cell :col-span="2">汇总</a-table-summary-cell>
+          <a-table-summary-cell>{{ totalVideoCount }}</a-table-summary-cell>
+          <a-table-summary-cell :col-span="2"></a-table-summary-cell>
+          <a-table-summary-cell>
+            <span :style="{ color: totalFulfilledColor, fontWeight: 600 }">
+              {{ totalFulfilledCount }}/{{ totalVideoCount }}
+            </span>
+          </a-table-summary-cell>
+        </a-table-summary-row>
+      </template>
+      </a-table>
+    </div>
   </a-modal>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { requirementApi } from '../../api/index'
 import { colorForValue } from '../../utils/tagColor'
 import { videoTypeColor } from '../../utils/enumColors'
+import { useTopScrollbar } from '../../composables/useTopScrollbar'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
   requirementId: { type: [Number, String], default: null }
 })
 const emit = defineEmits(['update:visible'])
+const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading = ref(false)
 const items = ref([])
@@ -51,6 +71,8 @@ const columns = [
   { title: '客户合作单价（$）', dataIndex: 'clientUnitPrice', key: 'clientUnitPrice', width: 130 },
   { title: '已实施/总数', key: 'fulfilled', width: 110 }
 ]
+
+const scrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
 function splitMulti(str) {
   if (!str) return []
@@ -70,6 +92,14 @@ function fulfilledColor(record) {
   return '#595959'
 }
 
+const totalVideoCount = computed(() => items.value.reduce((sum, r) => sum + (r.videoCount ?? 0), 0))
+const totalFulfilledCount = computed(() => items.value.reduce((sum, r) => sum + (r.fulfilledCount ?? 0), 0))
+const totalFulfilledColor = computed(() => {
+  if (totalFulfilledCount.value > totalVideoCount.value) return '#cf1322'
+  if (totalVideoCount.value > 0 && totalFulfilledCount.value === totalVideoCount.value) return '#237804'
+  return '#595959'
+})
+
 async function load() {
   if (!props.requirementId) return
   loading.value = true
@@ -78,6 +108,7 @@ async function load() {
     items.value = res.data || []
   } finally {
     loading.value = false
+    remeasure()
   }
 }
 
