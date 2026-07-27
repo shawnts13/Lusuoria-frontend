@@ -15,7 +15,7 @@
           <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value"
             :disabled="(FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress)
               || (!authStore.canWrite && !QUALIFYING_PROGRESS.includes(o.value))
-              || (blockedByMissingLink && QUALIFYING_PROGRESS.includes(o.value))">
+              || isBlockedByMissingPublishInfo(o.value)">
             {{ o.label }}
           </a-select-option>
         </a-select>
@@ -26,15 +26,12 @@
           财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"之间流转
         </div>
       </a-form-item>
-      <div v-if="blockedByMissingLink" style="margin-bottom:12px;color:#ff4d4f;font-size:12px">
-        该记录尚未填写视频发布链接，无法手动流转到"已发布（未结算）"/"已加入客户未结算列表"/
-        "客户已结算"这三个阶段，请先在编辑表单中设置视频发布链接（链接会自动带动进度流转）。
+      <div v-if="missingPublishInfo" style="margin-bottom:12px;color:#ff4d4f;font-size:12px">
+        该记录尚未填写{{ missingFieldsLabel }}，无法流转到"已发布（未结算）"/"已加入客户未结算列表"/
+        "客户已结算"这三个阶段（当前进度不受影响），请先通过"编辑"功能填写后再回来流转。
       </div>
       <div v-if="willAutoSetPayment" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」，不需要在这里手动选
-      </div>
-      <div v-if="willAutoFillPublishDate" style="margin-bottom:12px;color:#1677ff;font-size:12px">
-        该记录尚未填写"视频发布时间"，保存后系统将自动填上今天的日期
       </div>
       <a-form-item label="倒退原因" v-if="isRollback" required>
         <p style="color:#888;font-size:13px;margin-bottom:8px">
@@ -99,17 +96,21 @@ const autoPaymentLabel = computed(() => {
   return brand && brand.requiresInvoice === false ? '待结款（不涉及invoice）' : '待红人发送invoice'
 })
 
-// 视频发布时间自动填写提示：跟后端 updateStatus() 的规则保持一致——首次从不满足前置条件
-// 流转到满足前置条件的状态、且当前还没有视频发布时间时，系统才会自动填今天的日期
-const willAutoFillPublishDate = computed(() =>
-  qualifies(progress.value) && !qualifies(original.progress) && !props.record?.publishDate
-)
-
-// 2026-07 新增：跟后端 updateStatus() 新增的拦截规则保持一致——视频发布链接为空时，
-// 不允许手动从不满足前置条件的状态流转进已发布相关的三个阶段
-const blockedByMissingLink = computed(() =>
-  !qualifies(original.progress) && !props.record?.publishLink
-)
+// 2026-07 起：跟后端 updateStatus() 的规则保持一致——视频发布时间/视频发布链接任意一个缺失时，
+// 不允许流转进"已发布（未结算）"/"已加入客户未结算列表"/"客户已结算"这三个阶段（不管是不是
+// 首次进入，哪怕是在这三个阶段之间来回流转），不再像以前那样自动帮填"今天"这个日期——必须
+// 先通过"编辑"功能把这两个字段填好。原样保存当前值（没有真的换成别的进度）不受影响，避免
+// 历史遗留的问题记录被这条校验卡得连状态流转弹窗都打不开
+const missingLink = computed(() => !props.record?.publishLink)
+const missingDate = computed(() => !props.record?.publishDate)
+const missingPublishInfo = computed(() => missingLink.value || missingDate.value)
+const missingFieldsLabel = computed(() => {
+  if (missingLink.value && missingDate.value) return '视频发布时间和视频发布链接'
+  return missingLink.value ? '视频发布链接' : '视频发布时间'
+})
+function isBlockedByMissingPublishInfo(optionValue) {
+  return qualifies(optionValue) && optionValue !== original.progress && missingPublishInfo.value
+}
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
 // 这次要改成不符合条件的另一个状态，就是"倒退"，需要走审核
