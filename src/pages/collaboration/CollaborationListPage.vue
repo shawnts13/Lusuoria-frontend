@@ -97,9 +97,15 @@
       <a-button type="primary" @click="loadData">查询</a-button>
       <a-button @click="resetFilters">重置</a-button>
       <a-tooltip v-if="canFilterMyResponsibility" :title="myResponsibilityTooltip">
-        <a-button class="my-responsibility-filter-btn" :class="{ active: filters.onlyMyResponsibility }"
+        <a-button class="orange-filter-btn" :class="{ active: filters.onlyMyResponsibility }"
           @click="toggleMyResponsibility">
           查看由我负责的记录
+        </a-button>
+      </a-tooltip>
+      <a-tooltip title="只看视频项目进度不是&quot;客户已结算&quot;也不是&quot;折损&quot;的记录">
+        <a-button class="orange-filter-btn" :class="{ active: filters.onlyIncomplete }"
+          style="margin-left:16px" @click="toggleOnlyIncomplete">
+          查看未完成的记录
         </a-button>
       </a-tooltip>
     </div>
@@ -338,7 +344,9 @@ const filters = reactive({
   internalProjectNo: route.query.internalProjectNo || undefined,
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined,
-  onlyMyResponsibility: false
+  onlyMyResponsibility: false,
+  // "查看未完成的记录"：视频项目进度不是"客户已结算"也不是"折损"（这两个是终态，不用再跟进）
+  onlyIncomplete: false
 })
 
 const allColumns = [
@@ -455,6 +463,7 @@ async function loadData() {
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
       projectManagerId:   filters.projectManagerId,
       onlyMyResponsibility: filters.onlyMyResponsibility,
+      onlyIncomplete:     filters.onlyIncomplete,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -485,10 +494,16 @@ function resetFilters() {
     videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined,
-    onlyMyResponsibility: false
+    onlyMyResponsibility: false, onlyIncomplete: false
   })
   pagination.current = 1
   sortState.field = 'id'; sortState.order = 'descend'
+  loadData()
+}
+
+function toggleOnlyIncomplete() {
+  filters.onlyIncomplete = !filters.onlyIncomplete
+  pagination.current = 1
   loadData()
 }
 
@@ -501,7 +516,7 @@ const canFilterMyResponsibility = computed(() =>
   ['项目负责人', '执行人员', '管理层', '财务'].includes(authStore.employeeRole))
 const myResponsibilityTooltip = computed(() => {
   if (['项目负责人', '执行人员', '管理层'].includes(authStore.employeeRole)) {
-    return '只看自己作为项目负责人/执行人员的记录，再按是否还需要跟进（未到"已发布（未结算）"/"折损"）优先排序'
+    return '只看自己作为项目负责人/执行人员的记录，再按是否还需要跟进（未到"客户已结算"/"折损"）优先排序'
   }
   return '只看需要处理的记录（视频项目进度为"已发布（未结算）"/"已加入客户未结算列表"）'
 })
@@ -571,22 +586,22 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* "查看由我负责的记录"筛选按钮：常态用醒目的橙色描边，激活（正在只看自己负责的）时
-   切换成实心橙色背景，跟"红人需求管理"的"查看未完成的需求"按钮保持一致的配色风格 */
-.my-responsibility-filter-btn {
+/* "查看由我负责的记录"/"查看未完成的记录"这类筛选按钮共用：常态用醒目的橙色描边，
+   激活时切换成实心橙色背景，跟"红人需求管理"的"查看未完成的需求"按钮保持一致的配色风格 */
+.orange-filter-btn {
   color: #fa8c16;
   border-color: #fa8c16;
 }
-.my-responsibility-filter-btn:hover {
+.orange-filter-btn:hover {
   color: #ffa940 !important;
   border-color: #ffa940 !important;
 }
-.my-responsibility-filter-btn.active {
+.orange-filter-btn.active {
   color: #fff;
   background: #fa8c16;
   border-color: #fa8c16;
 }
-.my-responsibility-filter-btn.active:hover {
+.orange-filter-btn.active:hover {
   color: #fff !important;
   background: #ffa940 !important;
   border-color: #ffa940 !important;

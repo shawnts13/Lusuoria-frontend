@@ -202,6 +202,20 @@ const FIXED_SALARY_ROLES = ['财务', 'IT后勤']
 const EXECUTOR_ROLE = '执行人员'
 const LEGAL_ROLE = '法务'
 
+// 员工管理列表默认排序：先按角色（跟"员工角色"下拉框的既有顺序保持一致），角色内部再按姓名
+const ROLE_ORDER = ['项目负责人', '执行人员', '管理层', '财务', '法务', 'IT后勤']
+function roleSortIndex(role) {
+  const idx = ROLE_ORDER.indexOf(role)
+  return idx === -1 ? ROLE_ORDER.length : idx
+}
+function sortByRoleThenName(employees) {
+  return [...employees].sort((a, b) => {
+    const roleDiff = roleSortIndex(a.role) - roleSortIndex(b.role)
+    if (roleDiff !== 0) return roleDiff
+    return (a.name || '').localeCompare(b.name || '', 'zh')
+  })
+}
+
 function isCommissionRole(role)  { return COMMISSION_ROLES.includes(role) }
 function isFixedSalaryRole(role) { return FIXED_SALARY_ROLES.includes(role) }
 function isExecutorRole(role)    { return role === EXECUTOR_ROLE }
@@ -303,7 +317,7 @@ async function loadData() {
       employeeApi.list(),
       executorPayRateApi.list()
     ])
-    list.value = empRes.data || []
+    list.value = sortByRoleThenName(empRes.data || [])
     const map = {}
     for (const t of (rateRes.data || [])) {
       if (!map[t.executorId]) map[t.executorId] = {}

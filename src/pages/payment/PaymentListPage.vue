@@ -34,6 +34,10 @@
       <a-input-search v-model:value="filters.internalRequirementNo" placeholder="搜索内部需求编号"
         style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
+      <a-button class="orange-filter-btn" :class="{ active: filters.paymentStatus === 'PENDING' }"
+        style="margin-left:16px" @click="toggleOnlyUnpaid">
+        查看未付款的记录
+      </a-button>
     </div>
 
     <div class="table-card" ref="tableWrapperRef">
@@ -232,6 +236,11 @@ function resetFilters() {
   sortState.field = 'settlementMonth'; sortState.order = 'descend'
   loadData()
 }
+function toggleOnlyUnpaid() {
+  filters.paymentStatus = filters.paymentStatus === 'PENDING' ? undefined : 'PENDING'
+  pagination.current = 1
+  loadData()
+}
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
@@ -270,5 +279,25 @@ onMounted(async () => {
 }
 .requirement-no-line:hover {
   text-decoration: underline;
+}
+/* "查看未付款的记录"筛选按钮：常态用醒目的橙色描边，激活时切换成实心橙色背景，
+   跟"红人需求管理"的"查看未完成的需求"按钮保持一致的配色风格 */
+.orange-filter-btn {
+  color: #fa8c16;
+  border-color: #fa8c16;
+}
+.orange-filter-btn:hover {
+  color: #ffa940 !important;
+  border-color: #ffa940 !important;
+}
+.orange-filter-btn.active {
+  color: #fff;
+  background: #fa8c16;
+  border-color: #fa8c16;
+}
+.orange-filter-btn.active:hover {
+  color: #fff !important;
+  background: #ffa940 !important;
+  border-color: #ffa940 !important;
 }
 </style>
