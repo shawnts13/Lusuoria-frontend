@@ -522,8 +522,9 @@ function confirmTooltip(record) {
   return record.blockedReason
 }
 
-// 执行人员这一行的状态标签：已确认 / 待其他项目负责人确认（涉及的多个项目负责人里已经有人
-// 确认但还没全部确认）/ 预计（还没有任何相关项目负责人确认）——2026-07-28 新增中间状态
+// 执行人员这一行的状态标签：已确认（全部相关项目负责人都确认了）/ 待其他项目负责人确认
+// （管理层自己那部分——如果管理层这个月确实是相关项目负责人之一——已经确认了，不管别的
+// 项目负责人确没确认）/ 预计（管理层自己还没确认，不管别人有没有确认）——2026-07-28 新增中间状态
 function confirmTagLabel(record) {
   if (record.confirmed) return '已确认'
   if (record.employeeRole === '执行人员' && record.awaitingOtherManagers) return '待其他项目负责人确认'
