@@ -194,12 +194,14 @@
           <template v-if="column.key === 'confirm'">
             <a-space>
               <a-tag :color="confirmTagColor(record)">{{ confirmTagLabel(record) }}</a-tag>
-              <a-tooltip v-if="!record.confirmed" :title="confirmTooltip(record)">
+              <a-tooltip v-if="!record.confirmed && record.blockedReason" :title="confirmTooltip(record)">
                 <span>
                   <a-button type="primary" size="small"
                     :disabled="!!record.blockedReason" @click="confirmRow(record)">确认</a-button>
                 </span>
               </a-tooltip>
+              <a-button v-else-if="!record.confirmed" type="primary" size="small"
+                @click="confirmRow(record)">确认</a-button>
               <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(record)">
                 <a-button size="small">取消确认</a-button>
               </a-popconfirm>
@@ -207,7 +209,7 @@
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
-              <span v-if="record.employeeRole === '执行人员' && !record.confirmed" style="font-size:12px;color:#595959">
+              <span v-if="record.employeeRole === '执行人员' && !record.executorAllPmConfirmed" style="font-size:12px;color:#595959">
                 （需涉及的项目负责人都确认之后，执行人员的工资单才是最终版）
               </span>
             </a-space>
@@ -522,18 +524,28 @@ function confirmTooltip(record) {
   return record.blockedReason
 }
 
-// 执行人员这一行的状态标签：已确认（全部相关项目负责人都确认了）/ 待其他项目负责人确认
-// （管理层自己那部分——如果管理层这个月确实是相关项目负责人之一——已经确认了，不管别的
-// 项目负责人确没确认）/ 预计（管理层自己还没确认，不管别人有没有确认）——2026-07-28 新增中间状态
+// 执行人员这一行的状态标签：已确认（这个月涉及的所有项目负责人都确认了）/ 待其他项目负责人
+// 确认（管理层自己那部分——如果管理层这个月确实是相关项目负责人之一——已经确认了，不管别的
+// 项目负责人确没确认）/ 预计（管理层自己还没确认，不管别人有没有确认）——2026-07-28 新增中间
+// 状态。注意这个标签完全由 executorAllPmConfirmed/awaitingOtherManagers 驱动，跟 confirmed
+// （管理层是否点过主表格"确认"按钮）无关——两者是独立的两件事，哪怕管理层已经点过"确认"，
+// 只要还有项目负责人没确认，这里依然显示"预计"/"待其他项目负责人确认"，不会提前变绿。
+// 其余角色的标签仍然直接用 confirmed。
 function confirmTagLabel(record) {
-  if (record.confirmed) return '已确认'
-  if (record.employeeRole === '执行人员' && record.awaitingOtherManagers) return '待其他项目负责人确认'
-  return '预计'
+  if (record.employeeRole === '执行人员') {
+    if (record.executorAllPmConfirmed) return '已确认'
+    if (record.awaitingOtherManagers) return '待其他项目负责人确认'
+    return '预计'
+  }
+  return record.confirmed ? '已确认' : '预计'
 }
 function confirmTagColor(record) {
-  if (record.confirmed) return 'green'
-  if (record.employeeRole === '执行人员' && record.awaitingOtherManagers) return 'blue'
-  return 'orange'
+  if (record.employeeRole === '执行人员') {
+    if (record.executorAllPmConfirmed) return 'green'
+    if (record.awaitingOtherManagers) return 'blue'
+    return 'orange'
+  }
+  return record.confirmed ? 'green' : 'orange'
 }
 
 async function confirmRow(record) {
