@@ -51,10 +51,10 @@ export const brandApi = {
 
 // ===== Influencer Teams =====
 export const influencerTeamApi = {
-  list:   ()     => http.get('/api/influencer-teams'),
-  add:    (name) => http.post('/api/influencer-teams', JSON.stringify(name),
-    { headers: { 'Content-Type': 'application/json' } }),
-  delete: (id)   => http.delete(`/api/influencer-teams/${id}`)
+  list:        ()        => http.get('/api/influencer-teams'),
+  listByBrand: (brandId) => http.get(`/api/influencer-teams/by-brand/${brandId}`),
+  save:        (data)    => http.post('/api/influencer-teams', data),
+  delete:      (id)      => http.delete(`/api/influencer-teams/${id}`)
 }
 
 // ===== Domains =====

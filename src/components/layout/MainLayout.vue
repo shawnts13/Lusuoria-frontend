@@ -41,9 +41,9 @@
 
         <a-menu-divider />
 
-        <!-- 品牌方管理：严格按员工角色，只有"管理层"可见（2026-07 起） -->
+        <!-- 品牌方/红人团队管理：严格按员工角色，只有"管理层"可见（2026-07 起） -->
         <a-menu-item v-if="authStore.canAccessBrands" key="/brands">
-          <template #icon><ShopOutlined /></template>品牌方管理
+          <template #icon><ShopOutlined /></template>品牌方/红人团队管理
         </a-menu-item>
 
         <!-- 员工管理：ADMIN 或员工角色="管理层" 可见 -->
@@ -181,7 +181,7 @@ const pageTitleMap = {
   '/payments':       '3. 红人结款',
   '/payslips':       '工资单',
   '/pending':        '待处理',
-  '/brands':         '品牌方管理',
+  '/brands':         '品牌方/红人团队管理',
   '/employees':      '员工管理',
   '/executor-pay-rates': '执行人员管理',
   '/users':          '账号管理'

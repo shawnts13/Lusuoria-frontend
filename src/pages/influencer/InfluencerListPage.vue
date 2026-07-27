@@ -221,7 +221,6 @@
       :teams="teams"
       @saved="loadData"
       @domain-added="loadDomains"
-      @team-added="loadTeams"
     />
 
   </div>
@@ -384,10 +383,6 @@ function resetFilters() {
 async function loadDomains() {
   const res = await domainApi.list()
   domains.value = res.data || []
-}
-async function loadTeams() {
-  const res = await influencerTeamApi.list()
-  teams.value = res.data || []
 }
 
 function openCreate() { editingRecord.value = null; modalVisible.value = true }

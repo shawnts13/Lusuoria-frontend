@@ -45,9 +45,9 @@
             <div style="font-size:12px;color:#888;margin-top:4px">
               一个红人可以关联多个"品牌方-团队"对，同一品牌方下也可以配多个不同团队；团队可以不选（表示这个品牌方下暂时没配团队）
             </div>
-            <a-input-search v-if="authStore.canWrite" v-model:value="newTeamName"
-              placeholder="输入新团队名称后回车添加" enter-button="添加团队" style="margin-top:8px"
-              @search="handleAddTeam" />
+            <div style="font-size:12px;color:#ff4d4f;margin-top:4px">
+              未找到相应的红人团队？请联系管理层在"品牌方/红人团队管理"模块新建相应的团队。
+            </div>
           </a-form-item>
 
           <a-form-item label="服务国家/市场">
@@ -215,7 +215,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { influencerApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
+import { influencerApi, domainApi, influencerContractApi } from '../../api/index'
 import { useReferenceData } from '../../composables/useReferenceData'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
@@ -231,13 +231,12 @@ const props = defineProps({
   domains:           { type: Array, default: () => [] },
   teams:             { type: Array, default: () => [] }
 })
-const emit = defineEmits(['update:visible', 'saved', 'domain-added', 'team-added'])
+const emit = defineEmits(['update:visible', 'saved', 'domain-added'])
 
 const formRef          = ref()
 const saving           = ref(false)
 const employees        = ref([])
 const newDomainName    = ref('')
-const newTeamName      = ref('')
 const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
 const { loadEmployees } = useReferenceData()
@@ -426,18 +425,6 @@ async function handleAddDomain() {
     message.success('领域添加成功')
     newDomainName.value = ''
     emit('domain-added')
-  } catch (e) {
-    message.error(e?.response?.data?.message || '添加失败')
-  }
-}
-
-async function handleAddTeam() {
-  if (!newTeamName.value.trim()) return
-  try {
-    await influencerTeamApi.add(newTeamName.value.trim())
-    message.success('团队添加成功')
-    newTeamName.value = ''
-    emit('team-added')
   } catch (e) {
     message.error(e?.response?.data?.message || '添加失败')
   }

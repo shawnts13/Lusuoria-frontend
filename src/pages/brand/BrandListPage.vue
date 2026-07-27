@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <span class="page-title">品牌方管理</span>
+      <span class="page-title">品牌方/红人团队管理</span>
       <a-space>
         <a-button @click="brandApi.downloadTemplate()">
           <template #icon><DownloadOutlined /></template>下载导入模板
@@ -47,14 +47,17 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'action'">
-            <a-space v-if="authStore.canAccessBrands">
-              <a @click="openEdit(record)">编辑</a>
-              <a-divider type="vertical" />
-              <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                <a style="color:#ff4d4f">删除</a>
-              </a-popconfirm>
+            <a-space>
+              <a @click="openTeamManage(record)">管理团队</a>
+              <template v-if="authStore.canAccessBrands">
+                <a-divider type="vertical" />
+                <a @click="openEdit(record)">编辑</a>
+                <a-divider type="vertical" />
+                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
+                  <a style="color:#ff4d4f">删除</a>
+                </a-popconfirm>
+              </template>
             </a-space>
-            <span v-else style="color:#bbb">只读</span>
           </template>
         </template>
       </a-table>
@@ -134,6 +137,9 @@
         </template>
       </a-list>
     </a-modal>
+
+    <!-- 团队管理 -->
+    <TeamManageModal v-model:visible="teamManageVisible" :brand="teamManageBrand" />
   </div>
 </template>
 
@@ -144,6 +150,7 @@ import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '
 import { brandApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
+import TeamManageModal from './TeamManageModal.vue'
 
 const authStore = useAuthStore()
 const loading   = ref(false)
@@ -154,6 +161,13 @@ const saving             = ref(false)
 const formRef            = ref()
 const importResultVisible = ref(false)
 const importResults      = ref([])
+const teamManageVisible  = ref(false)
+const teamManageBrand    = ref(null)
+
+function openTeamManage(record) {
+  teamManageBrand.value = record
+  teamManageVisible.value = true
+}
 
 const form = reactive({
   id: null, name: '', countryMarket: '',
