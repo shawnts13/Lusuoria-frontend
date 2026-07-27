@@ -207,9 +207,13 @@
               <a @click="openStatusModal(record)">状态流转</a>
               <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
               <a-divider type="vertical" />
-              <a-tooltip v-if="!record.executorId" title="该记录还没有关联执行人员，请先在编辑表单里选择执行人员">
+              <a-tooltip v-if="!record.executorId" title="该记录还没有关联执行人员，若涉及的话，请先在编辑表单里选择执行人员">
                 <span style="color:#bbb;cursor:not-allowed">设置执行成本</span>
               </a-tooltip>
+              <!-- 项目负责人还没在"执行人员管理"给这个执行人员+这个视频类型配置薪资梯度，
+                   没有建议金额可给，隐藏这个快捷入口（占位不塌陷，避免"删除"错位），
+                   要设置的话去"编辑"里手动填 -->
+              <span v-else-if="!record.hasExecutorPayRateConfigured" style="visibility:hidden">设置执行成本</span>
               <a v-else @click="openExecutorCostModal(record)">设置执行成本</a>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
