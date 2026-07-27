@@ -32,7 +32,7 @@
         </template>
       </a-form>
 
-      <a-button v-if="!preSave" type="link" style="padding-left:0" @click="notApplicable = !notApplicable">
+      <a-button type="link" style="padding-left:0" @click="notApplicable = !notApplicable">
         {{ notApplicable ? '取消勾选' : '不涉及执行人员（以后不再提醒）' }}
       </a-button>
       <div v-if="notApplicable" style="font-size:12px;color:#888">
@@ -47,23 +47,12 @@ import { ref, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 
-/**
- * 2026-07 新增 preSave 模式：编辑表单里首次填视频链接触发自动流转、且该项目负责人还没给
- * 这个执行人员配置过费率梯度时，视频链接+状态+执行人员+执行成本要合并成一次性提交
- * （见 CollaborationFormModal.vue）——这种场景下这条记录在数据库里还是旧数据（链接/状态都
- * 还没改），不能调 suggestExecutorCost（会按旧的视频发布时间/进度算，还可能触发"该记录尚未
- * 填写视频发布时间"之类的报错），直接展示固定的"未配置费率"提示，不发起任何查询；
- * 也不提供"不涉及执行人员"选项——这个场景下执行人员是编辑表单里已经选好的，不涉及现场改选。
- * 确认时不直接调用 setExecutorCost，而是把金额通过 confirm-amount 事件交给父组件，
- * 由父组件把金额并入同一个保存请求一次性提交；取消/关闭/确认但没填金额，都不发起任何请求。
- */
 const props = defineProps({
   visible: Boolean,
   record: Object,
-  employees: { type: Array, default: () => [] },
-  preSave: { type: Boolean, default: false }
+  employees: { type: Array, default: () => [] }
 })
-const emit = defineEmits(['update:visible', 'saved', 'confirm-amount'])
+const emit = defineEmits(['update:visible', 'saved'])
 
 const executorCandidates = computed(() =>
   props.employees.filter(e => e.role === '执行人员'))
@@ -76,18 +65,9 @@ const loadingSuggestion = ref(false)
 const selectedExecutorId = ref(null)
 const notApplicable = ref(false)
 
-const NO_RATE_CONFIGURED_MESSAGE = '该项目负责人尚未在"执行人员管理"模块为其设置薪资信息，'
-  + '请先进行设置后，再手动设置该视频条目的执行人员薪酬。'
-
 const effectiveExecutorId = computed(() => props.record?.executorId || selectedExecutorId.value)
 
 async function loadSuggestion() {
-  if (props.preSave) {
-    amount.value = null
-    breakdown.value = NO_RATE_CONFIGURED_MESSAGE
-    rateBasedSuggestion.value = false
-    return
-  }
   if (!effectiveExecutorId.value) {
     amount.value = null
     breakdown.value = '请先选择内部执行人员，或选择"不涉及执行人员"'
@@ -124,16 +104,6 @@ function close() { emit('update:visible', false) }
 
 async function handleSave() {
   if (saving.value) return
-
-  if (props.preSave) {
-    if (amount.value == null) {
-      message.warning('请填写内部执行成本金额，或点击右上角关闭放弃本次保存')
-      return
-    }
-    emit('confirm-amount', amount.value)
-    close()
-    return
-  }
 
   if (!notApplicable.value && !effectiveExecutorId.value) {
     message.warning('请先选择内部执行人员，或选择"不涉及执行人员"')

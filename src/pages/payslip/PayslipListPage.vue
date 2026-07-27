@@ -53,14 +53,39 @@
               {{ managementRow.blockedReason }}
             </div>
             <div class="formula-box">
-              <div class="formula-line">
+              <div class="formula-title">
                 公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计（含Bonus） − 内部其他员工成本 − 奖金合计
               </div>
-              <div class="formula-line formula-data">
-                = {{ fmt(managementRow.grossProfit) }} − {{ fmt(managementRow.executorPayTotal) }}
-                − {{ fmt(managementRow.managerCommissionTotal) }} − {{ fmt(managementRow.otherStaffCost) }}
-                − {{ fmt(managementRow.extraBonusPayoutTotal) }}
-                = <b>{{ fmt(managementRow.totalAmount) }}</b>
+              <div class="formula-row">
+                <div class="formula-term">
+                  <div class="formula-label">项目毛利</div>
+                  <div class="formula-value">{{ fmt(managementRow.grossProfit) }}</div>
+                </div>
+                <div class="formula-op">−</div>
+                <div class="formula-term">
+                  <div class="formula-label">内部执行人力成本</div>
+                  <div class="formula-value">{{ fmt(managementRow.executorPayTotal) }}</div>
+                </div>
+                <div class="formula-op">−</div>
+                <div class="formula-term">
+                  <div class="formula-label">负责人提成合计（含Bonus）</div>
+                  <div class="formula-value">{{ fmt(managementRow.managerCommissionTotal) }}</div>
+                </div>
+                <div class="formula-op">−</div>
+                <div class="formula-term">
+                  <div class="formula-label">内部其他员工成本</div>
+                  <div class="formula-value">{{ fmt(managementRow.otherStaffCost) }}</div>
+                </div>
+                <div class="formula-op">−</div>
+                <div class="formula-term">
+                  <div class="formula-label">奖金合计</div>
+                  <div class="formula-value">{{ fmt(managementRow.extraBonusPayoutTotal) }}</div>
+                </div>
+                <div class="formula-op">=</div>
+                <div class="formula-term formula-total">
+                  <div class="formula-label">公司利润</div>
+                  <div class="formula-value">{{ fmt(managementRow.totalAmount) }}</div>
+                </div>
               </div>
             </div>
           </template>
@@ -446,14 +471,50 @@ onMounted(loadAll)
   border-radius: 8px;
   background: #fff;
 }
-.formula-line {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.8;
+.formula-title {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 10px;
 }
-.formula-line.formula-data {
+.formula-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+}
+.formula-term {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+  max-width: 160px;
+  padding: 2px 6px;
+  text-align: center;
+}
+.formula-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+.formula-value {
+  font-size: 14px;
+  font-weight: 600;
   color: #333;
   font-family: 'Consolas', monospace;
+}
+.formula-op {
+  font-size: 16px;
+  color: #999;
+  padding: 0 2px;
+}
+.formula-term.formula-total .formula-label {
+  color: #333;
+  font-weight: 600;
+}
+.formula-term.formula-total .formula-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: #000;
 }
 .exchange-rate-display {
   font-size: 13px;

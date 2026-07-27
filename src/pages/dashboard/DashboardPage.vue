@@ -84,11 +84,32 @@
       </div>
 
       <div v-if="summary.totalCompanyProfit != null" class="formula-box">
-        <div class="formula-line">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计 − 内部其他员工成本</div>
-        <div class="formula-line formula-data">
-          = {{ fmt(summary.totalGrossProfit) }} − {{ fmt(summary.totalInternalExecutionCost) }}
-          − {{ fmt(summary.totalCommissionAmount) }} − {{ fmt(summary.totalOtherStaffCost) }}
-          = <b>{{ fmt(summary.totalCompanyProfit) }}</b>
+        <div class="formula-title">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计 − 内部其他员工成本</div>
+        <div class="formula-row">
+          <div class="formula-term">
+            <div class="formula-label">项目毛利</div>
+            <div class="formula-value">{{ fmt(summary.totalGrossProfit) }}</div>
+          </div>
+          <div class="formula-op">−</div>
+          <div class="formula-term">
+            <div class="formula-label">内部执行人力成本</div>
+            <div class="formula-value">{{ fmt(summary.totalInternalExecutionCost) }}</div>
+          </div>
+          <div class="formula-op">−</div>
+          <div class="formula-term">
+            <div class="formula-label">负责人提成合计</div>
+            <div class="formula-value">{{ fmt(summary.totalCommissionAmount) }}</div>
+          </div>
+          <div class="formula-op">−</div>
+          <div class="formula-term">
+            <div class="formula-label">内部其他员工成本</div>
+            <div class="formula-value">{{ fmt(summary.totalOtherStaffCost) }}</div>
+          </div>
+          <div class="formula-op">=</div>
+          <div class="formula-term formula-total">
+            <div class="formula-label">公司利润</div>
+            <div class="formula-value">{{ fmt(summary.totalCompanyProfit) }}</div>
+          </div>
         </div>
       </div>
     </a-spin>
@@ -325,13 +346,49 @@ onMounted(loadSummary)
   border-radius: 8px;
   background: #fafafa;
 }
-.formula-line {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.8;
+.formula-title {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 10px;
 }
-.formula-line.formula-data {
+.formula-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+}
+.formula-term {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+  max-width: 160px;
+  padding: 2px 6px;
+  text-align: center;
+}
+.formula-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+.formula-value {
+  font-size: 14px;
+  font-weight: 600;
   color: #333;
   font-family: 'Consolas', monospace;
+}
+.formula-op {
+  font-size: 16px;
+  color: #999;
+  padding: 0 2px;
+}
+.formula-term.formula-total .formula-label {
+  color: #333;
+  font-weight: 600;
+}
+.formula-term.formula-total .formula-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: #000;
 }
 </style>

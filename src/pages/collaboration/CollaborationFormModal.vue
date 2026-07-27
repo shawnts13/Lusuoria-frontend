@@ -344,22 +344,12 @@
       @confirm="onRequirementLinked"
     />
   </a-modal>
-
-  <!-- 2026-07 新增：该项目负责人还没给选中的执行人员配置过费率梯度时，视频链接+状态+
-       执行人员+执行成本需要合并成一次性提交，见 checkNeedsExecutorCostBeforeSave() -->
-  <CollaborationExecutorCostModal
-    v-model:visible="preSaveCostModalVisible"
-    :record="preSaveCostRecord"
-    :pre-save="true"
-    @confirm-amount="onPreSaveAmountConfirmed"
-  />
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import RequirementLinkPickerModal from '../requirement/RequirementLinkPickerModal.vue'
-import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
 import { collaborationApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
@@ -707,19 +697,29 @@ function willAutoTransitionOnSave() {
   return !QUALIFYING_PROGRESS_FOR_TRANSITION.includes(props.record.progress)
 }
 
-// 该项目负责人还没给选中的执行人员配置过费率梯度时，需要在提交前先弹窗确认金额，
-// 视频链接+状态+执行人员+执行成本合并成一次性提交（"取消=整个操作一次性取消"）
-const preSaveCostModalVisible = ref(false)
-const preSaveCostRecord = ref(null)
-const pendingPayload = ref(null)
-
+// 2026-07 起：该项目负责人（或管理层）还没给选中的执行人员配置过这个视频类型的费率梯度时，
+// 直接阻止保存并提示去配置——不再允许在这里手动填一个金额绕过去，避免出现"流程还没变、
+// 规则还没配，却已经有人手动填了一个数字"的隐患。（原来是弹窗手动填金额、视频链接+状态+
+// 执行人员+执行成本合并一次性提交；现在改成提交前置校验不通过就直接报错，不落库）
 async function needsExecutorCostBeforeSave() {
   if (!form.executorId || !form.projectManagerId || !form.videoType) return false
   if (props.record?.executorCostNotApplicable) return false
   if (!willAutoTransitionOnSave()) return false
-  // 2026-07 起费率按视频类型分开配置，必须精确到这条记录的具体视频类型才能判断
+  // 费率按视频类型分开配置，必须精确到这条记录的具体视频类型才能判断
   const res = await executorPayRateApi.check(form.projectManagerId, form.executorId, form.videoType)
   return !res.data
+}
+
+function blockSaveForMissingExecutorRate() {
+  const executor = props.employees.find(e => e.id === form.executorId)
+  const manager = props.employees.find(e => e.id === form.projectManagerId)
+  const videoTypeLabel = getOptions('video_type').find(o => o.value === form.videoType)?.label || form.videoType
+  const configPage = manager?.role === '管理层' ? '"员工管理"页面（管理层维护）' : '"执行人员管理"页面（项目负责人维护）'
+  Modal.warning({
+    title: '无法保存',
+    content: `执行人员"${executor?.name || ''}"在"${videoTypeLabel}"这个视频类型下还没有配置薪资费率，`
+      + `请先前往${configPage}为其配置费率梯度后再保存。`
+  })
 }
 
 async function doSave() {
@@ -727,15 +727,7 @@ async function doSave() {
   saving.value = true
   try {
     if (await needsExecutorCostBeforeSave()) {
-      pendingPayload.value = buildPayload()
-      const executor = props.employees.find(e => e.id === form.executorId)
-      preSaveCostRecord.value = {
-        id: form.id,
-        internalProjectNo: form.internalProjectNo,
-        executorId: form.executorId,
-        executorName: executor?.name || ''
-      }
-      preSaveCostModalVisible.value = true
+      blockSaveForMissingExecutorRate()
       return
     }
     await submitPayload(buildPayload())
@@ -743,21 +735,6 @@ async function doSave() {
     message.error(e?.response?.data?.message || '保存失败')
   } finally {
     saving.value = false
-  }
-}
-
-// preSave 弹窗确认了金额：把金额并入同一份保存请求，一次性提交（视频链接+状态+执行人员+
-// 执行成本一起落库）；弹窗取消/关闭则完全不会触发这个回调，什么都不会保存
-async function onPreSaveAmountConfirmed(amount) {
-  if (!pendingPayload.value) return
-  saving.value = true
-  try {
-    await submitPayload({ ...pendingPayload.value, internalExecutionCost: amount })
-  } catch (e) {
-    message.error(e?.response?.data?.message || '保存失败')
-  } finally {
-    saving.value = false
-    pendingPayload.value = null
   }
 }
 
