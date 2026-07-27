@@ -99,7 +99,7 @@
         class="management-card">
         <div class="mgmt-top">
           <span class="mgmt-title">管理层手下执行人员工资</span>
-          <span class="confirm-hint">（当所有项目负责人都确认后，执行人员的工资单才会是最终版）</span>
+          <span class="confirm-hint">（这里的确认与管理层对执行人员工资单的最终确认相互独立，管理层可随时对执行人员工资单做最终确认）</span>
         </div>
         <a-table :columns="executorWageColumns" :data-source="managementExecutorDetail.executorWageRows"
           :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
@@ -207,9 +207,6 @@
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
-              <span v-if="record.employeeRole === '执行人员' && !record.confirmed" style="font-size:12px;color:#595959">
-                （需涉及的项目负责人都确认之后，执行人员的工资单才是最终版）
-              </span>
             </a-space>
           </template>
         </template>
@@ -264,7 +261,7 @@
           <div v-if="selfDetail.executorWageRows && selfDetail.executorWageRows.length" class="management-card">
             <div class="mgmt-top">
               <span class="mgmt-title">手下执行人员工资</span>
-              <span class="confirm-hint">（当所有项目负责人都确认后，执行人员的工资单才会是最终版）</span>
+              <span class="confirm-hint">（这里的确认与管理层对执行人员工资单的最终确认相互独立，管理层可随时对执行人员工资单做最终确认）</span>
             </div>
             <a-table :columns="executorWageColumns" :data-source="selfDetail.executorWageRows"
               :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
@@ -515,10 +512,9 @@ function loadAll() {
   }
 }
 
-// 执行人员的"确认"按钮不可点击时，提示具体去哪里操作，比后端那句列了一串项目负责人姓名的
-// 通用文案更直接可操作；其余角色（管理层自己）的拦截提示保持原样，那边场景不一样
+// 2026-07-28 起执行人员的最终确认不再要求所有涉及的项目负责人先确认（管理层可随时确认），
+// 所以这里不再有执行人员专属的拦截提示；只有管理层自己那行还可能有 blockedReason
 function confirmTooltip(record) {
-  if (record.employeeRole === '执行人员') return '请先在"管理层手下执行人员工资"确认执行人员薪酬'
   return record.blockedReason
 }
 
