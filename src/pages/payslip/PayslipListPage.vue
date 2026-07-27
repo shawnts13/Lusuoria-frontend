@@ -140,7 +140,7 @@
 
           <template v-if="column.key === 'confirm'">
             <template v-if="record.employeeRole === '执行人员'">
-              <a-tag color="blue">工资由各项目负责人分别确认，请先查看明细（未最终版）</a-tag>
+              <a-tag color="blue">等待其他项目负责人先确认，请先查看明细（非最终版）</a-tag>
             </template>
             <a-space v-else>
               <a-tag :color="record.confirmed ? 'green' : 'orange'">{{ record.confirmed ? '已确认' : '预计' }}</a-tag>
