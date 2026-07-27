@@ -32,19 +32,19 @@
             <template v-if="isCommissionRole(record.role)">
               <div style="font-size:12px;line-height:1.6">
                 <div>
-                  <span style="color:#888">默认提成：</span>
+                  <span style="color:#595959">默认提成：</span>
                   {{ record.defaultCommissionRate != null
                     ? (parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%'
                     : '—' }}
                 </div>
-                <div v-if="bonusTierSummary(record.id)" style="color:#666">
-                  <span style="color:#888">Bonus（{{ record.bonusTierCurrency === 'RMB' ? '¥' : '$' }}）：</span>
+                <div v-if="bonusTierSummary(record.id)" style="color:#262626">
+                  <span style="color:#595959">Bonus（{{ record.bonusTierCurrency === 'RMB' ? '¥' : '$' }}）：</span>
                   {{ bonusTierSummary(record.id) }}
                 </div>
               </div>
             </template>
             <template v-else-if="isFixedSalaryRole(record.role)">
-              <span style="color:#888;font-size:12px">固定月薪：</span>
+              <span style="color:#595959;font-size:12px">固定月薪：</span>
               {{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}
             </template>
             <template v-else-if="isExecutorRole(record.role)">
@@ -58,9 +58,9 @@
               <span v-else style="color:#c00000;font-size:12px">请项目负责人设置对应执行人员的薪资规则</span>
             </template>
             <template v-else-if="isLegalRole(record.role)">
-              <span style="color:#888;font-size:12px">法务每月薪资由管理层手动在"工资单"模块设置</span>
+              <span style="color:#262626;font-size:12px">法务每月薪资由管理层手动在"工资单"模块设置</span>
             </template>
-            <span v-else style="color:#bbb">薪资规则待定</span>
+            <span v-else style="color:#595959">薪资规则待定</span>
           </template>
           <template v-if="column.key === 'action'">
             <a-space>
@@ -110,7 +110,7 @@
               :formatter="v => v + '%'" :parser="v => v.replace('%','')"
               @change="v => form.defaultCommissionRate = v / 100"
             />
-            <div style="font-size:12px; color:#888; margin-top:4px">
+            <div style="font-size:12px; color:#595959; margin-top:4px">
               可在具体项目中覆盖此比例
             </div>
           </a-form-item>
@@ -417,12 +417,12 @@ onMounted(loadData)
 }
 .bonus-section-hint {
   font-size: 12px;
-  color: #999;
+  color: #595959;
   line-height: 1.5;
 }
 .bonus-empty {
   font-size: 12px;
-  color: #999;
+  color: #595959;
   background: #fff;
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
@@ -468,7 +468,7 @@ onMounted(loadData)
   margin-bottom: 4px;
 }
 .bonus-field-hint {
-  color: #bbb;
+  color: #595959;
   font-weight: normal;
   margin-left: 4px;
 }

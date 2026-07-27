@@ -43,7 +43,7 @@
     </a-table>
 
     <a-modal v-model:open="detailVisible" title="导入详情" :footer="null" width="600px">
-      <div style="margin-bottom:12px; color:#888; font-size:13px" v-if="detailRecord">
+      <div style="margin-bottom:12px; color:#262626; font-size:13px" v-if="detailRecord">
         {{ detailRecord.fileName }}　上传人：{{ detailRecord.uploadedByName }}
       </div>
       <a-list v-if="detailRecord?.status === 'COMPLETED'"
@@ -58,7 +58,7 @@
       <div v-else-if="detailRecord?.status === 'FAILED'" style="color:#ff4d4f">
         {{ detailRecord.errorMessage || '导入失败，没有具体错误信息' }}
       </div>
-      <div v-else style="color:#999">还在处理中，请稍后再查看</div>
+      <div v-else style="color:#595959">还在处理中，请稍后再查看</div>
     </a-modal>
   </div>
 </template>

@@ -36,7 +36,7 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'lastUpdatedAt'">
-            <span style="color:#888">{{ record.lastUpdatedAt ? formatDateTime(record.lastUpdatedAt) : '—' }}</span>
+            <span style="color:#595959">{{ record.lastUpdatedAt ? formatDateTime(record.lastUpdatedAt) : '—' }}</span>
           </template>
           <template v-if="column.key === 'action'">
             <a @click="openEdit(record)">修改</a>
@@ -67,7 +67,7 @@
         <a-form-item label="USD/CNY 汇率" name="usdToCny"
           :rules="[{ required: true, message: '请填写汇率' }]">
           <a-input-number v-model:value="form.usdToCny" style="width:100%" :precision="4" :min="0" />
-          <div style="font-size:12px;color:#888;margin-top:4px">
+          <div style="font-size:12px;color:#595959;margin-top:4px">
             即 1 美元 = 多少人民币，对照
             <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">中国银行官网</a>
             填写「中行折算价」并 ÷ 100（官网按每100美元报价）

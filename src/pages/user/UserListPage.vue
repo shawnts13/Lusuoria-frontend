@@ -53,7 +53,7 @@
           :rules="editingRecord ? [] : [{ required: true, message: '请填写密码' }, { min: 6, message: '至少6位' }]">
           <a-input-password v-model:value="form.password"
             :placeholder="editingRecord ? '留空则不修改密码' : '默认密码：lusuoria2026@'" />
-          <div v-if="!editingRecord" style="font-size:12px;color:#888;margin-top:3px">
+          <div v-if="!editingRecord" style="font-size:12px;color:#595959;margin-top:3px">
             默认密码已预填，可直接使用或修改
           </div>
         </a-form-item>

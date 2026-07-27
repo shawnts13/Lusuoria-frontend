@@ -42,7 +42,7 @@
             <a-button type="dashed" block @click="form.brandTeamPairs.push({ brandId: null, teamId: null })">
               + 添加品牌方-团队关联
             </a-button>
-            <div style="font-size:12px;color:#888;margin-top:4px">
+            <div style="font-size:12px;color:#595959;margin-top:4px">
               一个红人可以关联多个"品牌方-团队"对，同一品牌方下也可以配多个不同团队；团队可以不选（表示这个品牌方下暂时没配团队）
             </div>
             <div style="font-size:12px;color:#ff4d4f;margin-top:4px">
@@ -148,7 +148,7 @@
           <a-form-item label="已签署合同" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
             <template v-if="props.record?.id">
               <template v-if="!hasAnyAnnualBrand">
-                <span style="color:#888;font-size:12px">
+                <span style="color:#595959;font-size:12px">
                   此红人的合同是一需求一签，请在红人需求管理处查看对应需求的合同
                 </span>
               </template>
@@ -171,11 +171,11 @@
                     </div>
                   </div>
                 </div>
-                <span v-else style="color:#bbb;font-size:12px;display:block;margin-bottom:8px">还没有已签署的合同记录</span>
+                <span v-else style="color:#595959;font-size:12px;display:block;margin-bottom:8px">还没有已签署的合同记录</span>
                 <a-button size="small" @click="openContractModal(null)">上传合同</a-button>
               </template>
             </template>
-            <span v-else style="color:#bbb;font-size:12px">保存红人后才能维护已签署合同</span>
+            <span v-else style="color:#595959;font-size:12px">保存红人后才能维护已签署合同</span>
           </a-form-item>
 
           <!-- 敏感字段 -->

@@ -33,7 +33,7 @@
             <template v-if="column.key === 'requestedChange'">
               <span v-if="record.category === 'PROGRESS_ROLLBACK'">
                 视频项目进度 → {{ getLabel('collab_progress', record.requestedProgress) }}
-                <span style="color:#888">（红人结款进度将清空）</span>
+                <span style="color:#595959">（红人结款进度将清空）</span>
               </span>
               <span v-else style="color:#bbb">—</span>
             </template>

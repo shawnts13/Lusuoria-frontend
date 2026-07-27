@@ -325,10 +325,10 @@ onMounted(loadSummary)
 }
 .exchange-rate-display {
   font-size: 13px;
-  color: #666;
+  color: #595959;
 }
 .exchange-rate-display a, .rate-updated-by {
-  color: #999;
+  color: #595959;
   margin-left: 4px;
 }
 .exchange-rate-error {
@@ -348,7 +348,7 @@ onMounted(loadSummary)
 }
 .formula-title {
   font-size: 12px;
-  color: #888;
+  color: #595959;
   margin-bottom: 10px;
 }
 .formula-row {
@@ -368,7 +368,7 @@ onMounted(loadSummary)
 }
 .formula-label {
   font-size: 12px;
-  color: #666;
+  color: #595959;
   margin-bottom: 4px;
 }
 .formula-value {

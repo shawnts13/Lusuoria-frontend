@@ -81,7 +81,7 @@ function removeTier(idx) {
 }
 .tier-empty {
   font-size: 12px;
-  color: #999;
+  color: #595959;
   background: #fff;
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
@@ -127,7 +127,7 @@ function removeTier(idx) {
   margin-bottom: 4px;
 }
 .tier-field-hint {
-  color: #bbb;
+  color: #595959;
   font-weight: normal;
   margin-left: 4px;
 }
@@ -144,7 +144,7 @@ function removeTier(idx) {
 }
 .tier-section-hint {
   font-size: 12px;
-  color: #999;
+  color: #595959;
   margin-top: 8px;
   line-height: 1.5;
 }

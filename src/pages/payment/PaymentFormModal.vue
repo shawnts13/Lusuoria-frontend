@@ -28,7 +28,7 @@
             {{ t.teamName || '（不涉及团队）' }}
           </a-select-option>
         </a-select>
-        <div v-if="!form.id" style="font-size:12px;color:#999;margin-top:4px">
+        <div v-if="!form.id" style="font-size:12px;color:#595959;margin-top:4px">
           可多选，勾选多个团队时，"选择涉及的红人视频项目"会一起显示这几个团队的候选记录
         </div>
       </a-form-item>
@@ -54,7 +54,7 @@
         <a-button :disabled="!canOpenSelector" @click="openSelector">
           {{ selectorMode === 'view' ? '查看涉及的红人视频项目' : '选择涉及的红人视频项目' }}
         </a-button>
-        <div style="font-size:12px;color:#999;margin-top:4px">
+        <div style="font-size:12px;color:#595959;margin-top:4px">
           已选 {{ form.selectedItems.length }} 条，合计 {{ fmtNum(form.payableAmount) }} 美元
         </div>
       </a-form-item>
@@ -85,7 +85,7 @@
 
       <a-form-item label="预计付款日" name="expectedPaymentDate">
         <a-date-picker v-model:value="form.expectedPaymentDate" value-format="YYYY-MM-DD" style="width:100%" />
-        <div v-if="brandCycleHint" style="font-size:12px;color:#999;margin-top:4px">{{ brandCycleHint }}</div>
+        <div v-if="brandCycleHint" style="font-size:12px;color:#595959;margin-top:4px">{{ brandCycleHint }}</div>
       </a-form-item>
 
       <template v-if="!form.id">

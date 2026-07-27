@@ -319,7 +319,7 @@ async function doUnconfirmExecutorWages() {
 }
 .formula-title {
   font-size: 12px;
-  color: #888;
+  color: #595959;
   margin-bottom: 10px;
 }
 .formula-row {
@@ -339,7 +339,7 @@ async function doUnconfirmExecutorWages() {
 }
 .formula-label {
   font-size: 12px;
-  color: #666;
+  color: #595959;
   margin-bottom: 4px;
 }
 .formula-value {
@@ -365,7 +365,7 @@ async function doUnconfirmExecutorWages() {
 .footer-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: #888;
+  color: #595959;
   text-align: right;
 }
 :deep(.summary-row) {

@@ -89,7 +89,7 @@
               :href="contractCellState(record).href" target="_blank" style="font-size:12px">查看合同</a>
             <a v-else-if="contractCellState(record).mode === 'gotoInfluencer'"
               @click="goToInfluencerContract(record)"
-              style="font-size:12px;color:#999;cursor:pointer">{{ contractCellState(record).text }}</a>
+              style="font-size:12px;color:#595959;cursor:pointer">{{ contractCellState(record).text }}</a>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'action'">
@@ -274,9 +274,9 @@ function highlightContent(text) {
     '<span style="color:#1677ff;font-weight:600">$1$2$3</span>')
   // 其余常见标签弱化成灰色，降低视觉噪音，衬托真正重要的价格/金额信息
   html = html.replace(/(红人区域|红人完整名字|红人社媒完整名字|红人TEMU系统ID|下单条数|下单机构|投流期限|版权)([：:])/g,
-    '<span style="color:#888">$1$2</span>')
+    '<span style="color:#595959">$1$2</span>')
   // "其他权益"小标题
-  html = html.replace(/(其他权益)/g, '<span style="color:#666;font-weight:600">$1</span>')
+  html = html.replace(/(其他权益)/g, '<span style="color:#595959;font-weight:600">$1</span>')
   // USD 金额单独标红加粗，是全文最需要一眼看到的数字
   html = html.replace(/([\d.]+\s*USD)/g, '<span style="color:#c00000;font-weight:600">$1</span>')
   return html

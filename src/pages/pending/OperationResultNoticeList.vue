@@ -12,10 +12,10 @@
             <span :style="{ color: n.status === 'APPROVED' ? '#237804' : '#cf1322', fontWeight: 600 }">
               {{ n.status === 'APPROVED' ? '已同意' : '已拒绝' }}
             </span>
-            <span v-if="n.status === 'REJECTED' && n.resolutionNote" style="color:#888">
+            <span v-if="n.status === 'REJECTED' && n.resolutionNote" style="color:#595959">
               （原因：{{ n.resolutionNote }}）
             </span>
-            <span style="color:#888">，处理时间 {{ formatDateTime(n.resolvedAt) }}</span>
+            <span style="color:#595959">，处理时间 {{ formatDateTime(n.resolvedAt) }}</span>
           </span>
         </div>
         <a-popconfirm title="确认删除这条通知吗？" @confirm="handleDismiss(n)">

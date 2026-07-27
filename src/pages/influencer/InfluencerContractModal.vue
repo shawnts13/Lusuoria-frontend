@@ -15,7 +15,7 @@
           :disabled="!!contract">
           <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id">{{ b.name }}</a-select-option>
         </a-select>
-        <div style="font-size:12px;color:#888;margin-top:2px">
+        <div style="font-size:12px;color:#595959;margin-top:2px">
           只列出这个红人关联过的"一年签一次合同"品牌方；"一次需求签一次合同"的品牌方请在红人需求管理处上传
         </div>
       </a-form-item>

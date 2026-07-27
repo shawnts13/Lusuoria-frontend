@@ -1,7 +1,7 @@
 <template>
   <a-modal :open="visible" title="关联红人需求" width="640px" :footer="null" @cancel="close">
     <template v-if="step === 1">
-      <p style="color:#888;font-size:13px">选择该红人下"需求完成进度"还没满的需求：</p>
+      <p style="color:#595959;font-size:13px">选择该红人下"需求完成进度"还没满的需求：</p>
       <a-list :data-source="requirements" :loading="loadingStep1" bordered>
         <template #renderItem="{ item }">
           <a-list-item :class="{ 'req-row-selected': selectedRequirement?.id === item.id }"
@@ -9,13 +9,13 @@
             <a-radio :checked="selectedRequirement?.id === item.id" />
             <div style="margin-left:8px;flex:1">
               <div>{{ item.internalRequirementNo }}</div>
-              <div style="font-size:12px;color:#888">
+              <div style="font-size:12px;color:#595959">
                 需求月份 {{ item.requirementMonth }}，完成进度 {{ item.completedCount ?? 0 }}/{{ item.totalItemCount ?? 0 }}
               </div>
             </div>
           </a-list-item>
         </template>
-        <template #renderEmpty><div style="text-align:center;color:#bbb;padding:24px 0">该红人暂无未完成的需求</div></template>
+        <template #renderEmpty><div style="text-align:center;color:#595959;padding:24px 0">该红人暂无未完成的需求</div></template>
       </a-list>
       <div style="margin-top:16px;text-align:right">
         <a-button type="primary" :disabled="!selectedRequirement" @click="goToStep2">下一步</a-button>
@@ -23,7 +23,7 @@
     </template>
 
     <template v-else>
-      <p style="color:#888;font-size:13px">
+      <p style="color:#595959;font-size:13px">
         选择具体的"项目视频类型-合作平台"条目（已实施满的条目不能再选）：
       </p>
       <a-list :data-source="items" :loading="loadingStep2" bordered>
@@ -34,7 +34,7 @@
             <a-radio :checked="selectedItem?.id === item.id" :disabled="isFull(item)" />
             <div style="margin-left:8px;flex:1">
               {{ item.videoTypeLabel }}-{{ (item.platform || '').split('\n').join('、') }}
-              <span style="margin-left:8px;color:#888;font-size:12px">
+              <span style="margin-left:8px;color:#595959;font-size:12px">
                 已实施 {{ item.fulfilledCount ?? 0 }}/{{ item.videoCount ?? 0 }}
               </span>
             </div>

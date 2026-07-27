@@ -184,7 +184,7 @@
             <div v-if="record.contacts">
               <div v-for="c in parseContacts(record.contacts)" :key="c.type"
                 style="font-size:12px;white-space:nowrap">
-                <span style="color:#888">{{ contactTypeLabel(c.type) }}：</span>{{ c.value }}
+                <span style="color:#595959">{{ contactTypeLabel(c.type) }}：</span>{{ c.value }}
               </div>
             </div>
             <span v-else style="color:#bbb">—</span>

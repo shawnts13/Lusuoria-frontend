@@ -32,17 +32,17 @@
               <a-radio :checked="selectedRequirement?.id === item.id" />
               <div style="margin-left:8px;flex:1">
                 <div>{{ item.internalRequirementNo }}</div>
-                <div style="font-size:12px;color:#888">
+                <div style="font-size:12px;color:#595959">
                   需求月份 {{ item.requirementMonth }}，完成进度 {{ item.completedCount ?? 0 }}/{{ item.totalItemCount ?? 0 }}
                 </div>
               </div>
             </div>
             <div v-if="selectedRequirement?.id === item.id" style="margin-top:10px;padding-left:24px">
-              <div style="font-size:12px;color:#888;margin-bottom:4px">完整需求内容：</div>
+              <div style="font-size:12px;color:#595959;margin-bottom:4px">完整需求内容：</div>
               <div style="white-space:pre-wrap;font-size:12px;background:#f8faff;border-radius:4px;padding:8px;max-height:120px;overflow-y:auto">
                 {{ item.fullRequirementContent || '（空）' }}
               </div>
-              <div style="font-size:12px;color:#888;margin:8px 0 4px">涉及的红人需求条目：</div>
+              <div style="font-size:12px;color:#595959;margin:8px 0 4px">涉及的红人需求条目：</div>
               <a-table :columns="itemColumns" :data-source="selectedItems" :pagination="false" size="small" row-key="id" :loading="loadingItems" />
             </div>
           </a-list-item>

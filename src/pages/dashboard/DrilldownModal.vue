@@ -175,7 +175,7 @@ watch(() => props.visible, (v) => {
 }
 .rate-hint {
   font-size: 12px;
-  color: #888;
+  color: #595959;
 }
 .rate-hint a {
   color: #1677ff;
@@ -185,7 +185,7 @@ watch(() => props.visible, (v) => {
 }
 .empty-hint {
   text-align: center;
-  color: #999;
+  color: #595959;
   padding: 32px 0;
 }
 </style>

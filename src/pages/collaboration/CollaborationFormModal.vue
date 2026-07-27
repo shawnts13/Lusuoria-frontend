@@ -117,7 +117,7 @@
             <a-date-picker v-if="canEditPublishDate" v-model:value="form.publishDate"
               style="width:100%" value-format="YYYY-MM-DD" />
             <span v-else>{{ form.publishDate || '—' }}</span>
-            <div v-if="!canEditPublishDate" style="font-size:12px;color:#888;margin-top:2px">
+            <div v-if="!canEditPublishDate" style="font-size:12px;color:#595959;margin-top:2px">
               仅管理员可编辑，视频项目进度流转至已发布相关状态时系统会自动填写
             </div>
           </a-form-item>
@@ -134,7 +134,7 @@
               </a-select-option>
             </a-select>
             <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">视频项目进度请使用"状态流转"功能修改</div>
-            <div v-else-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#888;margin-top:2px">
+            <div v-else-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#595959;margin-top:2px">
               "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
             </div>
           </a-form-item>
@@ -148,12 +148,12 @@
                 {{ o.label }}
               </a-select-option>
             </a-select>
-            <div v-if="form.id" style="font-size:12px;color:#888;margin-top:2px">
+            <div v-if="form.id" style="font-size:12px;color:#595959;margin-top:2px">
               该状态通过"红人需求管理"的"上传Invoice"（若相关品牌方涉及）、以及管理层的"红人结款"
               功能来流转（项目负责人/执行人员不涉及），不能在这里手动修改
             </div>
             <template v-else>
-              <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#888;margin-top:2px">
+              <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#595959;margin-top:2px">
                 仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
               </div>
               <div style="font-size:12px;color:#ff4d4f;margin-top:2px">
@@ -183,7 +183,7 @@
 
       <a-form-item v-if="form.videoType === 'OLD_MATERIAL_REPOST'" label="采买旧视频的原链接">
         <a-input v-model:value="form.oldMaterialSourceLink" placeholder="填写被采买的那条旧视频的原始链接" />
-        <div style="font-size:12px;color:#888;margin-top:2px">
+        <div style="font-size:12px;color:#595959;margin-top:2px">
           系统会自动查重（同一视频不同链接写法也能识别），重复采买会被拒绝保存
         </div>
       </a-form-item>
@@ -777,7 +777,7 @@ async function handleSave() {
   border: 1px solid #e6f0ff;
 }
 .pv-item  { text-align: center; }
-.pv-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.pv-label { font-size: 12px; color: #595959; margin-bottom: 4px; }
 .pv-val   { font-size: 18px; font-weight: 700; }
 .pos  { color: #52c41a; }
 .neg  { color: #ff4d4f; }

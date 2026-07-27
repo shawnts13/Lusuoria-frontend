@@ -32,7 +32,7 @@
     <a-modal :open="modalVisible" title="编辑执行人员薪资标准"
       :confirm-loading="saving" @ok="handleSave" @cancel="modalVisible = false"
       :destroy-on-close="true" width="480px">
-      <div style="margin-bottom:12px; color:#666; font-size:13px">{{ editing?.name }}</div>
+      <div style="margin-bottom:12px; color:#262626; font-size:13px">{{ editing?.name }}</div>
       <ExecutorRateFields v-if="editing" ref="ratesRef" :executor-id="editing.id" />
     </a-modal>
   </div>

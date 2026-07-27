@@ -103,7 +103,7 @@ async function handleLogin() {
 .login-subtitle {
   text-align: center;
   font-size: 14px;
-  color: #888;
+  color: #595959;
   margin-bottom: 32px;
 }
 </style>

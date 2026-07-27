@@ -1,7 +1,7 @@
 <template>
   <a-modal :open="visible" title="状态流转" width="460px"
     :confirm-loading="saving" @ok="handleSave" @cancel="close">
-    <div style="margin-bottom:16px; color:#666; font-size:13px">
+    <div style="margin-bottom:16px; color:#262626; font-size:13px">
       {{ record?.accountName }}
       <span v-if="record?.internalProjectNo">（{{ record.internalProjectNo }}）</span>
     </div>
@@ -19,10 +19,10 @@
             {{ o.label }}
           </a-select-option>
         </a-select>
-        <div v-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#888;margin-top:2px">
+        <div v-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#595959;margin-top:2px">
           "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
         </div>
-        <div v-else-if="!authStore.canWrite" style="font-size:12px;color:#888;margin-top:2px">
+        <div v-else-if="!authStore.canWrite" style="font-size:12px;color:#595959;margin-top:2px">
           财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"之间流转
         </div>
       </a-form-item>
@@ -34,7 +34,7 @@
         首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」，不需要在这里手动选
       </div>
       <a-form-item label="倒退原因" v-if="isRollback" required>
-        <p style="color:#888;font-size:13px;margin-bottom:8px">
+        <p style="color:#595959;font-size:13px;margin-bottom:8px">
           该记录"红人结款进度"已有值，视频项目进度要改回不满足前置条件的状态，不会立即生效，
           需要提交管理员审核，请说明原因。
         </p>

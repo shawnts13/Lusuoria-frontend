@@ -94,7 +94,7 @@
             <a-select v-model:value="pane.videoType" allow-clear placeholder="选择视频类型" :disabled="!!pane.internalRequirementNo">
               <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
             </a-select>
-            <div v-if="pane.internalRequirementNo" style="font-size:12px;color:#888;margin-top:2px">
+            <div v-if="pane.internalRequirementNo" style="font-size:12px;color:#595959;margin-top:2px">
               已根据关联的需求子项自动填入，如需修改请重新点击"关联红人需求"选择其他子项
             </div>
           </a-form-item>

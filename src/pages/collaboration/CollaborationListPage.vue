@@ -244,7 +244,7 @@
       @saved="loadData" />
 
     <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
-      <p style="color:#888;font-size:13px">删除红人合作跟踪记录需要管理员审核，请填写删除原因。</p>
+      <p style="color:#595959;font-size:13px">删除红人合作跟踪记录需要管理员审核，请填写删除原因。</p>
       <a-form layout="vertical">
         <a-form-item label="删除原因" required>
           <a-textarea v-model:value="deleteReason" :rows="3" placeholder="请说明删除原因" />

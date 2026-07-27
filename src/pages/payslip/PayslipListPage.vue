@@ -154,7 +154,7 @@
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
-              <span v-if="record.employeeRole === '执行人员' && !record.confirmed" style="font-size:12px;color:#8c8c8c">
+              <span v-if="record.employeeRole === '执行人员' && !record.confirmed" style="font-size:12px;color:#595959">
                 （需各项目负责人先确认，再由管理层最终确认）
               </span>
             </a-space>
@@ -455,7 +455,7 @@ onMounted(loadAll)
   align-items: center;
 }
 .mgmt-label {
-  color: #666;
+  color: #595959;
   margin-right: 12px;
 }
 .mgmt-amount {
@@ -479,7 +479,7 @@ onMounted(loadAll)
 }
 .formula-title {
   font-size: 12px;
-  color: #888;
+  color: #595959;
   margin-bottom: 10px;
 }
 .formula-row {
@@ -499,7 +499,7 @@ onMounted(loadAll)
 }
 .formula-label {
   font-size: 12px;
-  color: #666;
+  color: #595959;
   margin-bottom: 4px;
 }
 .formula-value {
@@ -524,10 +524,10 @@ onMounted(loadAll)
 }
 .exchange-rate-display {
   font-size: 13px;
-  color: #666;
+  color: #595959;
 }
 .exchange-rate-display a, .rate-updated-by {
-  color: #999;
+  color: #595959;
   margin-left: 4px;
 }
 .exchange-rate-error {
@@ -539,7 +539,7 @@ onMounted(loadAll)
   margin-left: 4px;
 }
 .empty-hint {
-  color: #888;
+  color: #595959;
   padding: 40px 0;
   text-align: center;
 }
@@ -551,7 +551,7 @@ onMounted(loadAll)
 }
 .mixed-state-hint {
   font-size: 13px;
-  color: #666;
+  color: #262626;
 }
 .self-line {
   display: flex;
@@ -569,7 +569,7 @@ onMounted(loadAll)
 .footer-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: #888;
+  color: #595959;
   text-align: right;
 }
 </style>

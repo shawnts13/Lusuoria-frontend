@@ -1,7 +1,7 @@
 <template>
   <a-modal :open="visible" title="状态流转" width="420px"
     :confirm-loading="saving" @ok="handleSave" @cancel="close">
-    <div style="margin-bottom:16px; color:#666; font-size:13px">
+    <div style="margin-bottom:16px; color:#262626; font-size:13px">
       {{ record?.paymentNo }}
     </div>
     <a-form layout="vertical">

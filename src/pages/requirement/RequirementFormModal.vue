@@ -88,7 +88,7 @@
             {{ e.name }}
           </a-select-option>
         </a-select>
-        <div style="font-size:12px;color:#888;margin-top:2px">
+        <div style="font-size:12px;color:#595959;margin-top:2px">
           "红人合作跟踪"关联这条需求新建具体视频记录时，项目负责人会默认带入这里配置的人（新建的人自己是
           项目负责人时优先填自己），可以再改
         </div>
@@ -121,7 +121,7 @@
             <a @click="openItemModal(record)">编辑</a>
             <a-divider type="vertical" />
             <a-tooltip v-if="record.fulfilledCount > 0" title="已经有关联的红人合作跟踪记录，不能删除">
-              <span style="color:#bbb">已实施{{ record.fulfilledCount }}条</span>
+              <span style="color:#595959">已实施{{ record.fulfilledCount }}条</span>
             </a-tooltip>
             <a v-else style="color:#ff4d4f" @click="removeItem(record)">删除</a>
           </template>
@@ -482,6 +482,6 @@ async function handleSave() {
 
 <style scoped>
 .summary-item { text-align: center; background: #f8faff; border-radius: 8px; padding: 10px; }
-.summary-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+.summary-label { font-size: 12px; color: #595959; margin-bottom: 4px; }
 .summary-val { font-size: 16px; font-weight: 700; }
 </style>

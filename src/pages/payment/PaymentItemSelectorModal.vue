@@ -12,7 +12,7 @@
       <a-select v-model:value="requirementNoFilter" placeholder="内部需求编号" allow-clear show-search
         style="width:220px" :options="requirementNoOptions" />
     </div>
-    <div v-if="mode === 'select'" style="font-size:12px;color:#888;margin-bottom:8px">
+    <div v-if="mode === 'select'" style="font-size:12px;color:#595959;margin-bottom:8px">
       提示：切换上面的筛选条件不会影响已经勾选的记录——可以先按一个需求编号筛选、勾选完，
       再切换成另一个需求编号继续勾选，之前勾的会一直保留，直到点"确定"。
     </div>
