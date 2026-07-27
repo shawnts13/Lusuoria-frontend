@@ -92,6 +92,47 @@
         </a-spin>
       </div>
 
+      <!-- 管理层作为"特殊的项目负责人"，名下（projectManagerId=管理层本人）如果确实有执行人员
+           工作，也要能单独确认，入口独立于上面"确认公司利润"这个动作，跟项目负责人自己的
+           那块"手下执行人员工资"卡片是同一套机制、同一套样式 -->
+      <div v-if="managementExecutorDetail && managementExecutorDetail.executorWageRows && managementExecutorDetail.executorWageRows.length"
+        class="management-card">
+        <div class="mgmt-top">
+          <span class="mgmt-title">管理层手下执行人员工资</span>
+          <a-tag :color="managementExecutorDetail.executorWageConfirmed ? 'green' : 'orange'">
+            {{ managementExecutorDetail.executorWageConfirmed ? '已确认' : '预计（实时更新）' }}
+          </a-tag>
+          <a-space style="margin-left:auto">
+            <a-button v-if="!managementExecutorDetail.executorWageConfirmed" type="primary" size="small"
+              @click="doConfirmManagementExecutorWages">确认执行人员工资</a-button>
+            <a-popconfirm v-else title="确认取消执行人员工资的确认？" @confirm="doUnconfirmManagementExecutorWages">
+              <a-button size="small">取消确认</a-button>
+            </a-popconfirm>
+          </a-space>
+        </div>
+        <a-table :columns="executorWageColumns" :data-source="managementExecutorDetail.executorWageRows"
+          :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'executorName'">
+              <a-tag v-if="record.executorName && !record.isSummaryRow" :color="colorForValue(record.executorName)">
+                {{ record.executorName }}
+              </a-tag>
+            </template>
+            <template v-if="column.key === 'brandTeam'">
+              <template v-if="record.isSummaryRow">汇总</template>
+              <template v-else-if="record.isGroupSubtotal"><b>{{ record.brandName }}</b></template>
+              <template v-else>
+                <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+                <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+              </template>
+            </template>
+            <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
+            <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
+            <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+          </template>
+        </a-table>
+      </div>
+
       <div class="filter-bar">
         <a-select v-model:value="roleFilter" placeholder="角色（默认全部）" style="width:180px" allow-clear @change="loadList">
           <a-select-option value="项目负责人">项目负责人</a-select-option>
@@ -362,6 +403,7 @@ const loadingList = ref(false)
 const loadingSelf = ref(false)
 
 const managementRow = ref(null)
+const managementExecutorDetail = ref(null)
 const rows = ref([])
 const selfDetail = ref(null)
 
@@ -418,6 +460,14 @@ async function loadManagement() {
   try {
     const res = await payslipApi.management(selectedMonth.value, currency.value)
     managementRow.value = res.data || null
+    // 管理层作为"特殊的项目负责人"，名下如果有执行人员工作，需要单独一块确认入口；
+    // /management 只返回汇总行，这里额外拉一次明细才能拿到 executorWageRows 这批数据
+    if (managementRow.value?.employeeId) {
+      const detailRes = await payslipApi.detail(managementRow.value.employeeId, selectedMonth.value, currency.value)
+      managementExecutorDetail.value = detailRes.data || null
+    } else {
+      managementExecutorDetail.value = null
+    }
   } finally {
     loadingManagement.value = false
   }
@@ -497,6 +547,26 @@ async function doConfirmExecutorWages() {
 async function doUnconfirmExecutorWages() {
   try {
     await payslipApi.unconfirmExecutorWages(selectedMonth.value)
+    message.success('已取消确认')
+    loadAll()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '取消确认失败')
+  }
+}
+
+// ===== 管理层作为"特殊的项目负责人"，确认/取消确认自己名下执行人员的工资 =====
+async function doConfirmManagementExecutorWages() {
+  try {
+    await payslipApi.confirmExecutorWages(selectedMonth.value, managementRow.value?.employeeId)
+    message.success('已确认')
+    loadAll()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '确认失败')
+  }
+}
+async function doUnconfirmManagementExecutorWages() {
+  try {
+    await payslipApi.unconfirmExecutorWages(selectedMonth.value, managementRow.value?.employeeId)
     message.success('已取消确认')
     loadAll()
   } catch (e) {
