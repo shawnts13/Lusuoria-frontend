@@ -30,28 +30,31 @@
           </template>
           <template v-if="column.key === 'salaryInfo'">
             <template v-if="isCommissionRole(record.role)">
-              <div style="font-size:12px;line-height:1.6;color:#262626">
+              <div style="font-size:12px;line-height:1.8">
                 <div>
                   <span style="color:#595959">默认提成：</span>
-                  {{ record.defaultCommissionRate != null
-                    ? (parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%'
-                    : '—' }}
+                  <span v-if="record.defaultCommissionRate != null"
+                    v-html="highlightAmounts((parseFloat(record.defaultCommissionRate) * 100).toFixed(0) + '%')"></span>
+                  <span v-else style="color:#bbb">—</span>
                 </div>
-                <div v-if="bonusTierSummary(record.id)">
-                  <span style="color:#595959">Bonus（{{ record.bonusTierCurrency === 'RMB' ? '¥' : '$' }}）：</span>
-                  {{ bonusTierSummary(record.id) }}
+                <div v-if="bonusTierSummary(record.id, record.bonusTierCurrency)">
+                  <span style="color:#595959">Bonus：</span>
+                  <span v-html="highlightAmounts(bonusTierSummary(record.id, record.bonusTierCurrency))"></span>
                 </div>
               </div>
             </template>
             <template v-else-if="isFixedSalaryRole(record.role)">
               <span style="color:#595959;font-size:12px">固定月薪：</span>
-              <span style="color:#262626;font-size:12px">{{ record.fixedMonthlySalary ? '¥' + fmtNum(record.fixedMonthlySalary) : '—' }}</span>
+              <span style="font-size:12px" v-if="record.fixedMonthlySalary"
+                v-html="highlightAmounts('¥' + fmtNum(record.fixedMonthlySalary))"></span>
+              <span v-else style="color:#bbb;font-size:12px">—</span>
             </template>
             <template v-else-if="isExecutorRole(record.role)">
-              <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.6;color:#262626">
+              <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.8">
                 <div v-for="type in VIDEO_TYPES" :key="type">
                   <template v-if="tierSummary(record.id, type)">
-                    {{ VIDEO_TYPE_LABELS[type] }}：{{ tierSummary(record.id, type) }}
+                    <a-tag :color="videoTypeColor(type)" style="margin-right:4px">{{ VIDEO_TYPE_LABELS[type] }}</a-tag>
+                    <span v-html="highlightAmounts(tierSummary(record.id, type))"></span>
                   </template>
                 </div>
               </div>
@@ -192,6 +195,8 @@ import { employeeApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
+import { videoTypeColor } from '../../utils/enumColors'
+import { highlightAmounts } from '../../utils/textHighlight'
 import { VIDEO_TYPES, VIDEO_TYPE_LABELS, formatVideoTypeTiers } from '../../utils/executorRateFormat'
 import ExecutorRateFields from './ExecutorRateFields.vue'
 
@@ -238,12 +243,17 @@ function hasAnyRate(executorId) {
 // 供列表"薪资信息"列直接展示已配置的 bonus 规则，不用打开编辑弹窗才能看到
 const bonusTiersByEmployeeId = ref({})
 
-function bonusTierSummary(employeeId) {
+// currency 直接拼进每个档位的金额里（而不是像以前那样只在外层标签上显示一次货币符号），
+// 这样这段文案本身就是自包含的"¥金额→比例"结构，highlightAmounts 才能按"¥开头"识别出金额来上色
+function bonusTierSummary(employeeId, currency) {
   const tiers = bonusTiersByEmployeeId.value[employeeId]
   if (!tiers || !tiers.length) return null
+  const symbol = currency === 'RMB' ? '¥' : '$'
   const sorted = [...tiers].sort((a, b) => (a.minAmount || 0) - (b.minAmount || 0))
   return sorted.map(t => {
-    const range = t.maxAmount == null ? `${fmtNum(t.minAmount)}+` : `${fmtNum(t.minAmount)}-${fmtNum(t.maxAmount)}`
+    const range = t.maxAmount == null
+      ? `${symbol}${fmtNum(t.minAmount)}+`
+      : `${symbol}${fmtNum(t.minAmount)}-${symbol}${fmtNum(t.maxAmount)}`
     const pct = (parseFloat(t.bonusRate) * 100).toFixed(0) + '%'
     return `${range}→${pct}`
   }).join('，')

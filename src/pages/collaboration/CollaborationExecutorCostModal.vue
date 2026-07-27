@@ -45,6 +45,7 @@
 import { ref, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
+import { highlightAmounts } from '../../utils/textHighlight'
 
 const props = defineProps({
   visible: Boolean,
@@ -99,23 +100,11 @@ watch(selectedExecutorId, () => {
   if (!notApplicable.value) loadSuggestion()
 })
 
-function escapeHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
 // 建议金额说明是纯文本拼出来的自然语言，不是结构化字段，用正则给月份/笔数/金额这几个
-// 用户最关心的数字上色，方便一眼扫到关键信息，跟"红人需求管理"查看完整需求内容弹窗的
-// highlightContent 是同一套做法：先转义再上色，避免万一文本里带 <> 之类字符被当成 HTML
-function highlightBreakdown(text) {
-  if (!text) return ''
-  let html = escapeHtml(text)
-  // 月份
-  html = html.replace(/(\d+月)/g, '<span style="color:#1677ff;font-weight:600">$1</span>')
-  // "N笔"这种计数（含"第N笔"里的N笔）
-  html = html.replace(/(\d+\s*笔)/g, '<span style="color:#1677ff;font-weight:600">$1</span>')
-  // 金额是最需要一眼看到的数字，单独标红加粗
-  html = html.replace(/(¥[\d.]+)/g, '<span style="color:#c00000;font-weight:600">$1</span>')
-  return html
-}
+// 用户最关心的数字上色，方便一眼扫到关键信息——这套通用的"金额/计数高亮"规则抽到了
+// utils/textHighlight.js（highlightAmounts），"员工管理"薪资信息列也复用同一份，
+// 不要在这里重新写一份容易跟那边风格走偏
+const highlightBreakdown = highlightAmounts
 
 function close() { emit('update:visible', false) }
 

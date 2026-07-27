@@ -114,21 +114,25 @@
             :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'executorName'">
-                <a-tag v-if="record.executorName && !record.isSummaryRow" :color="colorForValue(record.executorName)">
+                <a-tag v-if="record.executorName && !record.isSummaryRow && !record.isTierSummaryRow" :color="colorForValue(record.executorName)">
                   {{ record.executorName }}
                 </a-tag>
               </template>
               <template v-if="column.key === 'brandTeam'">
-                <template v-if="record.isSummaryRow">汇总</template>
+                <span v-if="record.isTierSummaryRow" style="color:#874d00;font-weight:600">{{ record.brandName }}</span>
+                <template v-else-if="record.isSummaryRow">汇总</template>
                 <template v-else-if="record.isGroupSubtotal"><b>{{ record.brandName }}</b></template>
                 <template v-else>
                   <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
                   <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
                 </template>
               </template>
-              <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
-              <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
-              <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+              <template v-if="column.key === 'videoTypeLabel'">{{ record.isTierSummaryRow ? '' : (record.videoTypeLabel || '—') }}</template>
+              <template v-if="column.key === 'videoCount'">{{ record.isTierSummaryRow ? '' : (record.videoCount ?? 0) }}</template>
+              <template v-if="column.key === 'unitPrice'">
+                {{ (record.isTierSummaryRow || record.isSummaryRow || record.isGroupSubtotal) ? '' : fmt(record.unitPrice) }}
+              </template>
+              <template v-if="column.key === 'amount'">{{ record.isTierSummaryRow ? '' : fmt(record.amount) }}</template>
               <template v-if="column.key === 'confirmStatus' && record.isGroupSubtotal">
                 <a-tag :color="record.groupConfirmed ? 'green' : 'orange'">
                   {{ record.groupConfirmed ? '已确认' : '预计' }}
@@ -197,6 +201,7 @@ const executorWageColumns = [
   { title: '品牌方/红人团队', key: 'brandTeam' },
   { title: '项目视频类型', key: 'videoTypeLabel' },
   { title: '视频数', key: 'videoCount', width: 80 },
+  { title: '单价', key: 'unitPrice', width: 100 },
   { title: '薪酬金额', key: 'amount', width: 140 },
   { title: '确认状态', key: 'confirmStatus', width: 90 }
 ]
@@ -218,6 +223,7 @@ const footerHint = computed(() => {
 
 function rowClassName(record) {
   if (record.isSummaryRow) return 'summary-row'
+  if (record.isTierSummaryRow) return 'tier-summary-row'
   if (record.isGroupSubtotal) return 'subtotal-row'
   return ''
 }
@@ -341,6 +347,9 @@ function close() { emit('update:visible', false) }
 :deep(.summary-row) {
   font-weight: 600;
   background: #fafafa;
+}
+:deep(.tier-summary-row) {
+  background: #fffbe6;
 }
 :deep(.subtotal-row) {
   font-weight: 600;

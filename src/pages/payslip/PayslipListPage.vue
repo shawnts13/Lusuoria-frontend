@@ -99,33 +99,38 @@
         class="management-card">
         <div class="mgmt-top">
           <span class="mgmt-title">管理层手下执行人员工资</span>
+          <span class="confirm-hint">（当所有项目负责人都确认后，执行人员的工资单才会是最终版）</span>
         </div>
         <a-table :columns="executorWageColumns" :data-source="managementExecutorDetail.executorWageRows"
           :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'executorName'">
-              <a-tag v-if="record.executorName && !record.isSummaryRow" :color="colorForValue(record.executorName)">
+              <a-tag v-if="record.executorName && !record.isSummaryRow && !record.isTierSummaryRow" :color="colorForValue(record.executorName)">
                 {{ record.executorName }}
               </a-tag>
             </template>
             <template v-if="column.key === 'brandTeam'">
-              <template v-if="record.isSummaryRow">汇总</template>
+              <span v-if="record.isTierSummaryRow" class="tier-summary-text">{{ record.brandName }}</span>
+              <template v-else-if="record.isSummaryRow">汇总</template>
               <template v-else-if="record.isGroupSubtotal"><b>{{ record.brandName }}</b></template>
               <template v-else>
                 <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
                 <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
               </template>
             </template>
-            <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
-            <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
-            <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+            <template v-if="column.key === 'videoTypeLabel'">{{ record.isTierSummaryRow ? '' : (record.videoTypeLabel || '—') }}</template>
+            <template v-if="column.key === 'videoCount'">{{ record.isTierSummaryRow ? '' : (record.videoCount ?? 0) }}</template>
+            <template v-if="column.key === 'unitPrice'">
+              {{ (record.isTierSummaryRow || record.isSummaryRow || record.isGroupSubtotal) ? '' : fmt(record.unitPrice) }}
+            </template>
+            <template v-if="column.key === 'amount'">{{ record.isTierSummaryRow ? '' : fmt(record.amount) }}</template>
             <template v-if="column.key === 'confirmAction' && record.isGroupSubtotal">
               <a-space>
                 <a-tag :color="record.groupConfirmed ? 'green' : 'orange'">
                   {{ record.groupConfirmed ? '已确认' : '预计' }}
                 </a-tag>
                 <a v-if="!record.groupConfirmed" @click="doConfirmManagementExecutorWage(record.executorId)">
-                  确认执行人员工资（涉及管理层部分）
+                  请确认执行人员薪酬（涉及管理层部分）
                 </a>
                 <a-popconfirm v-else title="确认取消这个执行人员工资的确认？"
                   @confirm="doUnconfirmManagementExecutorWage(record.executorId)">
@@ -178,7 +183,10 @@
 
           <template v-if="column.key === 'extraBonus'">
             <span>{{ record.extraBonusAmount != null ? fmt(record.extraBonusAmount) : '未设置' }}</span>
-            <a style="margin-left:8px" @click="openExtraBonusModal(record)">设置奖金</a>
+            <a-tooltip v-if="record.confirmed" title="请先取消确认，再设置奖金">
+              <span style="margin-left:8px;color:#bbb;cursor:not-allowed">设置奖金</span>
+            </a-tooltip>
+            <a v-else style="margin-left:8px" @click="openExtraBonusModal(record)">设置奖金</a>
           </template>
 
           <template v-if="column.key === 'total'">{{ fmt(record.totalAmount) }}</template>
@@ -186,7 +194,7 @@
           <template v-if="column.key === 'confirm'">
             <a-space>
               <a-tag :color="record.confirmed ? 'green' : 'orange'">{{ record.confirmed ? '已确认' : '预计' }}</a-tag>
-              <a-tooltip v-if="!record.confirmed" :title="record.blockedReason">
+              <a-tooltip v-if="!record.confirmed" :title="confirmTooltip(record)">
                 <span>
                   <a-button type="primary" size="small"
                     :disabled="!!record.blockedReason" @click="confirmRow(record)">确认</a-button>
@@ -200,7 +208,7 @@
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
               <span v-if="record.employeeRole === '执行人员' && !record.confirmed" style="font-size:12px;color:#595959">
-                （需各项目负责人先确认，再由管理层最终确认）
+                （需涉及的项目负责人都确认之后，执行人员的工资单才是最终版）
               </span>
             </a-space>
           </template>
@@ -219,26 +227,14 @@
                 {{ selfDetail.confirmed ? '已确认' : '预计（实时更新）' }}
               </a-tag>
             </div>
+            <!-- 项目负责人自己的提成工资单是否确认，是管理层的动作（在管理层的工资单列表页
+                 逐行确认），不是项目负责人自己能操作的——这里只做只读展示 -->
             <div class="mgmt-body">
               <span class="mgmt-label">提成金额</span>
               <a class="mgmt-amount" @click="openSelfDetail">{{ fmt(selfDetail.baseAmount) }}</a>
               <a-space style="margin-left:24px">
                 <a-button size="small" @click="openSelfDetail">查看明细</a-button>
-                <a-tooltip :title="selfDetail.blockedReason">
-                  <span>
-                    <a-button v-if="!selfDetail.confirmed" type="primary" size="small"
-                      :disabled="!!selfDetail.blockedReason"
-                      @click="confirmRow({ employeeId: authStore.employeeId })">确认</a-button>
-                    <a-popconfirm v-else title="确认取消这份工资单的确认？"
-                      @confirm="unconfirmRow({ employeeId: authStore.employeeId })">
-                      <a-button size="small">取消确认</a-button>
-                    </a-popconfirm>
-                  </span>
-                </a-tooltip>
               </a-space>
-            </div>
-            <div v-if="selfDetail.blockedReason && !selfDetail.confirmed" class="mgmt-hint">
-              {{ selfDetail.blockedReason }}
             </div>
             <div class="self-line">
               <span>提成金额</span><span>{{ fmt(selfDetail.baseAmount) }}</span>
@@ -268,32 +264,37 @@
           <div v-if="selfDetail.executorWageRows && selfDetail.executorWageRows.length" class="management-card">
             <div class="mgmt-top">
               <span class="mgmt-title">手下执行人员工资</span>
+              <span class="confirm-hint">（当所有项目负责人都确认后，执行人员的工资单才会是最终版）</span>
             </div>
             <a-table :columns="executorWageColumns" :data-source="selfDetail.executorWageRows"
               :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'executorName'">
-                  <a-tag v-if="record.executorName && !record.isSummaryRow" :color="colorForValue(record.executorName)">
+                  <a-tag v-if="record.executorName && !record.isSummaryRow && !record.isTierSummaryRow" :color="colorForValue(record.executorName)">
                     {{ record.executorName }}
                   </a-tag>
                 </template>
                 <template v-if="column.key === 'brandTeam'">
-                  <template v-if="record.isSummaryRow">汇总</template>
+                  <span v-if="record.isTierSummaryRow" class="tier-summary-text">{{ record.brandName }}</span>
+                  <template v-else-if="record.isSummaryRow">汇总</template>
                   <template v-else-if="record.isGroupSubtotal"><b>{{ record.brandName }}</b></template>
                   <template v-else>
                     <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
                     <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
                   </template>
                 </template>
-                <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
-                <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
-                <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+                <template v-if="column.key === 'videoTypeLabel'">{{ record.isTierSummaryRow ? '' : (record.videoTypeLabel || '—') }}</template>
+                <template v-if="column.key === 'videoCount'">{{ record.isTierSummaryRow ? '' : (record.videoCount ?? 0) }}</template>
+                <template v-if="column.key === 'unitPrice'">
+                  {{ (record.isTierSummaryRow || record.isSummaryRow || record.isGroupSubtotal) ? '' : fmt(record.unitPrice) }}
+                </template>
+                <template v-if="column.key === 'amount'">{{ record.isTierSummaryRow ? '' : fmt(record.amount) }}</template>
                 <template v-if="column.key === 'confirmAction' && record.isGroupSubtotal">
                   <a-space>
                     <a-tag :color="record.groupConfirmed ? 'green' : 'orange'">
                       {{ record.groupConfirmed ? '已确认' : '预计' }}
                     </a-tag>
-                    <a v-if="!record.groupConfirmed" @click="doConfirmExecutorWage(record.executorId)">确认</a>
+                    <a v-if="!record.groupConfirmed" @click="doConfirmExecutorWage(record.executorId)">请确认</a>
                     <a-popconfirm v-else title="确认取消这个执行人员工资的确认？"
                       @confirm="doUnconfirmExecutorWage(record.executorId)">
                       <a>取消确认</a>
@@ -416,17 +417,20 @@ const columns = [
 ]
 
 // "手下执行人员工资"表格用（项目负责人自己页面 + 管理层页面共用同一套列定义）。
-// "确认状态"这一列只在每个执行人员的小计行（isGroupSubtotal）上有内容，其余明细行/汇总行留空
+// "确认状态"这一列只在每个执行人员的小计行（isGroupSubtotal）上有内容，其余明细行/汇总行留空；
+// "梯度小结"行（isTierSummaryRow）只在"品牌方/红人团队"这一列展示一整句说明文字，其余列留空
 const executorWageColumns = [
   { title: '执行人员', key: 'executorName', width: 130 },
   { title: '品牌方/红人团队', key: 'brandTeam' },
   { title: '项目视频类型', key: 'videoTypeLabel' },
   { title: '视频数', key: 'videoCount', width: 80 },
+  { title: '单价', key: 'unitPrice', width: 100 },
   { title: '薪酬金额', key: 'amount', width: 140 },
   { title: '确认状态', key: 'confirmAction', width: 260 }
 ]
 function rowClassName(record) {
   if (record.isSummaryRow) return 'summary-row'
+  if (record.isTierSummaryRow) return 'tier-summary-row'
   if (record.isGroupSubtotal) return 'subtotal-row'
   return ''
 }
@@ -511,6 +515,13 @@ function loadAll() {
   }
 }
 
+// 执行人员的"确认"按钮不可点击时，提示具体去哪里操作，比后端那句列了一串项目负责人姓名的
+// 通用文案更直接可操作；其余角色（管理层自己）的拦截提示保持原样，那边场景不一样
+function confirmTooltip(record) {
+  if (record.employeeRole === '执行人员') return '请先在"管理层手下执行人员工资"确认执行人员薪酬'
+  return record.blockedReason
+}
+
 async function confirmRow(record) {
   try {
     await payslipApi.confirm(record.employeeId, selectedMonth.value)
@@ -574,13 +585,13 @@ async function doUnconfirmManagementExecutorWage(executorId) {
 // ===== 设置奖金 =====
 const extraBonusModalVisible = ref(false)
 const savingExtraBonus = ref(false)
-const extraBonusForm = reactive({ employeeId: null, amount: null, currency: 'USD' })
+const extraBonusForm = reactive({ employeeId: null, amount: null, currency: 'RMB' })
 
 function openExtraBonusModal(record) {
   extraBonusForm.employeeId = record.employeeId
   extraBonusForm.amount = record.extraBonusAmountNative ?? null
-  extraBonusForm.currency = record.extraBonusCurrencyNative
-    || (['财务', 'IT后勤', '法务'].includes(record.employeeRole) ? 'RMB' : 'USD')
+  // 默认币种统一是RMB，不分角色；只有这条记录之前已经手动设置过奖金原始币种时才沿用那个值
+  extraBonusForm.currency = record.extraBonusCurrencyNative || 'RMB'
   extraBonusModalVisible.value = true
 }
 async function submitExtraBonus() {
@@ -646,6 +657,15 @@ onMounted(loadAll)
 .mgmt-title {
   font-size: 15px;
   font-weight: 600;
+}
+.confirm-hint {
+  font-size: 12px;
+  color: #595959;
+}
+.tier-summary-text {
+  color: #874d00;
+  font-weight: 600;
+  white-space: normal;
 }
 .mgmt-body {
   display: flex;
@@ -766,6 +786,9 @@ onMounted(loadAll)
 :deep(.summary-row) {
   font-weight: 600;
   background: #fafafa;
+}
+:deep(.tier-summary-row) {
+  background: #fffbe6;
 }
 :deep(.subtotal-row) {
   font-weight: 600;
