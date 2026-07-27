@@ -139,12 +139,14 @@
           <template v-if="column.key === 'total'">{{ fmt(record.totalAmount) }}</template>
 
           <template v-if="column.key === 'confirm'">
-            <template v-if="record.employeeRole === '执行人员'">
-              <a-tag color="blue">等待其他项目负责人先确认，请先查看明细（非最终版）</a-tag>
-            </template>
-            <a-space v-else>
+            <a-space>
               <a-tag :color="record.confirmed ? 'green' : 'orange'">{{ record.confirmed ? '已确认' : '预计' }}</a-tag>
-              <a-button v-if="!record.confirmed" type="primary" size="small" @click="confirmRow(record)">确认</a-button>
+              <a-tooltip v-if="!record.confirmed" :title="record.blockedReason">
+                <span>
+                  <a-button type="primary" size="small"
+                    :disabled="!!record.blockedReason" @click="confirmRow(record)">确认</a-button>
+                </span>
+              </a-tooltip>
               <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(record)">
                 <a-button size="small">取消确认</a-button>
               </a-popconfirm>
@@ -152,6 +154,9 @@
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
+              <span v-if="record.employeeRole === '执行人员' && !record.confirmed" style="font-size:12px;color:#8c8c8c">
+                （需各项目负责人先确认，再由管理层最终确认）
+              </span>
             </a-space>
           </template>
         </template>
@@ -163,10 +168,11 @@
       <a-spin :spinning="loadingSelf">
         <div v-if="!authStore.employeeId" class="empty-hint">当前账号未关联员工记录，没有个人工资单。</div>
         <div v-else-if="selfDetail" class="self-card">
-          <a-tag v-if="selfDetail.type !== 'EXECUTOR'" :color="selfDetail.confirmed ? 'green' : 'orange'">
-            {{ selfDetail.confirmed ? '已确认' : '工资单预计（实时更新）' }}
-          </a-tag>
-          <span v-else class="mixed-state-hint">工资按每个项目负责人分别确认，详见明细</span>
+          <a-tag v-if="selfDetail.confirmed" color="green">已确认</a-tag>
+          <span v-else-if="selfDetail.type === 'EXECUTOR'" class="mixed-state-hint">
+            工资按每个项目负责人分别确认，详见明细（非最终版，需管理层最终确认后才是确认版）
+          </span>
+          <a-tag v-else color="orange">工资单预计（实时更新）</a-tag>
 
           <div v-if="selfDetail.type === 'PROJECT_MANAGER'" class="self-line">
             <span>提成金额</span><span>{{ fmt(selfDetail.baseAmount) }}</span>
@@ -203,7 +209,7 @@
             <span v-else>{{ fmt(selfDetail.totalAmount) }}</span>
           </div>
 
-          <div v-if="selfDetail.confirmed && selfDetail.type !== 'EXECUTOR'" class="footer-hint">
+          <div v-if="selfDetail.confirmed" class="footer-hint">
             若有疑问，请向管理层联系。
           </div>
         </div>
