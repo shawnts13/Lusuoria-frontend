@@ -20,9 +20,8 @@
         </div>
 
         <template v-if="!notApplicable">
-          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#262626; white-space:pre-line; line-height:1.6">
-            {{ breakdown }}
-          </div>
+          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#262626; white-space:pre-line; line-height:1.6"
+            v-html="highlightBreakdown(breakdown)"></div>
           <a-form-item label="内部执行成本（元）">
             <a-input-number v-model:value="amount" :min="0" :precision="2" style="width:100%" />
           </a-form-item>
@@ -99,6 +98,24 @@ watch(() => props.visible, v => {
 watch(selectedExecutorId, () => {
   if (!notApplicable.value) loadSuggestion()
 })
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+// 建议金额说明是纯文本拼出来的自然语言，不是结构化字段，用正则给月份/笔数/金额这几个
+// 用户最关心的数字上色，方便一眼扫到关键信息，跟"红人需求管理"查看完整需求内容弹窗的
+// highlightContent 是同一套做法：先转义再上色，避免万一文本里带 <> 之类字符被当成 HTML
+function highlightBreakdown(text) {
+  if (!text) return ''
+  let html = escapeHtml(text)
+  // 月份
+  html = html.replace(/(\d+月)/g, '<span style="color:#1677ff;font-weight:600">$1</span>')
+  // "N笔"这种计数（含"第N笔"里的N笔）
+  html = html.replace(/(\d+\s*笔)/g, '<span style="color:#1677ff;font-weight:600">$1</span>')
+  // 金额是最需要一眼看到的数字，单独标红加粗
+  html = html.replace(/(¥[\d.]+)/g, '<span style="color:#c00000;font-weight:600">$1</span>')
+  return html
+}
 
 function close() { emit('update:visible', false) }
 
