@@ -1,7 +1,7 @@
 <template>
   <a-modal :open="visible" title="设置内部执行成本" width="480px"
     :confirm-loading="saving" @ok="handleSave" @cancel="close">
-    <div style="margin-bottom:12px; color:#666; font-size:13px">
+    <div style="margin-bottom:12px; color:#262626; font-size:13px">
       {{ record?.internalProjectNo }}
     </div>
 
@@ -15,18 +15,18 @@
             <a-select-option v-for="e in executorCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
           </a-select>
         </a-form-item>
-        <div v-else style="margin-bottom:12px; color:#666; font-size:13px">
+        <div v-else style="margin-bottom:12px; color:#262626; font-size:13px">
           执行人员：{{ record.executorName || '—' }}
         </div>
 
         <template v-if="!notApplicable">
-          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#555">
+          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#262626">
             {{ breakdown }}
           </div>
           <a-form-item label="内部执行成本（元）">
             <a-input-number v-model:value="amount" :min="0" :precision="2" style="width:100%" />
           </a-form-item>
-          <div v-if="rateBasedSuggestion" style="font-size:12px; color:#999">
+          <div v-if="rateBasedSuggestion" style="font-size:12px; color:#595959">
             以上是根据该执行人员在员工管理里维护的费率档位自动算出的建议金额，可以手动修改后再保存。
           </div>
         </template>
@@ -35,7 +35,7 @@
       <a-button type="link" style="padding-left:0" @click="notApplicable = !notApplicable">
         {{ notApplicable ? '取消勾选' : '不涉及执行人员（以后不再提醒）' }}
       </a-button>
-      <div v-if="notApplicable" style="font-size:12px;color:#888">
+      <div v-if="notApplicable" style="font-size:12px;color:#595959">
         确认后这条记录以后不会再自动弹出这个提醒；如果后续确实需要安排执行人员，直接去"编辑"里手动设置即可。
       </div>
     </a-spin>
