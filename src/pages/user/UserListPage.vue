@@ -113,9 +113,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
-import { userApi, employeeApi } from '../../api/index'
+import { userApi } from '../../api/index'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { formatDateTime } from '../../utils/dateFormat'
 
+const { loadEmployees } = useReferenceData()
 const loading      = ref(false)
 const list         = ref([])
 const employees    = ref([])
@@ -206,7 +208,7 @@ async function handleSave() {
 }
 
 onMounted(async () => {
-  const [, emp] = await Promise.all([loadData(), employeeApi.list()])
-  employees.value = emp.data || []
+  const [, emp] = await Promise.all([loadData(), loadEmployees()])
+  employees.value = emp || []
 })
 </script>

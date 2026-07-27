@@ -283,9 +283,10 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, LinkOutlined } from '@ant-design/icons-vue'
-import { collaborationApi, brandApi, influencerApi, influencerTeamApi, employeeApi } from '../../api/index'
+import { collaborationApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
@@ -301,6 +302,7 @@ const authStore = useAuthStore()
 // "状态流转"的前提条件（见"操作"列的 v-else-if）
 const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 const { getOptions, getLabel } = useOptions()
+const { loadBrands, loadTeams, loadInfluencersSimple, loadEmployees } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading     = ref(false)
@@ -575,12 +577,12 @@ async function handleImport(file) {
 
 onMounted(async () => {
   const [b, t, inf, emp] = await Promise.all([
-    brandApi.list(), influencerTeamApi.list(), influencerApi.simple(), employeeApi.list()
+    loadBrands(), loadTeams(), loadInfluencersSimple(), loadEmployees()
   ])
-  brands.value      = b.data || []
-  teams.value       = t.data || []
-  influencers.value = inf.data || []
-  employees.value   = emp.data || []
+  brands.value      = b || []
+  teams.value       = t || []
+  influencers.value = inf || []
+  employees.value   = emp || []
   loadData()
 })
 </script>

@@ -215,7 +215,8 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { influencerApi, employeeApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
+import { influencerApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { formatDate } from '../../utils/dateFormat'
@@ -239,6 +240,7 @@ const newDomainName    = ref('')
 const newTeamName      = ref('')
 const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
+const { loadEmployees } = useReferenceData()
 
 // 已签署合同（一个红人可以有多条，按品牌方+团队各自维护有效期区间，仅"一年签一次合同"的
 // 品牌方才需要在这里维护——"一次需求签一次合同"的品牌方合同挂在具体需求上，见红人需求管理）
@@ -478,8 +480,7 @@ async function handleSave() {
 }
 
 onMounted(async () => {
-  const empRes = await employeeApi.list()
-  employees.value = empRes.data || []
+  employees.value = await loadEmployees()
 })
 </script>
 

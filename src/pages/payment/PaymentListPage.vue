@@ -118,7 +118,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import { paymentApi, brandApi, influencerTeamApi } from '../../api/index'
+import { paymentApi } from '../../api/index'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate } from '../../utils/dateFormat'
@@ -129,6 +130,7 @@ import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
 
 const authStore = useAuthStore()
 const loading   = ref(false)
+const { loadBrands, loadTeams } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 const tableData = ref([])
 const brands = ref([])
@@ -262,9 +264,9 @@ async function handleDelete(id) {
 function handleExport() { paymentApi.exportExcel(filters.settlementMonth) }
 
 onMounted(async () => {
-  const [b, t] = await Promise.all([brandApi.list(), influencerTeamApi.list()])
-  brands.value = b.data || []
-  teams.value  = t.data || []
+  const [b, t] = await Promise.all([loadBrands(), loadTeams()])
+  brands.value = b || []
+  teams.value  = t || []
   loadData()
 })
 </script>

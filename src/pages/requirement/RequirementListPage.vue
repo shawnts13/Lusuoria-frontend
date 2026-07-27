@@ -169,9 +169,10 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined, FilterOutlined } from '@ant-design/icons-vue'
-import { requirementApi, brandApi, influencerApi, influencerTeamApi, influencerContractApi, employeeApi } from '../../api/index'
+import { requirementApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { formatDateTime } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
 import RequirementFormModal from './RequirementFormModal.vue'
@@ -182,6 +183,7 @@ import RequirementContractModal from './RequirementContractModal.vue'
 import CollaborationBatchCreateModal from '../collaboration/CollaborationBatchCreateModal.vue'
 
 const authStore = useAuthStore()
+const { loadBrands, loadTeams, loadInfluencersSimple, loadEmployees } = useReferenceData()
 const route = useRoute()
 const router = useRouter()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -501,12 +503,12 @@ function openInvoiceModal(record) {
 
 onMounted(async () => {
   const [b, t, i, e] = await Promise.all([
-    brandApi.list(), influencerTeamApi.list(), influencerApi.simple(), employeeApi.list()
+    loadBrands(), loadTeams(), loadInfluencersSimple(), loadEmployees()
   ])
-  brands.value      = b.data || []
-  teams.value       = t.data || []
-  influencers.value = i.data || []
-  employees.value   = e.data || []
+  brands.value      = b || []
+  teams.value       = t || []
+  influencers.value = i || []
+  employees.value   = e || []
   loadData()
 })
 </script>
