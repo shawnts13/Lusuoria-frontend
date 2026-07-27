@@ -4,11 +4,22 @@
     <a-spin :spinning="loading">
       <template v-if="detail">
         <a-table v-if="detail.rows && detail.rows.length" :columns="columns" :data-source="detail.rows"
-          :pagination="false" size="small" row-key="brandName"
-          :row-class-name="(record) => record.isSummaryRow ? 'summary-row' : ''">
+          :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
           <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'projectManagerName'">
+              <a-tag v-if="record.projectManagerName && !record.isSummaryRow" :color="colorForValue(record.projectManagerName)">
+                {{ record.projectManagerName }}
+              </a-tag>
+            </template>
             <template v-if="column.key === 'brandTeam'">
               <template v-if="record.isSummaryRow">汇总</template>
+              <template v-else-if="record.isGroupSubtotal">
+                <b>{{ record.brandName }}</b>
+                <a-tag v-if="detail.type === 'EXECUTOR'" style="margin-left:6px"
+                  :color="record.groupConfirmed ? 'green' : 'orange'">
+                  {{ record.groupConfirmed ? '已确认' : '预计' }}
+                </a-tag>
+              </template>
               <template v-else>
                 <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
                 <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
@@ -46,7 +57,7 @@
           </div>
 
           <div class="line total">
-            <span>{{ detail.type === 'MANAGEMENT' ? '公司利润' : '总工资' }}</span>
+            <span>{{ totalLineLabel }}</span>
             <span>{{ fmt(detail.totalAmount) }}</span>
           </div>
         </div>
@@ -63,9 +74,49 @@
           </div>
         </div>
 
-        <div class="footer-hint">
-          {{ detail.confirmed ? '以上为已确认的工资单快照' : '以上为工资单预计（实时更新）' }}
-        </div>
+        <template v-if="detail.type === 'PROJECT_MANAGER'">
+          <div class="section-title">
+            <span>执行人员薪酬明细</span>
+            <a-tag :color="detail.executorWageConfirmed ? 'green' : 'orange'" style="margin-left:8px">
+              {{ detail.executorWageConfirmed ? '已确认' : '预计（实时更新）' }}
+            </a-tag>
+            <a-space v-if="canManageExecutorWages" class="section-actions">
+              <a-button v-if="!detail.executorWageConfirmed" type="primary" size="small"
+                @click="doConfirmExecutorWages">确认执行人员工资</a-button>
+              <a-popconfirm v-else title="确认取消执行人员工资的确认？" @confirm="doUnconfirmExecutorWages">
+                <a-button size="small">取消确认</a-button>
+              </a-popconfirm>
+            </a-space>
+          </div>
+          <a-table v-if="detail.executorWageRows && detail.executorWageRows.length"
+            :columns="executorWageColumns" :data-source="detail.executorWageRows"
+            :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'executorName'">
+                <a-tag v-if="record.executorName && !record.isSummaryRow" :color="colorForValue(record.executorName)">
+                  {{ record.executorName }}
+                </a-tag>
+              </template>
+              <template v-if="column.key === 'brandTeam'">
+                <template v-if="record.isSummaryRow">汇总</template>
+                <template v-else-if="record.isGroupSubtotal"><b>{{ record.brandName }}</b></template>
+                <template v-else>
+                  <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+                  <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+                </template>
+              </template>
+              <template v-if="column.key === 'videoTypeLabel'">{{ record.videoTypeLabel || '—' }}</template>
+              <template v-if="column.key === 'videoCount'">{{ record.videoCount ?? 0 }}</template>
+              <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+            </template>
+          </a-table>
+          <div class="summary-lines">
+            <div class="line"><span>应发给执行人员的工资</span><span>{{ fmt(detail.executorWageTotal) }}</span></div>
+            <div class="line total"><span>最终净得工资</span><span>{{ fmt(detail.finalNetWage) }}</span></div>
+          </div>
+        </template>
+
+        <div class="footer-hint">{{ footerHint }}</div>
       </template>
     </a-spin>
   </a-modal>
@@ -73,8 +124,12 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { message } from 'ant-design-vue'
 import { payslipApi } from '../../api/index'
+import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
+
+const authStore = useAuthStore()
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -92,6 +147,7 @@ const columns = computed(() => {
   if (!detail.value) return []
   if (detail.value.type === 'EXECUTOR') {
     return [
+      { title: '所属项目负责人', key: 'projectManagerName', width: 130 },
       { title: '品牌方/红人团队', key: 'brandTeam' },
       { title: '项目视频类型', key: 'videoTypeLabel' },
       { title: '视频数', key: 'videoCount', width: 80 },
@@ -113,6 +169,41 @@ const columns = computed(() => {
     { title: '客户合作价格', key: 'amount', width: 140 }
   ]
 })
+
+const executorWageColumns = [
+  { title: '执行人员', key: 'executorName', width: 130 },
+  { title: '品牌方/红人团队', key: 'brandTeam' },
+  { title: '项目视频类型', key: 'videoTypeLabel' },
+  { title: '视频数', key: 'videoCount', width: 80 },
+  { title: '薪酬金额', key: 'amount', width: 140 }
+]
+
+const totalLineLabel = computed(() => {
+  if (!detail.value) return '总工资'
+  if (detail.value.type === 'MANAGEMENT') return '公司利润'
+  if (detail.value.type === 'PROJECT_MANAGER') return '管理层所发工资'
+  return '总工资'
+})
+
+const footerHint = computed(() => {
+  if (!detail.value) return ''
+  if (detail.value.type === 'PROJECT_MANAGER') {
+    return detail.value.confirmed ? '以上"管理层所发工资"为已确认的工资单快照' : '以上"管理层所发工资"为预计（实时更新）'
+  }
+  return detail.value.confirmed ? '以上为已确认的工资单快照' : '以上为工资单预计（实时更新）'
+})
+
+// 只有项目负责人本人查看自己的工资单，才能确认/取消确认名下执行人员的工资
+const canManageExecutorWages = computed(() =>
+  detail.value?.type === 'PROJECT_MANAGER'
+  && authStore.employeeId != null
+  && String(authStore.employeeId) === String(props.employeeId))
+
+function rowClassName(record) {
+  if (record.isSummaryRow) return 'summary-row'
+  if (record.isGroupSubtotal) return 'subtotal-row'
+  return ''
+}
 
 function fmt(val) {
   if (val == null) return '—'
@@ -142,6 +233,25 @@ watch(() => [props.visible, props.employeeId, props.yearMonth, props.currency], 
 }, { immediate: true })
 
 function close() { emit('update:visible', false) }
+
+async function doConfirmExecutorWages() {
+  try {
+    await payslipApi.confirmExecutorWages(props.yearMonth)
+    message.success('已确认')
+    load()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '确认失败')
+  }
+}
+async function doUnconfirmExecutorWages() {
+  try {
+    await payslipApi.unconfirmExecutorWages(props.yearMonth)
+    message.success('已取消确认')
+    load()
+  } catch (e) {
+    message.error(e?.response?.data?.message || '取消确认失败')
+  }
+}
 </script>
 
 <style scoped>
@@ -149,6 +259,18 @@ function close() { emit('update:visible', false) }
   margin-top: 16px;
   border-top: 1px solid #f0f0f0;
   padding-top: 12px;
+}
+.section-title {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.section-actions {
+  margin-left: auto;
 }
 .line {
   display: flex;
@@ -188,5 +310,9 @@ function close() { emit('update:visible', false) }
 :deep(.summary-row) {
   font-weight: 600;
   background: #fafafa;
+}
+:deep(.subtotal-row) {
+  font-weight: 600;
+  background: #f7f7f7;
 }
 </style>

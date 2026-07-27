@@ -114,12 +114,19 @@
           <template v-if="column.key === 'total'">{{ fmt(record.totalAmount) }}</template>
 
           <template v-if="column.key === 'confirm'">
-            <a-space>
+            <template v-if="record.employeeRole === '执行人员'">
+              <a-tag color="blue">按项目负责人分别确认，见明细</a-tag>
+            </template>
+            <a-space v-else>
               <a-tag :color="record.confirmed ? 'green' : 'orange'">{{ record.confirmed ? '已确认' : '预计' }}</a-tag>
               <a-button v-if="!record.confirmed" type="primary" size="small" @click="confirmRow(record)">确认</a-button>
               <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(record)">
                 <a-button size="small">取消确认</a-button>
               </a-popconfirm>
+              <a-tag v-if="record.employeeRole === '项目负责人'"
+                :color="record.executorWageConfirmed ? 'green' : 'orange'">
+                执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
+              </a-tag>
             </a-space>
           </template>
         </template>
@@ -131,9 +138,10 @@
       <a-spin :spinning="loadingSelf">
         <div v-if="!authStore.employeeId" class="empty-hint">当前账号未关联员工记录，没有个人工资单。</div>
         <div v-else-if="selfDetail" class="self-card">
-          <a-tag :color="selfDetail.confirmed ? 'green' : 'orange'">
+          <a-tag v-if="selfDetail.type !== 'EXECUTOR'" :color="selfDetail.confirmed ? 'green' : 'orange'">
             {{ selfDetail.confirmed ? '已确认' : '工资单预计（实时更新）' }}
           </a-tag>
+          <span v-else class="mixed-state-hint">工资按每个项目负责人分别确认，详见明细</span>
 
           <div v-if="selfDetail.type === 'PROJECT_MANAGER'" class="self-line">
             <span>提成金额</span><span>{{ fmt(selfDetail.baseAmount) }}</span>
@@ -152,14 +160,27 @@
             <span>奖金</span><span>{{ fmt(selfDetail.extraBonusAmount) }}</span>
           </div>
 
-          <div class="self-line total">
+          <template v-if="selfDetail.type === 'PROJECT_MANAGER'">
+            <div class="self-line">
+              <span>管理层所发工资</span><span>{{ fmt(selfDetail.totalAmount) }}</span>
+            </div>
+            <div class="self-line">
+              <span>应发给执行人员的工资</span><span>{{ fmt(selfDetail.executorWageTotal) }}</span>
+            </div>
+            <div class="self-line total">
+              <span>最终净得工资</span>
+              <a @click="openSelfDetail">{{ fmt(selfDetail.finalNetWage) }}</a>
+            </div>
+          </template>
+          <div v-else class="self-line total">
             <span>总工资</span>
-            <a v-if="selfDetail.type === 'PROJECT_MANAGER' || selfDetail.type === 'EXECUTOR'"
-              @click="openSelfDetail">{{ fmt(selfDetail.totalAmount) }}</a>
+            <a v-if="selfDetail.type === 'EXECUTOR'" @click="openSelfDetail">{{ fmt(selfDetail.totalAmount) }}</a>
             <span v-else>{{ fmt(selfDetail.totalAmount) }}</span>
           </div>
 
-          <div v-if="selfDetail.confirmed" class="footer-hint">若有疑问，请向管理层联系。</div>
+          <div v-if="selfDetail.confirmed && selfDetail.type !== 'EXECUTOR'" class="footer-hint">
+            若有疑问，请向管理层联系。
+          </div>
         </div>
       </a-spin>
     </template>
@@ -228,7 +249,7 @@ const columns = [
   { title: '阶梯Bonus', key: 'tierBonus', width: 120 },
   { title: '奖金', key: 'extraBonus', width: 200 },
   { title: '总工资', key: 'total', width: 130 },
-  { title: '状态/操作', key: 'confirm', width: 220 }
+  { title: '状态/操作', key: 'confirm', width: 300 }
 ]
 
 function fmt(val) {
@@ -456,10 +477,14 @@ onMounted(loadAll)
   text-align: center;
 }
 .self-card {
-  max-width: 480px;
+  max-width: 560px;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
   padding: 20px;
+}
+.mixed-state-hint {
+  font-size: 13px;
+  color: #666;
 }
 .self-line {
   display: flex;
