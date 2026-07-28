@@ -145,4 +145,25 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
+/**
+ * 部署后"点击模块没反应，必须手动刷新地址栏才恢复"的根因（2026-07 排查确认）：路由懒加载
+ * （每个页面组件都是 () => import(...)）产生按内容哈希命名的独立 JS 文件；Vercel 每次部署会
+ * 用新哈希的文件整体替换旧文件，不保留旧文件。用户如果在部署前就打开着页面（SPA 不会自动
+ * 刷新），JS 一直是部署前那一份，只要点到"这次会话还没加载过"的模块，浏览器还是去请求那个
+ * 已经被删除的旧哈希文件，请求 404，import() 的 promise 直接 reject——没有任何全局兜底处理
+ * 之前，这个 reject 不会弹出任何提示，页面表现就是"点了没反应"，只有手动刷新地址栏（拿到
+ * 最新的 index.html + 匹配的新哈希资源）才能恢复。
+ * 修复：捕获到这类"动态导入模块失败"的报错时，记下用户本来要去哪，整页强制刷新一次，
+ * 刷新后自动跳转过去，不需要用户自己意识到要去刷新。
+ */
+const CHUNK_LOAD_ERROR_PATTERN =
+  /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i
+export const PENDING_NAV_KEY = 'lusuoria_pending_nav_after_reload'
+
+router.onError((error, to) => {
+  if (!CHUNK_LOAD_ERROR_PATTERN.test(error?.message || '')) return
+  if (to?.fullPath) sessionStorage.setItem(PENDING_NAV_KEY, to.fullPath)
+  window.location.reload()
+})
+
 export default router

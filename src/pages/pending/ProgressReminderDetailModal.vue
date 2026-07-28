@@ -12,7 +12,8 @@
         <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
       </div>
       <a-table :columns="columns" :data-source="filteredList" :loading="loading"
-        row-key="id" size="middle" :pagination="false" :scroll="{ x: scrollX }">
+        row-key="id" size="middle" :pagination="false" :scroll="{ x: scrollX }"
+        :row-class-name="rowClassName">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'brandName'">
             <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
@@ -41,7 +42,8 @@
             <a @click="goToDetail(record)">查看详情</a>
             <template v-if="canAcknowledge">
               <a-divider type="vertical" />
-              <a-popconfirm title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
+              <span v-if="record.acknowledged" style="color:#8c8c8c">已标记为已处理</span>
+              <a-popconfirm v-else title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
                 @confirm="handleAcknowledge(record)">
                 <a style="color:#52c41a">标记已处理</a>
               </a-popconfirm>
@@ -371,10 +373,20 @@ async function handleAcknowledge(record) {
   const targetId = REQUIREMENT_CATEGORIES.includes(props.category) ? record.requirementId : record.trackingId
   await progressReminderApi.acknowledge(props.category, targetId)
   message.success('已标记为已处理，进度有变化前不会再提醒这条')
-  list.value = list.value.filter(r => r.id !== record.id)
+  // 2026-07 起后端不再把标记已处理的行从列表里移除（那样会导致主卡片标题的笔数——跑批时
+  // 固定算好的，不受标记影响——跟点进详情看到的笔数对不上），改成原地标记 acknowledged，
+  // 这一行继续展示，只是变灰 + 换成"已标记为已处理"文案
+  const target = list.value.find(r => r.id === record.id)
+  if (target) target.acknowledged = true
+}
+
+// 已标记已处理的行整体变灰（内容仍然完整可读，只是弱化视觉优先级），跟未处理的行区分开
+function rowClassName(record) {
+  return record.acknowledged ? 'acknowledged-row' : ''
 }
 </script>
 
 <style scoped>
 .filter-bar { margin-bottom: 12px; }
+:deep(.acknowledged-row) { opacity: 0.55; }
 </style>

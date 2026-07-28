@@ -15,15 +15,19 @@
         row-key="id" size="middle" :scroll="{ x: tableScrollX }" @change="handleTableChange">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'brand'">
-            <a-tag v-if="record.brand?.name" :color="colorForValue(record.brand.name)">{{ record.brand.name }}</a-tag>
+            <a-tag v-if="getBrandName(record.brandId)" :color="colorForValue(getBrandName(record.brandId))">
+              {{ getBrandName(record.brandId) }}
+            </a-tag>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'team'">
-            <a-tag v-if="record.team?.name" :color="colorForValue(record.team.name)">{{ record.team.name }}</a-tag>
+            <a-tag v-if="getTeamName(record.teamId)" :color="colorForValue(getTeamName(record.teamId))">
+              {{ getTeamName(record.teamId) }}
+            </a-tag>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'accountName'">
-            {{ record.influencer?.accountName || '—' }}
+            <span style="color:#262626">{{ getInfluencerName(record.influencerId) || '—' }}</span>
           </template>
           <template v-if="column.key === 'platform'">
             <template v-if="record.platform">
@@ -57,10 +61,10 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'projectManager'">
-            <span style="color:#262626">{{ record.projectManager?.name || '—' }}</span>
+            <span style="color:#262626">{{ getEmployeeName(record.projectManagerId) || '—' }}</span>
           </template>
           <template v-if="column.key === 'executor'">
-            <span style="color:#262626">{{ record.executor?.name || '—' }}</span>
+            <span style="color:#262626">{{ getEmployeeName(record.executorId) || '—' }}</span>
           </template>
           <template v-if="column.key === 'clientOrderId'">
             <span style="color:#262626">{{ record.clientOrderId || '—' }}</span>
@@ -80,7 +84,7 @@
         </template>
         <template #summary>
           <a-table-summary-row v-if="rows.length">
-            <a-table-summary-cell>汇总</a-table-summary-cell>
+            <a-table-summary-cell>汇总（共 {{ pagination.total }} 条）</a-table-summary-cell>
             <a-table-summary-cell v-for="i in 13" :key="i" />
             <a-table-summary-cell><b>{{ fmtNum(totalInfluencerCost) }}</b></a-table-summary-cell>
             <a-table-summary-cell><b>{{ fmtNum(totalClientPrice) }}</b></a-table-summary-cell>
@@ -97,6 +101,7 @@ import { ref, reactive, watch } from 'vue'
 import { ExportOutlined } from '@ant-design/icons-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
@@ -112,12 +117,23 @@ const props = defineProps({
 const emit = defineEmits(['update:visible'])
 
 const { getLabel } = useOptions()
+const { loadBrands, loadTeams, loadEmployees, loadInfluencersSimple } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading = ref(false)
 const rows = ref([])
 const totalInfluencerCost = ref(0)
 const totalClientPrice = ref(0)
+// 品牌方/红人团队/员工/红人 这几个字段后端返回的是 CollaborationTracking 原始实体，
+// brand/team/influencer/projectManager/executor 关联对象都是 @JsonIgnore（跟"红人合作跟踪"
+// 列表页同一套约定），前端只拿得到 brandId/teamId/influencerId/projectManagerId/executorId，
+// 名字要靠这几个本地加载的引用列表自己查（之前直接读 record.brand?.name 这类嵌套对象，
+// 永远是 undefined，这就是"品牌方/红人团队/红人社媒完整名字/项目负责人/内部执行人员都显示
+// -"这个 bug 的根因）
+const brands = ref([])
+const teams = ref([])
+const employees = ref([])
+const influencers = ref([])
 const pagination = reactive({
   current: 1, pageSize: 20, total: 0,
   showTotal: t => `共 ${t} 条`,
@@ -157,12 +173,37 @@ function fmtNum(v) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function getBrandName(brandId) {
+  return brands.value.find(b => b.id === brandId)?.name || ''
+}
+function getTeamName(teamId) {
+  return teams.value.find(t => t.id === teamId)?.name || ''
+}
+function getEmployeeName(employeeId) {
+  if (!employeeId) return ''
+  return employees.value.find(e => e.id === employeeId)?.name || ''
+}
+function getInfluencerName(influencerId) {
+  if (!influencerId) return ''
+  return influencers.value.find(i => i.id === influencerId)?.accountName || ''
+}
+
+async function loadReferenceData() {
+  const [b, t, e, i] = await Promise.all([loadBrands(), loadTeams(), loadEmployees(), loadInfluencersSimple()])
+  brands.value = b || []
+  teams.value = t || []
+  employees.value = e || []
+  influencers.value = i || []
+}
+
 async function loadData() {
   if (!props.influencerId) return
   loading.value = true
   try {
-    const res = await collaborationApi.byInfluencer(
-      props.influencerId, props.category, pagination.current - 1, pagination.pageSize)
+    const [res] = await Promise.all([
+      collaborationApi.byInfluencer(props.influencerId, props.category, pagination.current - 1, pagination.pageSize),
+      loadReferenceData()
+    ])
     const data = res.data || {}
     rows.value = data.page?.content || []
     pagination.total = data.page?.totalElements || 0
