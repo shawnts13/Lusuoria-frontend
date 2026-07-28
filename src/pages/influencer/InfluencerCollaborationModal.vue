@@ -8,29 +8,62 @@
     </div>
 
     <div class="filter-bar">
-      <a-date-picker v-if="category === 'COMPLETED'" v-model:value="filters.videoMonthVal" picker="month"
-        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布月份" style="width:140px"
-        @change="v => { filters.videoMonth = v; applyFilters() }" />
-      <a-select v-model:value="filters.platform" placeholder="合作平台"
-        style="width:120px" allow-clear @change="applyFilters">
-        <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-      </a-select>
-      <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
-        style="width:140px" allow-clear @change="applyFilters">
-        <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-      </a-select>
-      <a-tooltip v-if="category === 'ACTIVE'" :title="filters.progress ? getLabel('collab_progress', filters.progress) : ''">
-        <a-select v-model:value="filters.progress" placeholder="视频项目进度"
+      <!-- "合作中项目"：品牌方/红人团队排最前面；"已完结项目"：品牌方/红人团队排在项目视频
+           发布月份后面——两个类别的筛选项顺序不一样，分开两段写，不用一串零散的 v-if 交错
+           拼顺序，容易看错 -->
+      <template v-if="category === 'ACTIVE'">
+        <a-select v-model:value="filters.brandId" placeholder="品牌方"
+          style="width:150px" allow-clear show-search
+          :filter-option="(input, opt) => opt.label.includes(input)"
+          @change="applyFilters">
+          <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+        </a-select>
+        <a-select v-model:value="filters.teamId" placeholder="红人团队"
+          style="width:150px" allow-clear show-search
+          :filter-option="(input, opt) => opt.label.includes(input)"
+          @change="applyFilters">
+          <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+        </a-select>
+        <a-select v-model:value="filters.platform" placeholder="合作平台"
+          style="width:120px" allow-clear @change="applyFilters">
+          <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+        <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
           style="width:140px" allow-clear @change="applyFilters">
-          <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
-      </a-tooltip>
-      <a-tooltip v-if="category === 'ACTIVE'" :title="filters.influencerPaymentProgress ? getLabel('influencer_payment_progress', filters.influencerPaymentProgress) : ''">
-        <a-select v-model:value="filters.influencerPaymentProgress" placeholder="红人结款进度"
-          style="width:160px" allow-clear @change="applyFilters">
-          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        <a-tooltip :title="filters.progress ? getLabel('collab_progress', filters.progress) : ''">
+          <a-select v-model:value="filters.progress" placeholder="视频项目进度"
+            style="width:140px" allow-clear @change="applyFilters">
+            <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          </a-select>
+        </a-tooltip>
+      </template>
+      <template v-else>
+        <a-date-picker v-model:value="filters.videoMonthVal" picker="month"
+          format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布月份" style="width:140px"
+          @change="v => { filters.videoMonth = v; applyFilters() }" />
+        <a-select v-model:value="filters.brandId" placeholder="品牌方"
+          style="width:150px" allow-clear show-search
+          :filter-option="(input, opt) => opt.label.includes(input)"
+          @change="applyFilters">
+          <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
         </a-select>
-      </a-tooltip>
+        <a-select v-model:value="filters.teamId" placeholder="红人团队"
+          style="width:150px" allow-clear show-search
+          :filter-option="(input, opt) => opt.label.includes(input)"
+          @change="applyFilters">
+          <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+        </a-select>
+        <a-select v-model:value="filters.platform" placeholder="合作平台"
+          style="width:120px" allow-clear @change="applyFilters">
+          <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+        <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
+          style="width:140px" allow-clear @change="applyFilters">
+          <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+      </template>
       <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
         style="width:130px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
@@ -178,14 +211,15 @@ const pagination = reactive({
 const projectManagerCandidates = computed(() =>
   employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
 
-// 筛选条件（2026-07 新增，都是可选的，可以同时生效）：videoMonth/progress/
-// influencerPaymentProgress 只在对应类别（COMPLETED/ACTIVE）的弹窗里展示，
-// platform/videoType/projectManagerId 两个类别都展示
+// 筛选条件（2026-07 新增，都是可选的，可以同时生效）：videoMonth 只在"已完结项目"展示，
+// progress 只在"合作中项目"展示，brandId/teamId/platform/videoType/projectManagerId
+// 两个类别都展示（顺序不同，见模板）
 const filters = reactive({
+  brandId: undefined,
+  teamId: undefined,
   platform: undefined,
   videoType: undefined,
   progress: undefined,
-  influencerPaymentProgress: undefined,
   projectManagerId: undefined,
   videoMonth: undefined,
   videoMonthVal: undefined
@@ -252,10 +286,11 @@ async function loadData() {
   try {
     const [res] = await Promise.all([
       collaborationApi.byInfluencer(props.influencerId, props.category, pagination.current - 1, pagination.pageSize, {
+        brandId: filters.brandId || undefined,
+        teamId: filters.teamId || undefined,
         platform: filters.platform || undefined,
         videoType: filters.videoType || undefined,
         progress: filters.progress || undefined,
-        influencerPaymentProgress: filters.influencerPaymentProgress || undefined,
         projectManagerId: filters.projectManagerId || undefined,
         videoMonth: filters.videoMonth || undefined
       }),
@@ -280,8 +315,8 @@ function applyFilters() {
 
 function resetFilters() {
   Object.assign(filters, {
-    platform: undefined, videoType: undefined, progress: undefined,
-    influencerPaymentProgress: undefined, projectManagerId: undefined,
+    brandId: undefined, teamId: undefined, platform: undefined, videoType: undefined,
+    progress: undefined, projectManagerId: undefined,
     videoMonth: undefined, videoMonthVal: undefined
   })
   applyFilters()
@@ -309,8 +344,8 @@ watch(() => props.visible, v => {
   if (v) {
     pagination.current = 1
     Object.assign(filters, {
-      platform: undefined, videoType: undefined, progress: undefined,
-      influencerPaymentProgress: undefined, projectManagerId: undefined,
+      brandId: undefined, teamId: undefined, platform: undefined, videoType: undefined,
+      progress: undefined, projectManagerId: undefined,
       videoMonth: undefined, videoMonthVal: undefined
     })
     loadData()
