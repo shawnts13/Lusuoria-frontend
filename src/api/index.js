@@ -252,7 +252,10 @@ export const dashboardApi = {
     http.get('/api/dashboard/drilldown/other-staff-cost', { params: { startMonth, endMonth, currency } }),
 
   drilldownCommission: (startMonth, endMonth, currency) =>
-    http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } })
+    http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } }),
+
+  drilldownExtraBonus: (startMonth, endMonth, currency) =>
+    http.get('/api/dashboard/drilldown/extra-bonus', { params: { startMonth, endMonth, currency } })
 }
 
 // ===== 工资单 =====

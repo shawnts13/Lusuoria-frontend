@@ -33,7 +33,7 @@
       <a-table
         :columns="columns"
         :data-source="rows"
-        :pagination="rows.length > 10 ? { pageSize: 10 } : false"
+        :pagination="tablePagination"
         row-key="dimensionLabel"
         size="middle"
         style="margin-top:12px"
@@ -44,7 +44,11 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'amount'">
-            <span style="color:#237804;font-weight:600">{{ fmtAmount(record.amount) }}</span>
+            <!-- 法务还没被管理层在"工资单"模块设置当月工资：显示提示文案，不是金额（2026-07 新增） -->
+            <span v-if="record.dimensionType === 'legal_unset'" style="color:#8c8c8c">
+              待管理层在工资单模块设置法务当月工资
+            </span>
+            <span v-else style="color:#237804;font-weight:600">{{ fmtAmount(record.amount) }}</span>
           </template>
           <template v-if="column.key === 'bonusAmount'">
             <span style="color:#d46b08">{{ fmtAmount(record.bonusAmount) }}</span>
@@ -109,6 +113,14 @@ const currentDimensionLabel = computed(() => {
 })
 const monthRange = ref([props.defaultMonth, props.defaultMonth])
 
+const tablePagination = reactive({
+  current: 1,
+  pageSize: 10,
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: t => `共 ${t} 条`
+})
+
 const columns = computed(() => {
   const dimCol = { title: '维度', dataIndex: 'dimensionLabel', key: 'dimensionLabel' }
   if (props.metric === 'video') {
@@ -149,6 +161,7 @@ async function reload() {
     const res = await props.fetcher(start, end, currency.value, dimension.value)
     rows.value = res.data?.rows || []
     exchangeRateInfo.value = res.data?.exchangeRateInfo || null
+    tablePagination.current = 1
   } catch {
     rows.value = []
   } finally {
@@ -161,6 +174,7 @@ watch(() => props.visible, (v) => {
     monthRange.value = [props.defaultMonth, props.defaultMonth]
     currency.value = 'USD'
     if (props.dimensionOptions?.length) dimension.value = props.dimensionOptions[0].value
+    tablePagination.current = 1
     reload()
   }
 })

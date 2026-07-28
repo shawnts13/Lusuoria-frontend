@@ -72,6 +72,12 @@
           <div class="value">{{ fmt(summary.totalOtherStaffCost) }}</div>
         </div>
 
+        <!-- 奖金（Payslip.extraBonusAmount）：当月没有任何人设置奖金时不显示这张卡片 -->
+        <div v-if="hasExtraBonus" class="summary-card warning clickable" @click="openDrilldown('extra-bonus')">
+          <div class="label">奖金 <span class="drill-hint">点击查看明细 ›</span></div>
+          <div class="value">{{ fmt(summary.totalExtraBonus) }}</div>
+        </div>
+
         <div class="summary-card success clickable" @click="openDrilldown('gross-profit')">
           <div class="label">项目毛利 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalGrossProfit) }}</div>
@@ -89,7 +95,7 @@
       </div>
 
       <div v-if="summary.totalCompanyProfit != null" class="formula-box">
-        <div class="formula-title">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计 − 内部其他员工成本</div>
+        <div class="formula-title">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计 − 内部其他员工成本 − 奖金</div>
         <div class="formula-row">
           <div class="formula-term">
             <div class="formula-label">项目毛利</div>
@@ -98,7 +104,7 @@
           <div class="formula-op">−</div>
           <div class="formula-term">
             <div class="formula-label">内部执行人力成本</div>
-            <div class="formula-value">{{ fmt(summary.totalInternalExecutionCost) }}</div>
+            <div class="formula-value">{{ fmt(summary.totalInternalExecutionCostForProfit) }}</div>
           </div>
           <div class="formula-op">−</div>
           <div class="formula-term">
@@ -109,6 +115,11 @@
           <div class="formula-term">
             <div class="formula-label">内部其他员工成本</div>
             <div class="formula-value">{{ fmt(summary.totalOtherStaffCost) }}</div>
+          </div>
+          <div class="formula-op">−</div>
+          <div class="formula-term">
+            <div class="formula-label">奖金</div>
+            <div class="formula-value">{{ fmt(summary.totalExtraBonus) }}</div>
           </div>
           <div class="formula-op">=</div>
           <div class="formula-term formula-total">
@@ -205,11 +216,22 @@
       :show-currency-toggle="true"
       :fetcher="fetchCommissionDrilldown"
     />
+
+    <!-- 奖金下钻：仅员工维度，当月没有人设置奖金时卡片本身不显示，弹窗也就打不开 -->
+    <DrilldownModal
+      v-model:visible="modals.extraBonus"
+      title="奖金明细"
+      metric="extra-bonus"
+      :default-month="selectedMonth"
+      :show-currency-toggle="true"
+      :count-label="'人数'"
+      :fetcher="fetchExtraBonusDrilldown"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { dashboardApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import dayjs from 'dayjs'
@@ -223,12 +245,19 @@ const summary = ref({})
 
 const modals = reactive({
   video: false, clientPrice: false, influencerCost: false,
-  grossProfit: false, companyProfit: false, executionCost: false, otherStaffCost: false, commission: false
+  grossProfit: false, companyProfit: false, executionCost: false, otherStaffCost: false, commission: false,
+  extraBonus: false
 })
 
+// 当月没有任何人设置奖金（Payslip.extraBonusAmount）时不展示"奖金"这张卡片
+const hasExtraBonus = computed(() => {
+  const v = parseFloat(summary.value.totalExtraBonus)
+  return !isNaN(v) && v !== 0
+})
+
+// 2026-07 起去掉"按红人团队"（红人成本/项目毛利/公司利润这三个下钻共用这份维度列表）
 const dimensionOptions = [
   { value: 'brand',      label: '按品牌方' },
-  { value: 'team',       label: '按红人团队' },
   { value: 'brand_team', label: '按品牌方/红人团队' },
   { value: 'account',    label: '按红人账号' },
   { value: 'type',       label: '按红人类型' }
@@ -240,8 +269,9 @@ const dimensionOptionsWithManager = [
 ]
 
 const clientPriceDimensionOptions = [
-  { value: 'brand_team', label: '按品牌方/红人团队' },
-  { value: 'manager',    label: '按项目负责人' }
+  { value: 'brand',       label: '按品牌方' },
+  { value: 'brand_team',  label: '按品牌方/红人团队' },
+  { value: 'manager',     label: '按项目负责人' }
 ]
 
 const executionCostDimensionOptions = [
@@ -250,17 +280,18 @@ const executionCostDimensionOptions = [
   { value: 'manager_brand_team', label: '按项目负责人/品牌方/红人团队' }
 ]
 
+// 2026-07 起："按品牌方"排最前面，去掉"按项目视频发布时间"
 const videoDimensionOptions = [
-  { value: 'brand_team',    label: '按品牌方/红人团队' },
-  { value: 'manager',       label: '按项目负责人' },
-  { value: 'publish_month', label: '按项目视频发布时间' }
+  { value: 'brand',      label: '按品牌方' },
+  { value: 'brand_team', label: '按品牌方/红人团队' },
+  { value: 'manager',    label: '按项目负责人' }
 ]
 
 function openDrilldown(metric) {
   const map = { video: 'video', 'client-price': 'clientPrice',
     'influencer-cost': 'influencerCost', 'gross-profit': 'grossProfit',
     'company-profit': 'companyProfit', 'execution-cost': 'executionCost',
-    'other-staff-cost': 'otherStaffCost', commission: 'commission' }
+    'other-staff-cost': 'otherStaffCost', commission: 'commission', 'extra-bonus': 'extraBonus' }
   modals[map[metric]] = true
 }
 
@@ -309,6 +340,9 @@ function fetchOtherStaffCostDrilldown(start, end, cur) {
 }
 function fetchCommissionDrilldown(start, end, cur) {
   return dashboardApi.drilldownCommission(start, end, cur)
+}
+function fetchExtraBonusDrilldown(start, end, cur) {
+  return dashboardApi.drilldownExtraBonus(start, end, cur)
 }
 
 onMounted(loadSummary)
