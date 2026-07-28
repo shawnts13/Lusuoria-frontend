@@ -357,4 +357,9 @@ function close() { emit('update:visible', false) }
   font-weight: 600;
   background: #f7f7f7;
 }
+/* 每个执行人员小计行下面加一条更明显的分隔线，跟下一个执行人员的明细行区分开——
+   表格行本身没有"外边距"这个概念，用加粗的单元格底边框模拟视觉上的间隔 */
+:deep(.subtotal-row td) {
+  border-bottom: 2px solid #bfbfbf !important;
+}
 </style>

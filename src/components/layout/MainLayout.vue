@@ -7,15 +7,32 @@
       </div>
 
       <a-menu theme="dark" mode="inline" :selected-keys="[currentRoute]" @click="handleMenuClick">
-        <!-- 数据看板仅 ADMIN / AUDITOR 可见 -->
-        <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
-          <template #icon><DashboardOutlined /></template>数据看板
-        </a-menu-item>
-
-        <!-- 待处理：对所有非访客角色开放（审批列表/进度提醒各自按身份过滤展示），见 store/auth.js canAccessPending -->
-        <a-menu-item v-if="authStore.canAccessPending" key="/pending">
-          <template #icon><ExclamationCircleOutlined /></template>待处理
-        </a-menu-item>
+        <!-- 2026-07 新增：菜单顺序按"员工角色=管理层"分两套——管理层视角工资单紧跟数据看板
+             之后；其余人视角工资单排最前面，然后是待处理（数据看板仅 ADMIN/AUDITOR 可见，
+             不是所有"其余人"都能看到，能看到的话排在工资单/待处理之后）。工资单本身不对
+             访客开放，管理层看全体+确认，其余角色只看自己那份 -->
+        <template v-if="authStore.isManagement">
+          <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
+            <template #icon><DashboardOutlined /></template>数据看板
+          </a-menu-item>
+          <a-menu-item v-if="!authStore.isGuest" key="/payslips">
+            <template #icon><WalletOutlined /></template>工资单
+          </a-menu-item>
+          <a-menu-item v-if="authStore.canAccessPending" key="/pending">
+            <template #icon><ExclamationCircleOutlined /></template>待处理
+          </a-menu-item>
+        </template>
+        <template v-else>
+          <a-menu-item v-if="!authStore.isGuest" key="/payslips">
+            <template #icon><WalletOutlined /></template>工资单
+          </a-menu-item>
+          <a-menu-item v-if="authStore.canAccessPending" key="/pending">
+            <template #icon><ExclamationCircleOutlined /></template>待处理
+          </a-menu-item>
+          <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
+            <template #icon><DashboardOutlined /></template>数据看板
+          </a-menu-item>
+        </template>
 
         <!-- 审计员隐藏红人管理 -->
         <template v-if="!authStore.isAuditor">
@@ -32,11 +49,6 @@
         <!-- 红人结款：严格按员工角色（管理层/财务/法务）可见，跟 ADMIN/AUDITOR 等 role 无关 -->
         <a-menu-item v-if="authStore.canAccessPayments" key="/payments">
           <template #icon><PayCircleOutlined /></template>3. 红人结款
-        </a-menu-item>
-
-        <!-- 工资单：不对访客开放，管理层看全体+确认，其余角色只看自己那份 -->
-        <a-menu-item v-if="!authStore.isGuest" key="/payslips">
-          <template #icon><WalletOutlined /></template>工资单
         </a-menu-item>
 
         <a-menu-divider />
