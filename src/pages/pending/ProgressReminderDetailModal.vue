@@ -12,7 +12,7 @@
         <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
       </div>
       <a-table :columns="columns" :data-source="filteredList" :loading="loading"
-        row-key="id" size="middle" :pagination="false" :scroll="{ x: scrollX }"
+        row-key="id" size="middle" :pagination="tablePagination" :scroll="{ x: scrollX }"
         :row-class-name="rowClassName">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'brandName'">
@@ -67,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { progressReminderApi } from '../../api/index'
@@ -100,6 +100,15 @@ const list = ref([])
 const brandTeamFilter = ref(undefined)
 const accountNameFilter = ref(undefined)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
+// 2026-07 新增：明细行之前是不分页的，一次性把某个类别/严重度下命中的全部记录都渲染出来，
+// 数量一多（比如某个项目负责人手下滞留了几百笔）页面会很长、体验差。分页只影响这里的展示，
+// 不影响数据完整性——后端 listDetails() 本身没有任何截断/上限，"共 X 条"和汇总合计
+// （summaryCells/totalCost/totalClientPrice）都是照 filteredList 全量算的，不受当前页影响
+const tablePagination = reactive({
+  current: 1, pageSize: 20, showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: t => `共 ${t} 条`
+})
 
 function fmtAmount(val) {
   if (val == null) return '—'
@@ -136,9 +145,12 @@ const accountNameOptions = computed(() => {
   return names.map(n => ({ value: n, label: n }))
 })
 
-// 排序：先按红人社媒完整名字归组，组内再按截止时间升序（越早到期的越靠前）；
+// 排序：未标记已处理的排在最前面，已标记已处理的排在最后（不跟未处理的交错），
+// 每个分组内部再按红人社媒完整名字归组、组内按截止时间升序（越早到期的越靠前）；
 // 没有截止时间的记录排在同名分组的最后
 function compareRows(a, b) {
+  const ackCompare = (a.acknowledged ? 1 : 0) - (b.acknowledged ? 1 : 0)
+  if (ackCompare !== 0) return ackCompare
   const nameCompare = (a.accountName || '').localeCompare(b.accountName || '')
   if (nameCompare !== 0) return nameCompare
   if (!a.deadlineDate && !b.deadlineDate) return 0
@@ -340,11 +352,15 @@ async function load() {
     list.value = res.data || []
     brandTeamFilter.value = undefined
     accountNameFilter.value = undefined
+    tablePagination.current = 1
     remeasure()
   } finally {
     loading.value = false
   }
 }
+
+// 筛选条件变化后命中的记录数会变，留在原来的页码可能会翻到空白页，回到第一页
+watch([brandTeamFilter, accountNameFilter], () => { tablePagination.current = 1 })
 
 watch(() => props.visible, v => { if (v) load() })
 
