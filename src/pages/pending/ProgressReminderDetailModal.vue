@@ -42,7 +42,14 @@
             <a @click="goToDetail(record)">查看详情</a>
             <template v-if="canAcknowledge">
               <a-divider type="vertical" />
-              <span v-if="record.acknowledged" style="color:#8c8c8c">已标记为已处理</span>
+              <template v-if="record.acknowledged">
+                <span style="color:#8c8c8c">已标记为已处理</span>
+                <a-divider type="vertical" />
+                <a-popconfirm title="取消标记？取消后这条会恢复正常提醒"
+                  @confirm="handleUnacknowledge(record)">
+                  <a>取消标记</a>
+                </a-popconfirm>
+              </template>
               <a-popconfirm v-else title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
                 @confirm="handleAcknowledge(record)">
                 <a style="color:#52c41a">标记已处理</a>
@@ -394,6 +401,16 @@ async function handleAcknowledge(record) {
   // 这一行继续展示，只是变灰 + 换成"已标记为已处理"文案
   const target = list.value.find(r => r.id === record.id)
   if (target) target.acknowledged = true
+}
+
+// 取消标记（2026-07 新增，防误点）：跟标记已处理对称，原地把 acknowledged 翻回 false，
+// 这一行恢复正常颜色/正常提醒
+async function handleUnacknowledge(record) {
+  const targetId = REQUIREMENT_CATEGORIES.includes(props.category) ? record.requirementId : record.trackingId
+  await progressReminderApi.unacknowledge(props.category, targetId)
+  message.success('已取消标记')
+  const target = list.value.find(r => r.id === record.id)
+  if (target) target.acknowledged = false
 }
 
 // 已标记已处理的行整体变灰（内容仍然完整可读，只是弱化视觉优先级），跟未处理的行区分开

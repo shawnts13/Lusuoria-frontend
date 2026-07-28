@@ -7,6 +7,39 @@
       </a-button>
     </div>
 
+    <div class="filter-bar">
+      <a-date-picker v-if="category === 'COMPLETED'" v-model:value="filters.videoMonthVal" picker="month"
+        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布月份" style="width:140px"
+        @change="v => { filters.videoMonth = v; applyFilters() }" />
+      <a-select v-model:value="filters.platform" placeholder="合作平台"
+        style="width:120px" allow-clear @change="applyFilters">
+        <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+      </a-select>
+      <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
+        style="width:140px" allow-clear @change="applyFilters">
+        <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+      </a-select>
+      <a-tooltip v-if="category === 'ACTIVE'" :title="filters.progress ? getLabel('collab_progress', filters.progress) : ''">
+        <a-select v-model:value="filters.progress" placeholder="视频项目进度"
+          style="width:140px" allow-clear @change="applyFilters">
+          <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+      </a-tooltip>
+      <a-tooltip v-if="category === 'ACTIVE'" :title="filters.influencerPaymentProgress ? getLabel('influencer_payment_progress', filters.influencerPaymentProgress) : ''">
+        <a-select v-model:value="filters.influencerPaymentProgress" placeholder="红人结款进度"
+          style="width:160px" allow-clear @change="applyFilters">
+          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+        </a-select>
+      </a-tooltip>
+      <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
+        style="width:130px" allow-clear show-search
+        :filter-option="(input, opt) => opt.label.includes(input)"
+        @change="applyFilters">
+        <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+      </a-select>
+      <a-button @click="resetFilters">重置筛选</a-button>
+    </div>
+
     <div class="table-card" ref="tableWrapperRef">
       <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
         <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
@@ -97,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { ExportOutlined } from '@ant-design/icons-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
@@ -116,7 +149,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible'])
 
-const { getLabel } = useOptions()
+const { getOptions, getLabel } = useOptions()
 const { loadBrands, loadTeams, loadEmployees, loadInfluencersSimple } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
@@ -139,6 +172,23 @@ const pagination = reactive({
   showTotal: t => `共 ${t} 条`,
   showSizeChanger: true,
   pageSizeOptions: ['10', '20', '50', '100']
+})
+
+// 负责人筛选只能选"项目负责人"或"管理层"角色的员工，跟"红人合作跟踪"列表页一致
+const projectManagerCandidates = computed(() =>
+  employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
+
+// 筛选条件（2026-07 新增，都是可选的，可以同时生效）：videoMonth/progress/
+// influencerPaymentProgress 只在对应类别（COMPLETED/ACTIVE）的弹窗里展示，
+// platform/videoType/projectManagerId 两个类别都展示
+const filters = reactive({
+  platform: undefined,
+  videoType: undefined,
+  progress: undefined,
+  influencerPaymentProgress: undefined,
+  projectManagerId: undefined,
+  videoMonth: undefined,
+  videoMonthVal: undefined
 })
 
 const columns = [
@@ -201,7 +251,14 @@ async function loadData() {
   loading.value = true
   try {
     const [res] = await Promise.all([
-      collaborationApi.byInfluencer(props.influencerId, props.category, pagination.current - 1, pagination.pageSize),
+      collaborationApi.byInfluencer(props.influencerId, props.category, pagination.current - 1, pagination.pageSize, {
+        platform: filters.platform || undefined,
+        videoType: filters.videoType || undefined,
+        progress: filters.progress || undefined,
+        influencerPaymentProgress: filters.influencerPaymentProgress || undefined,
+        projectManagerId: filters.projectManagerId || undefined,
+        videoMonth: filters.videoMonth || undefined
+      }),
       loadReferenceData()
     ])
     const data = res.data || {}
@@ -213,6 +270,21 @@ async function loadData() {
     loading.value = false
     remeasure()
   }
+}
+
+// 筛选条件变化后回到第一页再查（命中记录数变了，留在原页码可能翻到空白页）
+function applyFilters() {
+  pagination.current = 1
+  loadData()
+}
+
+function resetFilters() {
+  Object.assign(filters, {
+    platform: undefined, videoType: undefined, progress: undefined,
+    influencerPaymentProgress: undefined, projectManagerId: undefined,
+    videoMonth: undefined, videoMonthVal: undefined
+  })
+  applyFilters()
 }
 
 function handleTableChange(pag) {
@@ -236,6 +308,11 @@ function close() { emit('update:visible', false) }
 watch(() => props.visible, v => {
   if (v) {
     pagination.current = 1
+    Object.assign(filters, {
+      platform: undefined, videoType: undefined, progress: undefined,
+      influencerPaymentProgress: undefined, projectManagerId: undefined,
+      videoMonth: undefined, videoMonthVal: undefined
+    })
     loadData()
   }
 })
@@ -251,5 +328,11 @@ watch(() => props.visible, v => {
 .total-hint {
   color: #595959;
   font-size: 13px;
+}
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 </style>

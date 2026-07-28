@@ -159,9 +159,11 @@ export const collaborationApi = {
   unlinkRequirement:   (id) => http.patch(`/api/collaboration-trackings/${id}/unlink-requirement`),
   recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
 
-  // 红人管理"合作中项目/已完结项目"下钻弹窗用（2026-07 新增）：category 传 'ACTIVE' 或 'COMPLETED'
-  byInfluencer: (influencerId, category, page, size) => http.get('/api/collaboration-trackings/by-influencer',
-    { params: { influencerId, category, page, size } }),
+  // 红人管理"合作中项目/已完结项目"下钻弹窗用（2026-07 新增）：category 传 'ACTIVE' 或 'COMPLETED'。
+  // filters 可选（2026-07 新增）：platform/videoType/progress/influencerPaymentProgress/
+  // projectManagerId/videoMonth，都是"传了就筛，不传不影响"，可以同时生效
+  byInfluencer: (influencerId, category, page, size, filters) => http.get('/api/collaboration-trackings/by-influencer',
+    { params: { influencerId, category, page, size, ...filters } }),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(
@@ -306,5 +308,7 @@ export const progressReminderApi = {
   popupCheck:   ()   => http.get('/api/progress-reminders/popup-check'),
   popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss'),
   // "标记已处理"（2026-07 新增，仅进度滞留/Invoice逾期这3类支持）
-  acknowledge: (category, targetId) => http.post('/api/progress-reminders/acknowledge', { category, targetId })
+  acknowledge: (category, targetId) => http.post('/api/progress-reminders/acknowledge', { category, targetId }),
+  // 取消"标记已处理"（2026-07 新增，防误点）
+  unacknowledge: (category, targetId) => http.post('/api/progress-reminders/unacknowledge', { category, targetId })
 }
