@@ -16,26 +16,26 @@
           style="width:150px" allow-clear show-search
           :filter-option="(input, opt) => opt.label.includes(input)"
           @change="applyFilters">
-          <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+          <a-select-option v-for="b in brandFilterOptions" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.teamId" placeholder="红人团队"
           style="width:150px" allow-clear show-search
           :filter-option="(input, opt) => opt.label.includes(input)"
           @change="applyFilters">
-          <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+          <a-select-option v-for="t in teamFilterOptions" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.platform" placeholder="合作平台"
           style="width:120px" allow-clear @change="applyFilters">
-          <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          <a-select-option v-for="o in platformFilterOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
           style="width:140px" allow-clear @change="applyFilters">
-          <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          <a-select-option v-for="o in videoTypeFilterOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
         <a-tooltip :title="filters.progress ? getLabel('collab_progress', filters.progress) : ''">
           <a-select v-model:value="filters.progress" placeholder="视频项目进度"
             style="width:140px" allow-clear @change="applyFilters">
-            <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+            <a-select-option v-for="o in progressFilterOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
           </a-select>
         </a-tooltip>
       </template>
@@ -47,28 +47,28 @@
           style="width:150px" allow-clear show-search
           :filter-option="(input, opt) => opt.label.includes(input)"
           @change="applyFilters">
-          <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+          <a-select-option v-for="b in brandFilterOptions" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.teamId" placeholder="红人团队"
           style="width:150px" allow-clear show-search
           :filter-option="(input, opt) => opt.label.includes(input)"
           @change="applyFilters">
-          <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+          <a-select-option v-for="t in teamFilterOptions" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.platform" placeholder="合作平台"
           style="width:120px" allow-clear @change="applyFilters">
-          <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          <a-select-option v-for="o in platformFilterOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
           style="width:140px" allow-clear @change="applyFilters">
-          <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+          <a-select-option v-for="o in videoTypeFilterOptions" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
         </a-select>
       </template>
       <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
         style="width:130px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.includes(input)"
         @change="applyFilters">
-        <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
+        <a-select-option v-for="pm in projectManagerFilterOptions" :key="pm.id" :value="pm.id" :label="pm.name">{{ pm.name }}</a-select-option>
       </a-select>
       <a-button @click="resetFilters">重置筛选</a-button>
     </div>
@@ -207,9 +207,57 @@ const pagination = reactive({
   pageSizeOptions: ['10', '20', '50', '100']
 })
 
-// 负责人筛选只能选"项目负责人"或"管理层"角色的员工，跟"红人合作跟踪"列表页一致
-const projectManagerCandidates = computed(() =>
-  employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
+// 筛选下拉的可选值范围（2026-07 新增）：只列出这个红人在该类别下实际出现过的品牌方/团队/
+// 合作平台/项目视频类型/视频项目进度/项目负责人，而不是系统里全部的候选值——跟"待处理"里
+// 提醒详情弹窗的筛选项同一个思路（ProgressReminderDetailModal.vue 按 list.value 实际出现过的
+// 值算选项）。optionSourceRows 是不带任何筛选条件、size=200 单独拉的一份"全量"（同一个红人
+// 在这个类别下的记录量不会超过这个上限），只用来算下拉选项，不影响表格本身的数据——表格还是
+// 走 loadData() 的分页+筛选查询，两者互不干扰。这份全量只在弹窗打开时拉一次，不随筛选条件
+// 变化重新拉，否则选项会跟着筛选结果一起收窄，用户没法看到"还有哪些其他值可以切换筛选"。
+const optionSourceRows = ref([])
+
+async function loadOptionSource() {
+  try {
+    const res = await collaborationApi.byInfluencer(props.influencerId, props.category, 0, 200, {})
+    optionSourceRows.value = res.data?.page?.content || []
+  } catch (e) {
+    optionSourceRows.value = []
+  }
+}
+
+const brandFilterOptions = computed(() => {
+  const ids = [...new Set(optionSourceRows.value.map(r => r.brandId).filter(id => id != null))]
+  return ids.map(id => ({ id, name: getBrandName(id) }))
+    .filter(o => o.name)
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
+const teamFilterOptions = computed(() => {
+  const ids = [...new Set(optionSourceRows.value.map(r => r.teamId).filter(id => id != null))]
+  return ids.map(id => ({ id, name: getTeamName(id) }))
+    .filter(o => o.name)
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
+const platformFilterOptions = computed(() => {
+  const values = new Set()
+  for (const r of optionSourceRows.value) {
+    for (const p of splitMulti(r.platform)) values.add(p)
+  }
+  return [...values].sort().map(v => ({ value: v, label: v }))
+})
+const videoTypeFilterOptions = computed(() => {
+  const values = [...new Set(optionSourceRows.value.map(r => r.videoType).filter(Boolean))]
+  return values.map(v => ({ value: v, label: getLabel('video_type', v) }))
+})
+const progressFilterOptions = computed(() => {
+  const values = [...new Set(optionSourceRows.value.map(r => r.progress).filter(Boolean))]
+  return values.map(v => ({ value: v, label: getLabel('collab_progress', v) }))
+})
+const projectManagerFilterOptions = computed(() => {
+  const ids = [...new Set(optionSourceRows.value.map(r => r.projectManagerId).filter(id => id != null))]
+  return ids.map(id => ({ id, name: getEmployeeName(id) }))
+    .filter(o => o.name)
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
 
 // 筛选条件（2026-07 新增，都是可选的，可以同时生效）：videoMonth 只在"已完结项目"展示，
 // progress 只在"合作中项目"展示，brandId/teamId/platform/videoType/projectManagerId
@@ -349,6 +397,7 @@ watch(() => props.visible, v => {
       videoMonth: undefined, videoMonthVal: undefined
     })
     loadData()
+    loadOptionSource()
   }
 })
 </script>
