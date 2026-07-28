@@ -198,10 +198,6 @@
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
-              <span v-if="(record.employeeRole === '执行人员' || record.employeeRole === '项目负责人') && !record.confirmed"
-                style="font-size:12px;color:#595959">
-                （需相关的项目负责人和管理层都确认之后，才是最终版）
-              </span>
             </a-space>
           </template>
 
@@ -324,7 +320,7 @@
             <span v-else-if="selfDetail.type === 'EXECUTOR'" class="mixed-state-hint">
               工资按每个项目负责人分别确认，详见明细（非最终版，需管理层和相关的项目负责人都确认后才是最终版）
             </span>
-            <a-tag v-else color="orange">工资单预计（实时更新）</a-tag>
+            <a-tag v-else color="orange">工资单预计（等待管理层确认）</a-tag>
           </div>
 
           <div class="mgmt-body">
@@ -527,25 +523,35 @@ function confirmTooltip(record) {
   return record.blockedReason
 }
 
+// 这个项目负责人自己名下的执行人员工资是否都已确认（没有执行人员工作时视为"没有下游义务"，
+// 等同于都确认了），供"预计"细分文案用，跟 hasExecutorWageWork 组合判断
+function pmOwnWagesDone(record) {
+  return !record.hasExecutorWageWork || record.executorWageConfirmed
+}
+
 // 执行人员/项目负责人这两行的状态标签，2026-07-28 起统一用 confirmed（是否最终版）+
-// ownActionConfirmed（管理层自己那部分点没点）两个字段推：
-// - !ownActionConfirmed → 预计（管理层自己都还没点，不管别人确没确认）
+// ownActionConfirmed（管理层自己那部分点没点）两个字段推，"预计"进一步拆成两句更准确的文案：
+// - !ownActionConfirmed：
+//   - 执行人员：还有项目负责人（哪怕正是管理层自己）没确认执行人员工资 → 预计（需等待项目
+//     负责人确认）；否则（都确认了/压根不涉及）只差管理层自己没点 → 预计（等待管理层确认）
+//   - 项目负责人：自己名下执行人员工资还没全部确认 → 预计（需确认执行人员工资）；
+//     都确认了/没有执行人员工作 → 预计（等待管理层确认）
+//   - 其余角色（财务/IT后勤/法务）没有别的当事人，统一是 预计（等待管理层确认）
 // - ownActionConfirmed && !confirmed → 中间态（执行人员："待其他项目负责人确认"；
 //   项目负责人："等待项目负责人确认其执行人员工资"）
 // - confirmed（=ownActionConfirmed 且相关的执行人员工资确认全部到位）→ 已确认
-// 其余角色没有这层下游依赖，confirmed 恒等于 ownActionConfirmed，标签直接用 confirmed 即可。
 function confirmTagLabel(record) {
   if (record.employeeRole === '执行人员') {
     if (record.confirmed) return '已确认'
     if (record.ownActionConfirmed) return '待其他项目负责人确认'
-    return '预计'
+    return record.executorAllWagesConfirmed ? '预计（等待管理层确认）' : '预计（需等待项目负责人确认）'
   }
   if (record.employeeRole === '项目负责人') {
     if (record.confirmed) return '已确认'
     if (record.ownActionConfirmed) return '等待项目负责人确认其执行人员工资'
-    return '预计'
+    return pmOwnWagesDone(record) ? '预计（等待管理层确认）' : '预计（需确认执行人员工资）'
   }
-  return record.confirmed ? '已确认' : '预计'
+  return record.confirmed ? '已确认' : '预计（等待管理层确认）'
 }
 function confirmTagColor(record) {
   if (record.employeeRole === '执行人员' || record.employeeRole === '项目负责人') {
@@ -556,12 +562,15 @@ function confirmTagColor(record) {
   return record.confirmed ? 'green' : 'orange'
 }
 
-// 项目负责人自己页面那张只读卡片，跟管理层列表页里项目负责人那一行用同一套三态口径
-// （见 confirmTagLabel/confirmTagColor），只是这里没有按钮、纯展示
+// 项目负责人自己页面那张只读卡片，跟管理层列表页里项目负责人那一行用同一套三态+细分文案口径
+// （见 confirmTagLabel/confirmTagColor），只是这里没有按钮、纯展示，且没有 hasExecutorWageWork
+// 字段可用，改用 executorWageRows 是否非空来判断"是否有下游执行人员工作"
 function pmSelfTagLabel(detail) {
   if (detail.confirmed) return '已确认'
   if (detail.ownActionConfirmed) return '等待项目负责人确认其执行人员工资'
-  return '预计（实时更新）'
+  const hasWork = detail.executorWageRows && detail.executorWageRows.length
+  const wagesDone = !hasWork || detail.executorWageConfirmed
+  return wagesDone ? '预计（等待管理层确认）' : '预计（需确认执行人员工资）'
 }
 function pmSelfTagColor(detail) {
   if (detail.confirmed) return 'green'

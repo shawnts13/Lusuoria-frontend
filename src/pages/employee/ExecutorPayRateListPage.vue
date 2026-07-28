@@ -13,14 +13,15 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'salaryInfo'">
-            <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.6">
+            <div v-if="hasAnyRate(record.id)" style="font-size:12px;line-height:1.8">
               <div v-for="type in VIDEO_TYPES" :key="type">
                 <template v-if="tierSummary(record.id, type)">
-                  {{ VIDEO_TYPE_LABELS[type] }}：{{ tierSummary(record.id, type) }}
+                  <a-tag :color="videoTypeColor(type)" style="margin-right:4px">{{ VIDEO_TYPE_LABELS[type] }}</a-tag>
+                  <span v-html="highlightAmounts(tierSummary(record.id, type))"></span>
                 </template>
               </div>
             </div>
-            <span v-else style="color:#c00000;font-size:12px">请项目负责人设置对应执行人员的薪资规则</span>
+            <span v-else style="color:#c00000;font-size:12px">请设置对应执行人员的薪资规则</span>
           </template>
           <template v-if="column.key === 'action'">
             <a @click="openEdit(record)">编辑薪资标准</a>
@@ -48,6 +49,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { employeeApi, executorPayRateApi } from '../../api/index'
 import { VIDEO_TYPES, VIDEO_TYPE_LABELS, formatVideoTypeTiers } from '../../utils/executorRateFormat'
+import { videoTypeColor } from '../../utils/enumColors'
+import { highlightAmounts } from '../../utils/textHighlight'
 import ExecutorRateFields from './ExecutorRateFields.vue'
 
 const loading = ref(false)
