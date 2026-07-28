@@ -72,6 +72,9 @@
               <a-table-summary-cell><b>{{ fmtAmount(totalBonusAmount) }}</b></a-table-summary-cell>
               <a-table-summary-cell><b>{{ fmtAmount(totalTotalAmount) }}</b></a-table-summary-cell>
             </template>
+            <template v-else-if="NO_COUNT_METRICS.includes(metric)">
+              <a-table-summary-cell><b>{{ fmtAmount(totalAmount) }}</b></a-table-summary-cell>
+            </template>
             <template v-else>
               <a-table-summary-cell><b>{{ totalVideoCount }}</b></a-table-summary-cell>
               <a-table-summary-cell><b>{{ fmtAmount(totalAmount) }}</b></a-table-summary-cell>
@@ -121,10 +124,16 @@ const tablePagination = reactive({
   showTotal: t => `共 ${t} 条`
 })
 
+// "奖金"/"内部其他员工成本"这两个下钻维度本身就是员工姓名（一行=一个人），"人数"列
+// 永远是1，没有信息量，不展示（2026-07-28 Shawn 反馈）
+const NO_COUNT_METRICS = ['other-staff-cost', 'extra-bonus']
 const columns = computed(() => {
   const dimCol = { title: '维度', dataIndex: 'dimensionLabel', key: 'dimensionLabel' }
   if (props.metric === 'video') {
     return [dimCol, { title: '视频数量', key: 'videoCount', dataIndex: 'videoCount' }]
+  }
+  if (NO_COUNT_METRICS.includes(props.metric)) {
+    return [dimCol, { title: '金额', key: 'amount', dataIndex: 'amount' }]
   }
   const countCol = { title: props.countLabel, key: 'videoCount', dataIndex: 'videoCount', width: 90 }
   // "负责人提成明细"：金额列改名"提成金额"，追加 bonus、总金额两列

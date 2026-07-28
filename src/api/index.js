@@ -315,3 +315,9 @@ export const progressReminderApi = {
   // 取消"标记已处理"（2026-07 新增，防误点）
   unacknowledge: (category, targetId) => http.post('/api/progress-reminders/unacknowledge', { category, targetId })
 }
+
+// ===== 进度提醒阈值维护（2026-07-28 新增，仅"管理层"可访问） =====
+export const reminderThresholdApi = {
+  list:   ()               => http.get('/api/reminder-threshold-configs'),
+  update: (id, paramValue) => http.put(`/api/reminder-threshold-configs/${id}`, { paramValue })
+}

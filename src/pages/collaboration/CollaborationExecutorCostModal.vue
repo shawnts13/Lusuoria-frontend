@@ -25,7 +25,10 @@
           <a-form-item label="内部执行成本（元）">
             <a-input-number v-model:value="amount" :min="0" :precision="2" style="width:100%" />
           </a-form-item>
-          <div v-if="rateBasedSuggestion" style="font-size:12px; color:#595959">
+          <div v-if="alreadySet" style="font-size:12px; color:#595959">
+            以上是这条记录当前已保存的金额，如需调整可以直接修改后再保存。
+          </div>
+          <div v-else-if="rateBasedSuggestion" style="font-size:12px; color:#595959">
             以上是根据该执行人员在员工管理里维护的费率档位自动算出的建议金额，可以手动修改后再保存。
           </div>
         </template>
@@ -60,6 +63,7 @@ const executorCandidates = computed(() =>
 const amount = ref(null)
 const breakdown = ref('')
 const rateBasedSuggestion = ref(false)
+const alreadySet = ref(false)
 const saving = ref(false)
 const loadingSuggestion = ref(false)
 const selectedExecutorId = ref(null)
@@ -80,6 +84,7 @@ async function loadSuggestion() {
     amount.value = res.data.suggestedAmount
     breakdown.value = res.data.breakdown
     rateBasedSuggestion.value = !!res.data.rateBasedSuggestion
+    alreadySet.value = !!res.data.alreadySet
   } finally {
     loadingSuggestion.value = false
   }
@@ -90,6 +95,7 @@ watch(() => props.visible, v => {
     amount.value = null
     breakdown.value = ''
     rateBasedSuggestion.value = false
+    alreadySet.value = false
     selectedExecutorId.value = null
     notApplicable.value = false
     loadSuggestion()

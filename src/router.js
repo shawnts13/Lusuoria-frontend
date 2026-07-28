@@ -72,6 +72,14 @@ const routes = [
         meta: { adminOnly: true }
       },
       {
+        path: 'reminder-thresholds',
+        name: 'ReminderThresholds',
+        component: () => import('./pages/reminder-threshold/ReminderThresholdListPage.vue'),
+        // 严格按员工角色，只有"管理层"可见，跟后端 ReminderThresholdConfigController 的
+        // canManage() 校验一致
+        meta: { managementOnly: true }
+      },
+      {
         path: 'users',
         name: 'Users',
         component: () => import('./pages/user/UserListPage.vue'),
@@ -129,6 +137,11 @@ router.beforeEach((to, from, next) => {
   }
   // 员工管理：ADMIN 或员工角色="管理层"
   if (to.meta.employeeManagementAccess && role !== 'ADMIN' && employeeRole !== '管理层') {
+    next('/collaborations')
+    return
+  }
+  // 进度提醒阈值维护：严格按员工角色，只有"管理层"
+  if (to.meta.managementOnly && employeeRole !== '管理层') {
     next('/collaborations')
     return
   }

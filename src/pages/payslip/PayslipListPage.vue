@@ -159,16 +159,18 @@
 
           <template v-if="column.key === 'pay'">
             <template v-if="record.employeeRole === '项目负责人' || record.employeeRole === '执行人员'">
-              <a @click="openDetail(record)">{{ record.videoCount ?? 0 }} 条</a>
-              <span style="margin:0 4px">/</span>
-              <a @click="openDetail(record)">{{ fmt(record.baseAmount) }}</a>
+              <span class="amount-cell">
+                <a @click="openDetail(record)">{{ record.videoCount ?? 0 }} 条</a>
+                <span style="margin:0 4px">/</span>
+                <a @click="openDetail(record)">{{ fmt(record.baseAmount) }}</a>
+              </span>
             </template>
             <template v-else-if="record.employeeRole === '财务' || record.employeeRole === 'IT后勤'">
-              {{ fmt(record.baseAmount) }}
+              <span class="amount-cell">{{ fmt(record.baseAmount) }}</span>
             </template>
             <template v-else-if="record.employeeRole === '法务'">
               <template v-if="record.legalSalarySet">
-                {{ fmt(record.baseAmount) }}
+                <span class="amount-cell">{{ fmt(record.baseAmount) }}</span>
                 <a style="margin-left:8px" @click="openLegalSalaryModal(record)">编辑工资</a>
               </template>
               <a-button v-else size="small" @click="openLegalSalaryModal(record)">输入法务本月工资</a-button>
@@ -176,20 +178,20 @@
           </template>
 
           <template v-if="column.key === 'tierBonus'">
-            <span :style="record.tierBonusAmount != null ? '' : 'color:#bbb'">
+            <span class="amount-cell" :style="record.tierBonusAmount != null ? '' : 'color:#bbb'">
               {{ record.tierBonusAmount != null ? fmt(record.tierBonusAmount) : '—' }}
             </span>
           </template>
 
           <template v-if="column.key === 'extraBonus'">
-            <span>{{ record.extraBonusAmount != null ? fmt(record.extraBonusAmount) : '未设置' }}</span>
+            <span class="amount-cell">{{ record.extraBonusAmount != null ? fmt(record.extraBonusAmount) : '未设置' }}</span>
             <a-tooltip v-if="record.ownActionConfirmed" title="请先取消确认，再设置奖金">
               <span style="margin-left:8px;color:#bbb;cursor:not-allowed">设置奖金</span>
             </a-tooltip>
             <a v-else style="margin-left:8px" @click="openExtraBonusModal(record)">设置奖金</a>
           </template>
 
-          <template v-if="column.key === 'total'">{{ fmt(record.totalAmount) }}</template>
+          <template v-if="column.key === 'total'"><span class="amount-cell">{{ fmt(record.totalAmount) }}</span></template>
 
           <template v-if="column.key === 'status'">
             <a-tag :color="confirmTagColor(record)">{{ confirmTagLabel(record) }}</a-tag>
@@ -400,13 +402,17 @@ const detailModalVisible = ref(false)
 const detailEmployeeId = ref(null)
 const detailEmployeeName = ref('')
 
+// 薪酬/阶梯Bonus/奖金/总工资这几个金额列统一右对齐+等宽数字（2026-07-28 Shawn 反馈：
+// IT后勤/财务/执行人员这几行的金额看着没对齐，不好比对——之前没有设置对齐方式，默认左对齐，
+// 不同行金额位数不一样长短就会参差不齐；项目负责人凑巧看起来还行，其实也一样没对齐，
+// 一起改掉，不单独只改这几个角色）
 const columns = [
   { title: '姓名', dataIndex: 'employeeName', key: 'employeeName', width: 110 },
   { title: '角色', key: 'role', width: 110 },
-  { title: '薪酬', key: 'pay', width: 220 },
-  { title: '阶梯Bonus', key: 'tierBonus', width: 120 },
-  { title: '奖金', key: 'extraBonus', width: 200 },
-  { title: '总工资', key: 'total', width: 130 },
+  { title: '薪酬', key: 'pay', width: 220, align: 'right' },
+  { title: '阶梯Bonus', key: 'tierBonus', width: 120, align: 'right' },
+  { title: '奖金', key: 'extraBonus', width: 200, align: 'right' },
+  { title: '总工资', key: 'total', width: 130, align: 'right' },
   { title: '状态', key: 'status', width: 240 },
   { title: '操作', key: 'action', width: 140 }
 ]
@@ -680,6 +686,11 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
+/* 薪酬/阶梯Bonus/奖金/总工资几列的金额数字用等宽数字，避免不同行金额位数不一样时
+   看起来参差不齐（配合 columns 里的 align:'right' 一起用） */
+.amount-cell {
+  font-variant-numeric: tabular-nums;
+}
 .management-card {
   border: 1px solid #f0f0f0;
   border-radius: 8px;

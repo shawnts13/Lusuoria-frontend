@@ -77,6 +77,11 @@
         <a-menu-item v-if="authStore.isAdmin" key="/exchange-rates">
           <template #icon><DollarOutlined /></template>汇率维护
         </a-menu-item>
+
+        <!-- 进度提醒阈值维护：严格按员工角色，只有"管理层"可见 -->
+        <a-menu-item v-if="authStore.isManagement" key="/reminder-thresholds">
+          <template #icon><ExclamationCircleOutlined /></template>进度提醒阈值维护
+        </a-menu-item>
       </a-menu>
     </a-layout-sider>
 

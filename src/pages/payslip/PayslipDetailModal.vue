@@ -29,6 +29,9 @@
             </template>
             <template v-if="column.key === 'videoTypeLabel'">{{ record.isTierSummaryRow ? '' : (record.videoTypeLabel || '—') }}</template>
             <template v-if="column.key === 'videoCount'">{{ record.isTierSummaryRow ? '' : (record.videoCount ?? 0) }}</template>
+            <template v-if="column.key === 'unitPrice'">
+              {{ (record.isTierSummaryRow || record.isSummaryRow || record.isGroupSubtotal) ? '' : fmt(record.unitPrice) }}
+            </template>
             <template v-if="column.key === 'amount'">{{ record.isTierSummaryRow ? '' : fmt(record.amount) }}</template>
             <template v-if="column.key === 'amount2'">{{ record.isTierSummaryRow ? '' : fmt(record.amount2) }}</template>
           </template>
@@ -51,6 +54,9 @@
             <div class="line"><span>内部其他员工成本</span><span>{{ fmt(detail.otherStaffCost) }}</span></div>
           </template>
 
+          <div v-if="detail.tierBonusRate != null" class="line">
+            <span>Bonus比例</span><span>{{ fmtRate(detail.tierBonusRate) }}</span>
+          </div>
           <div v-if="detail.tierBonusAmount != null" class="line">
             <span>Bonus</span><span>{{ fmt(detail.tierBonusAmount) }}</span>
           </div>
@@ -179,6 +185,7 @@ const columns = computed(() => {
       { title: '品牌方/红人团队', key: 'brandTeam' },
       { title: '项目视频类型', key: 'videoTypeLabel' },
       { title: '视频数', key: 'videoCount', width: 80 },
+      { title: '单价', key: 'unitPrice', width: 100 },
       { title: '薪酬金额', key: 'amount', width: 140 }
     ]
   }
