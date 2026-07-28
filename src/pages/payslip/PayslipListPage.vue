@@ -40,7 +40,7 @@
                 <a-button size="small" @click="openDetail(managementRow)">查看明细</a-button>
                 <a-tooltip :title="managementRow.blockedReason">
                   <span>
-                    <a-button v-if="!managementRow.confirmed" type="primary" size="small"
+                    <a-button v-if="!managementRow.ownActionConfirmed" type="primary" size="small"
                       :disabled="!!managementRow.blockedReason" @click="confirmRow(managementRow)">确认</a-button>
                     <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(managementRow)">
                       <a-button size="small">取消确认</a-button>
@@ -49,7 +49,7 @@
                 </a-tooltip>
               </a-space>
             </div>
-            <div v-if="managementRow.blockedReason && !managementRow.confirmed" class="mgmt-hint">
+            <div v-if="managementRow.blockedReason && !managementRow.ownActionConfirmed" class="mgmt-hint">
               {{ managementRow.blockedReason }}
             </div>
             <div class="formula-box">
@@ -183,7 +183,7 @@
 
           <template v-if="column.key === 'extraBonus'">
             <span>{{ record.extraBonusAmount != null ? fmt(record.extraBonusAmount) : '未设置' }}</span>
-            <a-tooltip v-if="record.confirmed" title="请先取消确认，再设置奖金">
+            <a-tooltip v-if="record.ownActionConfirmed" title="请先取消确认，再设置奖金">
               <span style="margin-left:8px;color:#bbb;cursor:not-allowed">设置奖金</span>
             </a-tooltip>
             <a v-else style="margin-left:8px" @click="openExtraBonusModal(record)">设置奖金</a>
@@ -191,28 +191,32 @@
 
           <template v-if="column.key === 'total'">{{ fmt(record.totalAmount) }}</template>
 
-          <template v-if="column.key === 'confirm'">
-            <a-space>
+          <template v-if="column.key === 'status'">
+            <a-space direction="vertical" size="small">
               <a-tag :color="confirmTagColor(record)">{{ confirmTagLabel(record) }}</a-tag>
-              <a-tooltip v-if="!record.confirmed && record.blockedReason" :title="confirmTooltip(record)">
-                <span>
-                  <a-button type="primary" size="small"
-                    :disabled="!!record.blockedReason" @click="confirmRow(record)">确认</a-button>
-                </span>
-              </a-tooltip>
-              <a-button v-else-if="!record.confirmed" type="primary" size="small"
-                @click="confirmRow(record)">确认</a-button>
-              <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(record)">
-                <a-button size="small">取消确认</a-button>
-              </a-popconfirm>
               <a-tag v-if="record.employeeRole === '项目负责人' && record.hasExecutorWageWork"
                 :color="record.executorWageConfirmed ? 'green' : 'orange'">
                 执行人员工资{{ record.executorWageConfirmed ? '已确认' : '预计' }}
               </a-tag>
-              <span v-if="record.employeeRole === '执行人员' && !record.executorAllPmConfirmed" style="font-size:12px;color:#595959">
-                （需涉及的项目负责人都确认之后，执行人员的工资单才是最终版）
+              <span v-if="(record.employeeRole === '执行人员' || record.employeeRole === '项目负责人') && !record.confirmed"
+                style="font-size:12px;color:#595959">
+                （需相关的项目负责人和管理层都确认之后，才是最终版）
               </span>
             </a-space>
+          </template>
+
+          <template v-if="column.key === 'action'">
+            <a-tooltip v-if="!record.ownActionConfirmed && record.blockedReason" :title="confirmTooltip(record)">
+              <span>
+                <a-button type="primary" size="small"
+                  :disabled="!!record.blockedReason" @click="confirmRow(record)">确认</a-button>
+              </span>
+            </a-tooltip>
+            <a-button v-else-if="!record.ownActionConfirmed" type="primary" size="small"
+              @click="confirmRow(record)">确认</a-button>
+            <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(record)">
+              <a-button size="small">取消确认</a-button>
+            </a-popconfirm>
           </template>
         </template>
       </a-table>
@@ -225,9 +229,7 @@
           <div class="management-card">
             <div class="mgmt-top">
               <span class="mgmt-title">{{ authStore.displayName }}（项目负责人）</span>
-              <a-tag :color="selfDetail.confirmed ? 'green' : 'orange'">
-                {{ selfDetail.confirmed ? '已确认' : '预计（实时更新）' }}
-              </a-tag>
+              <a-tag :color="pmSelfTagColor(selfDetail)">{{ pmSelfTagLabel(selfDetail) }}</a-tag>
             </div>
             <!-- 项目负责人自己的提成工资单是否确认，是管理层的动作（在管理层的工资单列表页
                  逐行确认），不是项目负责人自己能操作的——这里只做只读展示 -->
@@ -320,7 +322,7 @@
             <span class="mgmt-title">{{ authStore.displayName }}</span>
             <a-tag v-if="selfDetail.confirmed" color="green">已确认</a-tag>
             <span v-else-if="selfDetail.type === 'EXECUTOR'" class="mixed-state-hint">
-              工资按每个项目负责人分别确认，详见明细（非最终版，需管理层最终确认后才是确认版）
+              工资按每个项目负责人分别确认，详见明细（非最终版，需管理层和相关的项目负责人都确认后才是最终版）
             </span>
             <a-tag v-else color="orange">工资单预计（实时更新）</a-tag>
           </div>
@@ -415,7 +417,8 @@ const columns = [
   { title: '阶梯Bonus', key: 'tierBonus', width: 120 },
   { title: '奖金', key: 'extraBonus', width: 200 },
   { title: '总工资', key: 'total', width: 130 },
-  { title: '状态/操作', key: 'confirm', width: 300 }
+  { title: '状态', key: 'status', width: 240 },
+  { title: '操作', key: 'action', width: 140 }
 ]
 
 // "手下执行人员工资"表格用（项目负责人自己页面 + 管理层页面共用同一套列定义）。
@@ -524,28 +527,46 @@ function confirmTooltip(record) {
   return record.blockedReason
 }
 
-// 执行人员这一行的状态标签：已确认（这个月涉及的所有项目负责人都确认了）/ 待其他项目负责人
-// 确认（管理层自己那部分——如果管理层这个月确实是相关项目负责人之一——已经确认了，不管别的
-// 项目负责人确没确认）/ 预计（管理层自己还没确认，不管别人有没有确认）。注意这个标签完全由
-// executorAllPmConfirmed/awaitingOtherManagers 驱动，跟 confirmed（管理层是否点过主表格
-// "确认"按钮）无关——两者是独立的两件事，哪怕管理层已经点过"确认"，只要还有项目负责人没
-// 确认，这里依然显示"预计"/"待其他项目负责人确认"，不会提前变绿。其余角色的标签仍然直接用
-// confirmed。
+// 执行人员/项目负责人这两行的状态标签，2026-07-28 起统一用 confirmed（是否最终版）+
+// ownActionConfirmed（管理层自己那部分点没点）两个字段推：
+// - !ownActionConfirmed → 预计（管理层自己都还没点，不管别人确没确认）
+// - ownActionConfirmed && !confirmed → 中间态（执行人员："待其他项目负责人确认"；
+//   项目负责人："等待项目负责人确认其执行人员工资"）
+// - confirmed（=ownActionConfirmed 且相关的执行人员工资确认全部到位）→ 已确认
+// 其余角色没有这层下游依赖，confirmed 恒等于 ownActionConfirmed，标签直接用 confirmed 即可。
 function confirmTagLabel(record) {
   if (record.employeeRole === '执行人员') {
-    if (record.executorAllPmConfirmed) return '已确认'
-    if (record.awaitingOtherManagers) return '待其他项目负责人确认'
+    if (record.confirmed) return '已确认'
+    if (record.ownActionConfirmed) return '待其他项目负责人确认'
+    return '预计'
+  }
+  if (record.employeeRole === '项目负责人') {
+    if (record.confirmed) return '已确认'
+    if (record.ownActionConfirmed) return '等待项目负责人确认其执行人员工资'
     return '预计'
   }
   return record.confirmed ? '已确认' : '预计'
 }
 function confirmTagColor(record) {
-  if (record.employeeRole === '执行人员') {
-    if (record.executorAllPmConfirmed) return 'green'
-    if (record.awaitingOtherManagers) return 'yellow'
+  if (record.employeeRole === '执行人员' || record.employeeRole === '项目负责人') {
+    if (record.confirmed) return 'green'
+    if (record.ownActionConfirmed) return 'yellow'
     return 'orange'
   }
   return record.confirmed ? 'green' : 'orange'
+}
+
+// 项目负责人自己页面那张只读卡片，跟管理层列表页里项目负责人那一行用同一套三态口径
+// （见 confirmTagLabel/confirmTagColor），只是这里没有按钮、纯展示
+function pmSelfTagLabel(detail) {
+  if (detail.confirmed) return '已确认'
+  if (detail.ownActionConfirmed) return '等待项目负责人确认其执行人员工资'
+  return '预计（实时更新）'
+}
+function pmSelfTagColor(detail) {
+  if (detail.confirmed) return 'green'
+  if (detail.ownActionConfirmed) return 'yellow'
+  return 'orange'
 }
 
 async function confirmRow(record) {
