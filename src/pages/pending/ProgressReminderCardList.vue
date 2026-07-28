@@ -43,6 +43,7 @@ const TEXT_COLOR = { red: '#cf1322', orange: '#d46b08', gold: '#ad8b00', green: 
 const CATEGORY_LABEL = {
   COLLAB_PAYMENT_DUE: '红人合作跟踪临近结款',
   BRAND_MONTH_END_PAYMENT_DUE: '品牌方月结临近结款',
+  INFLUENCER_PAYMENT_DUE: '红人结款临近付款日',
   PM_EXECUTOR_PROGRESS_STALL: '进度滞留-项目',
   FINANCE_PROGRESS_STALL: '进度滞留-财务',
   REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期',

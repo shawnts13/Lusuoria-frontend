@@ -33,6 +33,8 @@
       </a-select>
       <a-input-search v-model:value="filters.internalRequirementNo" placeholder="搜索内部需求编号"
         style="width:200px" @search="loadData" allow-clear />
+      <a-input-search v-model:value="filters.paymentNo" placeholder="搜索结款单号"
+        style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
       <a-button class="orange-filter-btn" :class="{ active: filters.paymentStatus === 'PENDING' }"
         style="margin-left:16px" @click="toggleOnlyUnpaid">
@@ -116,6 +118,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { paymentApi } from '../../api/index'
@@ -129,6 +132,7 @@ import PaymentStatusModal from './PaymentStatusModal.vue'
 import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
 
 const authStore = useAuthStore()
+const route = useRoute()
 const loading   = ref(false)
 const { loadBrands, loadTeams } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -149,7 +153,10 @@ const sortState = reactive({ field: 'settlementMonth', order: 'descend' })
 const filters = reactive({
   settlementMonth: undefined, settlementMonthVal: undefined,
   brandId: undefined, teamId: undefined, paymentStatus: undefined,
-  internalRequirementNo: undefined
+  internalRequirementNo: undefined,
+  // 支持从"红人结款临近付款日"提醒"查看详情"跳转过来时按结款单号直接定位（见
+  // ProgressReminderDetailModal.vue 的 goToDetail）
+  paymentNo: route.query.paymentNo || undefined
 })
 
 const paymentStatuses = [
@@ -210,6 +217,7 @@ async function loadData() {
       teamId:          filters.teamId,
       paymentStatus:   filters.paymentStatus,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
+      paymentNo: filters.paymentNo?.trim() || undefined,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -233,7 +241,8 @@ function handleTableChange(pag, _filters, sorter) {
 }
 function resetFilters() {
   Object.assign(filters, { settlementMonth:undefined, settlementMonthVal:undefined,
-    brandId:undefined, teamId:undefined, paymentStatus:undefined, internalRequirementNo:undefined })
+    brandId:undefined, teamId:undefined, paymentStatus:undefined, internalRequirementNo:undefined,
+    paymentNo:undefined })
   pagination.current = 1
   sortState.field = 'settlementMonth'; sortState.order = 'descend'
   loadData()
