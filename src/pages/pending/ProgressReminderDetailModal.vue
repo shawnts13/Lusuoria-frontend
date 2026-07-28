@@ -6,6 +6,8 @@
         style="width:240px" :options="brandTeamOptions" />
       <a-select v-model:value="accountNameFilter" placeholder="红人社媒完整名字" allow-clear show-search
         style="width:200px" :options="accountNameOptions" />
+      <a-select v-if="category === 'COLLAB_PAYMENT_DUE'" v-model:value="paymentProgressFilter"
+        placeholder="红人结款进度" allow-clear style="width:200px" :options="paymentProgressOptions" />
     </div>
     <div class="table-card" ref="tableWrapperRef">
       <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
@@ -25,6 +27,10 @@
           </template>
           <template v-if="column.key === 'progressLabel'">
             <a-tag v-if="record.progressLabel" :color="colorForValue(record.progressLabel)">{{ record.progressLabel }}</a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
+          <template v-if="column.key === 'paymentProgressLabel'">
+            <a-tag v-if="record.paymentProgressLabel" :color="colorForValue(record.paymentProgressLabel)">{{ record.paymentProgressLabel }}</a-tag>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'videoTypeLabel'">
@@ -106,6 +112,7 @@ const loading = ref(false)
 const list = ref([])
 const brandTeamFilter = ref(undefined)
 const accountNameFilter = ref(undefined)
+const paymentProgressFilter = ref(undefined)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 // 2026-07 新增：明细行之前是不分页的，一次性把某个类别/严重度下命中的全部记录都渲染出来，
 // 数量一多（比如某个项目负责人手下滞留了几百笔）页面会很长、体验差。分页只影响这里的展示，
@@ -152,6 +159,13 @@ const accountNameOptions = computed(() => {
   return names.map(n => ({ value: n, label: n }))
 })
 
+// "红人结款进度"筛选（仅 COLLAB_PAYMENT_DUE 有意义，见后端 paymentProgressLabel 字段注释）：
+// 选项来自当前明细列表里实际出现过的值，没设置的记录不出现在下拉选项里（用"—"占位不需要筛选）
+const paymentProgressOptions = computed(() => {
+  const labels = [...new Set(list.value.map(r => r.paymentProgressLabel).filter(Boolean))]
+  return labels.map(l => ({ value: l, label: l }))
+})
+
 // 排序：未标记已处理的排在最前面，已标记已处理的排在最后（不跟未处理的交错），
 // 每个分组内部再按红人社媒完整名字归组、组内按截止时间升序（越早到期的越靠前）；
 // 没有截止时间的记录排在同名分组的最后
@@ -170,6 +184,7 @@ const filteredList = computed(() => {
   let result = list.value
   if (brandTeamFilter.value) result = result.filter(r => brandTeamKey(r) === brandTeamFilter.value)
   if (accountNameFilter.value) result = result.filter(r => r.accountName === accountNameFilter.value)
+  if (paymentProgressFilter.value) result = result.filter(r => r.paymentProgressLabel === paymentProgressFilter.value)
   return [...result].sort(compareRows)
 })
 
@@ -193,6 +208,7 @@ const PAYMENT_DUE_COLUMNS = [
   { title: '红人视频制作与发布成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 180,
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
   { title: '视频项目进度',  key: 'progressLabel',       width: 140 },
+  { title: '红人结款进度',  key: 'paymentProgressLabel',      width: 160 },
   { title: '视频发布时间',  dataIndex: 'publishDate',         key: 'publishDate',         width: 110,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '结款周期',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
@@ -359,6 +375,7 @@ async function load() {
     list.value = res.data || []
     brandTeamFilter.value = undefined
     accountNameFilter.value = undefined
+    paymentProgressFilter.value = undefined
     tablePagination.current = 1
     remeasure()
   } finally {
@@ -367,7 +384,7 @@ async function load() {
 }
 
 // 筛选条件变化后命中的记录数会变，留在原来的页码可能会翻到空白页，回到第一页
-watch([brandTeamFilter, accountNameFilter], () => { tablePagination.current = 1 })
+watch([brandTeamFilter, accountNameFilter, paymentProgressFilter], () => { tablePagination.current = 1 })
 
 watch(() => props.visible, v => { if (v) load() })
 
