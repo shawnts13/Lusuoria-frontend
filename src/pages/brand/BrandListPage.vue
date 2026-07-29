@@ -3,16 +3,10 @@
     <div class="page-header">
       <span class="page-title">品牌方/红人团队管理</span>
       <a-space>
-        <a-button @click="brandApi.downloadTemplate()">
-          <template #icon><DownloadOutlined /></template>下载导入模板
-        </a-button>
         <a-button @click="brandApi.exportExcel()">
           <template #icon><ExportOutlined /></template>Excel 导出
         </a-button>
         <template v-if="authStore.canAccessBrands">
-          <a-upload :before-upload="handleImport" :show-upload-list="false" accept=".xlsx,.xls">
-            <a-button><template #icon><UploadOutlined /></template>Excel 导入</a-button>
-          </a-upload>
           <a-button type="primary" @click="openCreate">
             <template #icon><PlusOutlined /></template>新建品牌方
           </a-button>
@@ -127,19 +121,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 导入结果 -->
-    <a-modal v-model:open="importResultVisible" title="导入结果" :footer="null" width="560px">
-      <a-list :data-source="importResults" size="small"
-        :pagination="importResults.length > 10 ? { pageSize: 10 } : false">
-        <template #renderItem="{ item, index }">
-          <a-list-item>
-            <span :style="index === 0 ? 'font-weight:600;color:#1677ff'
-              : (item.includes('失败') ? 'color:#ff4d4f' : '')">{{ item }}</span>
-          </a-list-item>
-        </template>
-      </a-list>
-    </a-modal>
-
     <!-- 团队管理 -->
     <TeamManageModal v-model:visible="teamManageVisible" :brand="teamManageBrand" />
   </div>
@@ -148,7 +129,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { brandApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
@@ -161,8 +142,6 @@ const modalVisible       = ref(false)
 const editing            = ref(null)
 const saving             = ref(false)
 const formRef            = ref()
-const importResultVisible = ref(false)
-const importResults      = ref([])
 const teamManageVisible  = ref(false)
 const teamManageBrand    = ref(null)
 
@@ -253,15 +232,6 @@ async function handleSave() {
     message.success(form.id ? '更新成功' : '创建成功')
     modalVisible.value = false; loadData()
   } finally { saving.value = false }
-}
-
-async function handleImport(file) {
-  const fd = new FormData(); fd.append('file', file)
-  try {
-    const res = await brandApi.importExcel(fd)
-    importResults.value = res.data || []; importResultVisible.value = true; loadData()
-  } catch {}
-  return false
 }
 
 onMounted(loadData)

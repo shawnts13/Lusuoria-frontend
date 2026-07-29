@@ -41,12 +41,7 @@ export const brandApi = {
   delete:   (id)   => http.delete(`/api/brands/${id}`),
   teamOptions: (brandId) => http.get(`/api/brands/${brandId}/team-options`),
 
-  exportExcel:      ()     => downloadWithAuth(`${BASE}/api/brands/export/excel`, '品牌方.xlsx'),
-  downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/brands/import/template`, '品牌方导入模板.xlsx'),
-  importExcel:      (form) => http.post('/api/brands/import/excel', form, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000
-  })
+  exportExcel:      ()     => downloadWithAuth(`${BASE}/api/brands/export/excel`, '品牌方.xlsx')
 }
 
 // ===== Influencer Teams =====
