@@ -278,19 +278,18 @@ const INVOICE_OVERDUE_COLUMNS = [
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
   { title: '红人视频制作与发布总成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 200,
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
-  // 这一类的阈值是后端固定写死的5个工作日（ProgressReminderService.runRequirementInvoiceOverdue
-  // 里的常量），不是按行变化的数据，所以这里直接展示固定文案，不走 cycleDays（那个字段这一类
-  // 复用成"需求条目总数"了，不能兼职存阈值）
-  { title: '提醒阈值（工作日）', key: 'invoiceThreshold', width: 130,
-    customRender: () => '5天' },
+  // 这一类的阈值可以在"进度提醒阈值维护"里改，不是固定值——thresholdDays 是跑批当时实际用的值
+  // 的快照（cycleDays 这个字段这一类复用成"需求条目总数"了，不能兼职存阈值，2026-07-29 起
+  // 改用专门的 thresholdDays 字段，不再是前端硬编码的"5天"）
+  { title: '提醒阈值（工作日）', dataIndex: 'thresholdDays', key: 'thresholdDays', width: 130,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '操作',          key: 'action',                    width: 170 }
 ]
 
-// 合同上传逾期：结构完全照抄 Invoice逾期（都是按"需求"整体展示），阈值固定14个工作日
-// （ProgressReminderService.runRequirementContractOverdue 里的常量），只针对品牌方"每次需求
-// 签一次合同"的场景（一年签一次合同的品牌方不生成这类提醒）
+// 合同上传逾期：结构完全照抄 Invoice逾期（都是按"需求"整体展示），阈值可在"进度提醒阈值
+// 维护"里改，只针对品牌方"每次需求签一次合同"的场景（一年签一次合同的品牌方不生成这类提醒）
 const CONTRACT_OVERDUE_COLUMNS = [
   { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 200,
     customRender: ({ text }) => text || '—' },
@@ -303,15 +302,16 @@ const CONTRACT_OVERDUE_COLUMNS = [
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
   { title: '红人视频制作与发布总成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 200,
     customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
-  { title: '提醒阈值（工作日）', key: 'contractThreshold', width: 130,
-    customRender: () => '14天' },
+  { title: '提醒阈值（工作日）', dataIndex: 'thresholdDays', key: 'thresholdDays', width: 130,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '操作',          key: 'action',                    width: 170 }
 ]
 
-// 合同即将到期：按 (红人,品牌方,团队) 这个组合整体展示（不是单条视频），阈值固定30天
-// （ProgressReminderService.CONTRACT_EXPIRY_WINDOW_DAYS），只针对"一年签一次合同"的场景
+// 合同即将到期：按 (红人,品牌方,团队) 这个组合整体展示（不是单条视频），阈值可在"进度提醒
+// 阈值维护"里改（EXPIRY_WINDOW_DAYS，跑批当时的实际值直接存在 cycleDays 里），只针对
+// "一年签一次合同"的场景
 const CONTRACT_EXPIRING_COLUMNS = [
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
   { title: '红人团队',      key: 'teamName',            width: 160 },
@@ -320,8 +320,8 @@ const CONTRACT_EXPIRING_COLUMNS = [
     customRender: ({ text }) => text || '—' },
   { title: '当前合同到期时间', dataIndex: 'deadlineDate',      key: 'deadlineDate',        width: 130,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
-  { title: '提醒阈值', key: 'contractExpiryThreshold', width: 100,
-    customRender: () => '30天' },
+  { title: '提醒阈值', dataIndex: 'cycleDays', key: 'contractExpiryThreshold', width: 100,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '超出/剩余天数', dataIndex: 'overdueDays',        key: 'overdueDays',         width: 110,
     customRender: ({ text }) => text != null ? (text > 0 ? '已超期' + text + '天' : '未超期') : '—' },
   { title: '操作',          key: 'action',                    width: 170 }
