@@ -4,6 +4,9 @@
       <span class="page-title">待处理</span>
     </div>
 
+    <!-- 数据库每日备份失败提醒（2026-07-29 新增）：ADMIN/管理层可见，没有失败记录时组件自己不渲染 -->
+    <DbBackupAlertSection v-if="authStore.isAdmin || authStore.isManagement" />
+
     <!-- 处理结果通知：所有非访客角色可见，内容为空时组件自己不渲染任何东西 -->
     <OperationResultNoticeList v-if="!authStore.isGuest" />
 
@@ -82,6 +85,7 @@ import { useAuthStore } from '../../store/auth'
 import ProgressReminderSection from './ProgressReminderSection.vue'
 import OperationResultNoticeList from './OperationResultNoticeList.vue'
 import MyExecutorCostApprovalList from './MyExecutorCostApprovalList.vue'
+import DbBackupAlertSection from './DbBackupAlertSection.vue'
 
 const authStore = useAuthStore()
 const { getLabel } = useOptions()

@@ -7,6 +7,26 @@
       </a-button>
     </div>
 
+    <!-- Google Drive 备份账号（2026-07-29 新增）：数据库每日全量备份要上传到 Google Drive，
+         走的是这个真实 Google 账号的 OAuth 授权，不是 Service Account（详见后端注释）——授权
+         失效时"待处理"模块会有提醒，引导回到这里重新连接 -->
+    <div class="drive-auth-card">
+      <div class="drive-auth-title">数据库备份 · Google Drive 账号</div>
+      <a-spin :spinning="driveStatusLoading">
+        <div v-if="driveAuth" class="drive-auth-body">
+          <span style="color:#237804">
+            已连接（{{ driveAuth.connectedByUsername || '—' }} 于 {{ formatDateTime(driveAuth.connectedAt) }} 连接）
+          </span>
+          <a-button size="small" :loading="connecting" @click="connectGoogleDrive">重新连接</a-button>
+          <a-button size="small" :loading="testingBackup" @click="testBackupNow">立即执行一次备份（测试）</a-button>
+        </div>
+        <div v-else class="drive-auth-body">
+          <span style="color:#8c8c8c">尚未连接，每日数据库备份无法上传到 Google Drive</span>
+          <a-button type="primary" size="small" :loading="connecting" @click="connectGoogleDrive">连接 Google Drive</a-button>
+        </div>
+      </a-spin>
+    </div>
+
     <div class="table-card">
       <a-table :columns="columns" :data-source="list" :loading="loading" row-key="id" size="middle">
         <template #bodyCell="{ column, record }">
@@ -111,12 +131,14 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
-import { userApi } from '../../api/index'
+import { userApi, googleDriveAuthApi, dbBackupApi } from '../../api/index'
 import { useReferenceData } from '../../composables/useReferenceData'
 import { formatDateTime } from '../../utils/dateFormat'
 
+const router = useRouter()
 const { loadEmployees } = useReferenceData()
 const loading      = ref(false)
 const list         = ref([])
@@ -207,8 +229,86 @@ async function handleSave() {
   } finally { saving.value = false }
 }
 
+// Google Drive 授权状态
+const driveAuth = ref(null)
+const driveStatusLoading = ref(false)
+const connecting = ref(false)
+const testingBackup = ref(false)
+
+// 连接好之后不想等到明天凌晨3点半、也不想故意搞出一次失败才能测试，直接手动跑一次
+// （跟"待处理"里的"重试"按钮走的是同一个后端接口，行为完全一样，只是入口不同）
+async function testBackupNow() {
+  testingBackup.value = true
+  try {
+    await dbBackupApi.retry()
+    message.success('备份测试成功，已上传到 Google Drive')
+  } catch (e) {
+    // 失败提示已经由全局拦截器弹出来了
+  } finally {
+    testingBackup.value = false
+  }
+}
+
+async function loadDriveStatus() {
+  driveStatusLoading.value = true
+  try {
+    const res = await googleDriveAuthApi.status()
+    driveAuth.value = res.data || null
+  } finally {
+    driveStatusLoading.value = false
+  }
+}
+
+async function connectGoogleDrive() {
+  connecting.value = true
+  try {
+    const res = await googleDriveAuthApi.authorizeUrl()
+    // 整页跳转到 Google 的授权页面（不能用弹窗/iframe，Google 不允许被嵌入），
+    // 授权完 Google 会跳转到后端回调地址，后端处理完再跳转回这个页面
+    window.location.href = res.data
+  } finally {
+    connecting.value = false
+  }
+}
+
+// 从 Google OAuth 回调跳转回来时，URL 上会带 googleDriveConnected=1 或 googleDriveConnectError=xxx，
+// 处理完之后清掉这两个 query 参数，避免用户刷新页面时重复弹一遍提示
+function handleDriveConnectRedirect() {
+  const query = router.currentRoute.value.query
+  if (query.googleDriveConnected) {
+    message.success('Google Drive 已连接')
+  } else if (query.googleDriveConnectError) {
+    message.error('Google Drive 连接失败：' + query.googleDriveConnectError)
+  } else {
+    return
+  }
+  const { googleDriveConnected, googleDriveConnectError, ...rest } = query
+  router.replace({ path: router.currentRoute.value.path, query: rest })
+}
+
 onMounted(async () => {
-  const [, emp] = await Promise.all([loadData(), loadEmployees()])
+  handleDriveConnectRedirect()
+  const [, emp] = await Promise.all([loadData(), loadEmployees(), loadDriveStatus()])
   employees.value = emp || []
 })
 </script>
+
+<style scoped>
+.drive-auth-card {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  background: #fafafa;
+}
+.drive-auth-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #262626;
+}
+.drive-auth-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+</style>

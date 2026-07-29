@@ -321,3 +321,16 @@ export const reminderThresholdApi = {
   list:   ()               => http.get('/api/reminder-threshold-configs'),
   update: (id, paramValue) => http.put(`/api/reminder-threshold-configs/${id}`, { paramValue })
 }
+
+// ===== Google Drive 授权（2026-07-29 新增，数据库每日备份用，仅 ADMIN 可访问） =====
+export const googleDriveAuthApi = {
+  authorizeUrl: () => http.get('/api/google-drive-auth/authorize-url'),
+  status:       () => http.get('/api/google-drive-auth/status')
+}
+
+// ===== 数据库每日备份（2026-07-29 新增，"待处理"里的失败提醒+重试，ADMIN/管理层可见） =====
+export const dbBackupApi = {
+  alert: () => http.get('/api/db-backup/alert'),
+  // 重试是同步跑一遍完整的 pg_dump+压缩+上传，可能比较慢，全局30秒超时不够用，单独放宽到3分钟
+  retry: () => http.post('/api/db-backup/retry', null, { timeout: 180000 })
+}
