@@ -35,19 +35,21 @@
             </div>
             <div class="mgmt-body">
               <span class="mgmt-label">公司利润</span>
-              <a class="mgmt-amount" @click="openDetail(managementRow)">{{ fmt(managementRow.totalAmount) }}</a>
-              <a-space style="margin-left:24px">
-                <a-button size="small" @click="openDetail(managementRow)">查看明细</a-button>
-                <a-tooltip :title="managementRow.blockedReason">
-                  <span>
-                    <a-button v-if="!managementRow.ownActionConfirmed" type="primary" size="small"
-                      :disabled="!!managementRow.blockedReason" @click="confirmRow(managementRow)">确认</a-button>
-                    <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(managementRow)">
-                      <a-button size="small">取消确认</a-button>
-                    </a-popconfirm>
-                  </span>
-                </a-tooltip>
-              </a-space>
+              <div class="mgmt-amount-group">
+                <a class="mgmt-amount" @click="openDetail(managementRow)">{{ fmt(managementRow.totalAmount) }}</a>
+                <a-space>
+                  <a-button size="small" @click="openDetail(managementRow)">查看明细</a-button>
+                  <a-tooltip :title="managementRow.blockedReason">
+                    <span>
+                      <a-button v-if="!managementRow.ownActionConfirmed" type="primary" size="small"
+                        :disabled="!!managementRow.blockedReason" @click="confirmRow(managementRow)">确认</a-button>
+                      <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(managementRow)">
+                        <a-button size="small">取消确认</a-button>
+                      </a-popconfirm>
+                    </span>
+                  </a-tooltip>
+                </a-space>
+              </div>
             </div>
             <div v-if="managementRow.blockedReason && !managementRow.ownActionConfirmed" class="mgmt-hint">
               {{ managementRow.blockedReason }}
@@ -227,10 +229,10 @@
                  逐行确认），不是项目负责人自己能操作的——这里只做只读展示 -->
             <div class="mgmt-body">
               <span class="mgmt-label">提成金额</span>
-              <a class="mgmt-amount" @click="openSelfDetail">{{ fmt(selfDetail.baseAmount) }}</a>
-              <a-space style="margin-left:24px">
+              <div class="mgmt-amount-group">
+                <a class="mgmt-amount" @click="openSelfDetail">{{ fmt(selfDetail.baseAmount) }}</a>
                 <a-button size="small" @click="openSelfDetail">查看明细</a-button>
-              </a-space>
+              </div>
             </div>
             <div class="self-line">
               <span>提成金额</span><span>{{ fmt(selfDetail.baseAmount) }}</span>
@@ -321,9 +323,11 @@
 
           <div class="mgmt-body">
             <span class="mgmt-label">{{ selfDetail.type === 'EXECUTOR' ? '薪酬合计' : '工资' }}</span>
-            <a v-if="selfDetail.type === 'EXECUTOR'" class="mgmt-amount" @click="openSelfDetail">{{ fmt(selfDetail.baseAmount) }}</a>
-            <span v-else class="mgmt-amount">{{ fmt(selfDetail.baseAmount) }}</span>
-            <a-button v-if="selfDetail.type === 'EXECUTOR'" size="small" style="margin-left:24px" @click="openSelfDetail">查看明细</a-button>
+            <div class="mgmt-amount-group">
+              <a v-if="selfDetail.type === 'EXECUTOR'" class="mgmt-amount" @click="openSelfDetail">{{ fmt(selfDetail.baseAmount) }}</a>
+              <span v-else class="mgmt-amount">{{ fmt(selfDetail.baseAmount) }}</span>
+              <a-button v-if="selfDetail.type === 'EXECUTOR'" size="small" @click="openSelfDetail">查看明细</a-button>
+            </div>
           </div>
 
           <div v-if="selfDetail.tierBonusAmount != null" class="self-line" style="margin-top:12px">
@@ -722,10 +726,20 @@ onMounted(loadAll)
 .mgmt-body {
   display: flex;
   align-items: center;
+  /* 2026-07-29 Shawn 反馈：这一行的金额之前紧贴着 label 靠左（跟下面 .self-line 系列行
+     右对齐的金额对不上，看着别扭），改成两端对齐——label 靠左，金额+按钮这组整体靠右，
+     这样"工资/提成金额/公司利润"这个大字金额才能跟"奖金"/"总工资"这些明细行的金额
+     在同一条竖线上对齐 */
+  justify-content: space-between;
 }
 .mgmt-label {
   color: #595959;
   margin-right: 12px;
+}
+.mgmt-amount-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 .mgmt-amount {
   font-size: 20px;
