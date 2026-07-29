@@ -182,8 +182,8 @@ const columns = computed(() => {
   if (detail.value.type === 'EXECUTOR') {
     return [
       { title: '所属项目负责人', key: 'projectManagerName', width: 130 },
-      { title: '品牌方/红人团队', key: 'brandTeam' },
-      { title: '项目视频类型', key: 'videoTypeLabel' },
+      { title: '品牌方/红人团队', key: 'brandTeam', width: 180 },
+      { title: '项目视频类型', key: 'videoTypeLabel', width: 110 },
       { title: '视频数', key: 'videoCount', width: 80 },
       { title: '单价', key: 'unitPrice', width: 100 },
       { title: '薪酬金额', key: 'amount', width: 140 }
@@ -191,7 +191,7 @@ const columns = computed(() => {
   }
   if (detail.value.type === 'MANAGEMENT') {
     return [
-      { title: '品牌方/红人团队', key: 'brandTeam' },
+      { title: '品牌方/红人团队', key: 'brandTeam', width: 200 },
       { title: '视频数', key: 'videoCount', width: 80 },
       { title: '客户合作价格', key: 'amount', width: 140 },
       { title: '红人成本', key: 'amount2', width: 140 }
@@ -199,16 +199,20 @@ const columns = computed(() => {
   }
   // PROJECT_MANAGER
   return [
-    { title: '品牌方/红人团队', key: 'brandTeam' },
+    { title: '品牌方/红人团队', key: 'brandTeam', width: 200 },
     { title: '视频数', key: 'videoCount', width: 80 },
     { title: '客户合作价格', key: 'amount', width: 140 }
   ]
 })
 
+// 之前"品牌方/红人团队"/"项目视频类型"这两列一直没设置固定宽度（Ant Design 表格里其余
+// 列都设了 width，只有这两列没设，会导致自动布局时被其它固定宽度列挤占空间——720px 的弹窗
+// 宽度本来就紧张，"项目视频类型"这种短文本列一旦被挤到只剩几十像素，中文就会一个字一行，
+// 表格高度暴涨。这次全部显式给宽度（2026-07-29 Shawn 反馈修复）。
 const executorWageColumns = [
   { title: '执行人员', key: 'executorName', width: 130 },
-  { title: '品牌方/红人团队', key: 'brandTeam' },
-  { title: '项目视频类型', key: 'videoTypeLabel' },
+  { title: '品牌方/红人团队', key: 'brandTeam', width: 180 },
+  { title: '项目视频类型', key: 'videoTypeLabel', width: 110 },
   { title: '视频数', key: 'videoCount', width: 80 },
   { title: '单价', key: 'unitPrice', width: 100 },
   { title: '薪酬金额', key: 'amount', width: 140 },

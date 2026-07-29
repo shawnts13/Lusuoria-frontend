@@ -420,10 +420,12 @@ const columns = [
 // "手下执行人员工资"表格用（项目负责人自己页面 + 管理层页面共用同一套列定义）。
 // "确认状态"这一列只在每个执行人员的小计行（isGroupSubtotal）上有内容，其余明细行/汇总行留空；
 // "梯度小结"行（isTierSummaryRow）只在"品牌方/红人团队"这一列展示一整句说明文字，其余列留空
+// "品牌方/红人团队"/"项目视频类型"这两列之前没设置固定宽度，会被其它固定宽度列挤占空间，
+// 窄的时候"项目视频类型"这种短文本会一个字一行、表格暴涨（2026-07-29 Shawn 反馈修复）
 const executorWageColumns = [
   { title: '执行人员', key: 'executorName', width: 130 },
-  { title: '品牌方/红人团队', key: 'brandTeam' },
-  { title: '项目视频类型', key: 'videoTypeLabel' },
+  { title: '品牌方/红人团队', key: 'brandTeam', width: 180 },
+  { title: '项目视频类型', key: 'videoTypeLabel', width: 110 },
   { title: '视频数', key: 'videoCount', width: 80 },
   { title: '单价', key: 'unitPrice', width: 100 },
   { title: '薪酬金额', key: 'amount', width: 140 },
