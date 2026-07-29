@@ -412,19 +412,23 @@ function close() { emit('update:visible', false) }
 // 红人结款临近付款日跳转到"红人结款"按结款单号定位（internalRequirementNo 这一类借用来存
 // 结款单号，不是真正的需求编号，所以要在下面这个通用分支之前单独判断，否则会被误判成
 // Invoice逾期那种跳转到"红人需求管理"）；其余几类（临近结款/进度滞留）跳转到"红人合作跟踪"
-// 按内部项目编号定位
+// 按内部项目编号定位。2026-07-29 起改成新开 tab（router.resolve 只算 URL，不跳转，
+// window.open 才真正打开），而不是在当前"待处理"页面的 tab 里直接跳走——之前点了详情弹窗
+// 就没了，还得重新打开弹窗才能继续看其他行
 function goToDetail(record) {
+  let route
   if (props.category === 'CONTRACT_EXPIRING_SOON') {
     // requirementId 这一类借用来存红人 id（见后端 runContractExpiringSoon 的注释）
-    router.push({ path: '/influencers', query: { editInfluencerId: record.requirementId } })
+    route = { path: '/influencers', query: { editInfluencerId: record.requirementId } }
   } else if (props.category === 'INFLUENCER_PAYMENT_DUE') {
     // internalRequirementNo 这一类借用来存结款单号（见后端 runInfluencerPaymentDue 的注释）
-    router.push({ path: '/payments', query: { paymentNo: record.internalRequirementNo } })
+    route = { path: '/payments', query: { paymentNo: record.internalRequirementNo } }
   } else if (record.internalRequirementNo) {
-    router.push({ path: '/requirements', query: { internalRequirementNo: record.internalRequirementNo } })
+    route = { path: '/requirements', query: { internalRequirementNo: record.internalRequirementNo } }
   } else {
-    router.push({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } })
+    route = { path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } }
   }
+  window.open(router.resolve(route).href, '_blank')
 }
 
 async function handleAcknowledge(record) {
