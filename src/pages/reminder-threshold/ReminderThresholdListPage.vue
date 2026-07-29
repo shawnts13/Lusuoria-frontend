@@ -55,6 +55,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { reminderThresholdApi } from '../../api/index'
 import { colorForValue } from '../../utils/tagColor'
+import { CATEGORY_LABEL, categoryLabel } from '../../utils/reminderLabels'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -69,22 +70,10 @@ const columns = [
   { title: '操作', key: 'action', width: 80 }
 ]
 
-// 跟"待处理-进度提醒"卡片列表（ProgressReminderCardList.vue）用同一份类别中文标签，
-// 保持全站一致，不要各写一份容易走偏
-const CATEGORY_LABEL = {
-  COLLAB_PAYMENT_DUE: '红人合作跟踪临近结款',
-  BRAND_MONTH_END_PAYMENT_DUE: '品牌方月结临近结款',
-  INFLUENCER_PAYMENT_DUE: '红人结款临近付款日',
-  PM_EXECUTOR_PROGRESS_STALL: '进度滞留-项目',
-  FINANCE_PROGRESS_STALL: '进度滞留-财务',
-  REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期',
-  REQUIREMENT_CONTRACT_OVERDUE: '合同上传逾期',
-  CONTRACT_EXPIRING_SOON: '合同即将到期'
-}
 // 分组展示顺序：跟进度提醒卡片列表默认出现的顺序一致，方便对照
 const CATEGORY_ORDER = Object.keys(CATEGORY_LABEL)
 
-function categoryLabelOf(c) { return CATEGORY_LABEL[c] || c }
+function categoryLabelOf(c) { return categoryLabel(c) }
 
 // 默认展示时把不同提醒类型的数据 group 在一起（Shawn 要求），不是简单地把所有参数堆在一页
 const groupedConfigs = computed(() => {

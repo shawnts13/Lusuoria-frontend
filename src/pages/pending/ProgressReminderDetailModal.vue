@@ -1,6 +1,11 @@
 <template>
-  <a-modal :open="visible" title="进度提醒详情" width="1200px" :footer="null"
+  <a-modal :open="visible" width="1200px" :footer="null"
     @cancel="close" :destroy-on-close="true">
+    <template #title>
+      <a-tag :color="categoryTagColor(category)">{{ categoryLabel(category) }}</a-tag>
+      <a-tag v-if="hasUrgencyInfo" :color="urgencyColor(titleReminder)">{{ urgencyLabel(titleReminder) }}</a-tag>
+      <span style="margin-left:4px">详情</span>
+    </template>
     <div class="filter-bar">
       <a-select v-model:value="brandTeamFilter" placeholder="品牌方-红人团队" allow-clear
         style="width:240px" :options="brandTeamOptions" />
@@ -88,6 +93,7 @@ import { formatDate } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
+import { categoryLabel, categoryTagColor, urgencyLabel, urgencyColor } from '../../utils/reminderLabels'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -98,9 +104,21 @@ const props = defineProps({
   // 只有这3类"进度滞留/Invoice逾期"提醒支持"标记已处理"，且只对项目负责人/执行人员/财务
   // 本人生效（跟后端 acknowledge 的受众一致）——ADMIN/管理层看到的是完整视角，标记对他们
   // 自己没有意义，所以不展示这个操作
-  category: { type: String, default: null }
+  category: { type: String, default: null },
+  // 2026-07-29 新增：卡片列表点进来时带上这条提醒的紧急程度，供弹窗标题细化成"品类+紧急程度"，
+  // 不再是所有类别/档次共用一个"进度提醒详情"的笼统标题
+  urgency: { type: String, default: null },
+  overdueUrgency: { type: String, default: null }
 })
 const emit = defineEmits(['update:visible'])
+
+// 标题用的"这条提醒"对象，跟 utils/reminderLabels.js 里 urgencyLabel/urgencyColor 期待的
+// 形状（{category, urgency, overdueUrgency}）保持一致，直接复用同一份颜色/文案映射，
+// 不在这里再写一份容易跟卡片列表走偏
+const titleReminder = computed(() => ({
+  category: props.category, urgency: props.urgency, overdueUrgency: props.overdueUrgency
+}))
+const hasUrgencyInfo = computed(() => props.urgency != null || props.overdueUrgency != null)
 
 const STALL_CATEGORIES = ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL']
 const REQUIREMENT_CATEGORIES = ['REQUIREMENT_INVOICE_OVERDUE', 'REQUIREMENT_CONTRACT_OVERDUE']

@@ -13,7 +13,7 @@
       @view-detail="openDetail" />
 
     <ProgressReminderDetailModal v-model:visible="detailVisible" :reminder-id="detailReminderId"
-      :category="detailCategory" />
+      :category="detailCategory" :urgency="detailUrgency" :overdue-urgency="detailOverdueUrgency" />
   </div>
 </template>
 
@@ -33,6 +33,8 @@ const recomputingProjectFlow = ref(false)
 const detailVisible = ref(false)
 const detailReminderId = ref(null)
 const detailCategory = ref(null)
+const detailUrgency = ref(null)
+const detailOverdueUrgency = ref(null)
 
 async function loadData() {
   loading.value = true
@@ -47,6 +49,8 @@ async function loadData() {
 function openDetail(r) {
   detailReminderId.value = r.id
   detailCategory.value = r.category
+  detailUrgency.value = r.urgency
+  detailOverdueUrgency.value = r.overdueUrgency
   detailVisible.value = true
 }
 
