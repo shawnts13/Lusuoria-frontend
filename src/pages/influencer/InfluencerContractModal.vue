@@ -20,7 +20,7 @@
         </div>
       </a-form-item>
       <a-form-item label="团队" v-if="brandId">
-        <a-select v-model:value="teamId" placeholder="团队（可不选）" style="width:100%"
+        <a-select v-model:value="teamId" :placeholder="teamPlaceholder" style="width:100%"
           allow-clear :disabled="!!contract || availableTeams.length <= 1">
           <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId">
             {{ t.teamName || '（不涉及团队）' }}
@@ -70,6 +70,11 @@ const contractLink = ref('')
 const availableBrandIds = computed(() => [...new Set(props.brandTeamPairs.map(p => p.brandId))])
 const availableBrands = computed(() => props.brands.filter(b => availableBrandIds.value.includes(b.id)))
 const availableTeams = computed(() => props.brandTeamPairs.filter(p => p.brandId === brandId.value))
+// 这个品牌方下如果确实存在真实团队关系，提示词就不该暗示"可以不选"（看起来奇怪）——
+// 只有当这个红人在这个品牌方下的历史关系里压根没有任何真实团队（只有"不涉及团队"这一种）时，
+// 才用"可不选"的措辞；下拉选项本身该有的"（不涉及团队）"选项不受这个影响，该有还是有
+const teamPlaceholder = computed(() =>
+  availableTeams.value.some(t => t.teamId != null) ? '请选择团队' : '团队（可不选）')
 
 // 该品牌方下只有一个团队选项（含"不涉及团队"这一个选项）时自动带入——用于用户在弹窗打开后
 // 手动切换"品牌方"下拉框的场景。注意：这个组件不会随弹窗关闭销毁（只有外层"编辑红人"弹窗
