@@ -221,46 +221,49 @@ export const importBatchApi = {
 }
 
 // ===== Dashboard =====
+// extraConfig：2026-07 新增，年度报告/双月对比批量拉取时传 { silent: true }，单个请求失败/超时
+// 不弹全局 Toast（见 src/api/http.js 的 silent 处理），避免 Render 免费实例冷启动时刷屏报错
 export const dashboardApi = {
-  summary:      (yearMonth, currency) => http.get('/api/dashboard/summary', { params: { yearMonth, currency } }),
+  summary:      (yearMonth, currency, extraConfig = {}) =>
+    http.get('/api/dashboard/summary', { params: { yearMonth, currency }, ...extraConfig }),
   exchangeRate: (yearMonth)           => http.get('/api/dashboard/exchange-rate', { params: { yearMonth } }),
 
-  drilldownVideoCount: (startMonth, endMonth, dimension) =>
-    http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth, dimension } }),
+  drilldownVideoCount: (startMonth, endMonth, dimension, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth, dimension }, ...extraConfig }),
 
-  drilldownClientPrice: (startMonth, endMonth, currency, dimension) =>
-    http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency, dimension } }),
+  drilldownClientPrice: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
 
-  drilldownInfluencerCost: (startMonth, endMonth, currency, dimension) =>
-    http.get('/api/dashboard/drilldown/influencer-cost', { params: { startMonth, endMonth, currency, dimension } }),
+  drilldownInfluencerCost: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/influencer-cost', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
 
-  drilldownGrossProfit: (startMonth, endMonth, currency, dimension) =>
-    http.get('/api/dashboard/drilldown/gross-profit', { params: { startMonth, endMonth, currency, dimension } }),
+  drilldownGrossProfit: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/gross-profit', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
 
-  drilldownCompanyProfit: (startMonth, endMonth, currency, dimension) =>
-    http.get('/api/dashboard/drilldown/company-profit', { params: { startMonth, endMonth, currency, dimension } }),
+  drilldownCompanyProfit: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/company-profit', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
 
-  drilldownExecutionCost: (startMonth, endMonth, currency, dimension) =>
-    http.get('/api/dashboard/drilldown/execution-cost', { params: { startMonth, endMonth, currency, dimension } }),
+  drilldownExecutionCost: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/execution-cost', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
 
   drilldownOtherStaffCost: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/other-staff-cost', { params: { startMonth, endMonth, currency } }),
 
-  drilldownCommission: (startMonth, endMonth, currency) =>
-    http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } }),
+  drilldownCommission: (startMonth, endMonth, currency, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency }, ...extraConfig }),
 
   drilldownExtraBonus: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/extra-bonus', { params: { startMonth, endMonth, currency } }),
 
   // 2026-07 新增：年度报告 / 双月对比 / 业务分析
-  rangeSummary: (startMonth, endMonth, currency) =>
-    http.get('/api/dashboard/range-summary', { params: { startMonth, endMonth, currency } }),
+  rangeSummary: (startMonth, endMonth, currency, extraConfig = {}) =>
+    http.get('/api/dashboard/range-summary', { params: { startMonth, endMonth, currency }, ...extraConfig }),
 
-  pivot: (startMonth, endMonth, currency, rowDimension, colDimension) =>
-    http.get('/api/dashboard/pivot', { params: { startMonth, endMonth, currency, rowDimension, colDimension } }),
+  pivot: (startMonth, endMonth, currency, rowDimension, colDimension, extraConfig = {}) =>
+    http.get('/api/dashboard/pivot', { params: { startMonth, endMonth, currency, rowDimension, colDimension }, ...extraConfig }),
 
-  managerTrend: (startMonth, endMonth, currency, role) =>
-    http.get('/api/dashboard/manager-trend', { params: { startMonth, endMonth, currency, role } })
+  managerTrend: (startMonth, endMonth, currency, role, extraConfig = {}) =>
+    http.get('/api/dashboard/manager-trend', { params: { startMonth, endMonth, currency, role }, ...extraConfig })
 }
 
 // ===== 工资单 =====

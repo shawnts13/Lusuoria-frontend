@@ -13,6 +13,8 @@
       </a-space>
     </div>
     <div class="print-title">{{ year }} 年度报告（{{ currency }}）</div>
+    <a-alert v-if="loadWarning" type="warning" show-icon closable class="no-print" style="margin-bottom:16px"
+      :message="loadWarning" @close="loadWarning = ''" />
 
     <a-spin :spinning="loading">
       <template v-if="rangeSummary">
@@ -126,6 +128,7 @@ const year = computed(() => yearValue.value ? Number(dayjs(yearValue.value).form
 const currency = ref('USD')
 const currencyPrefix = computed(() => currency.value === 'RMB' ? '¥' : '$')
 const loading = ref(false)
+const loadWarning = ref('')
 
 const rangeSummary = ref(null)
 const rangeSummaryLastYear = ref(null)
@@ -149,27 +152,33 @@ async function loadAll() {
   const lastYearEnd = `${y - 1}12`
   const cur = currency.value
 
+  // silent: true —— 这一批几十个请求里单个失败/超时不弹全局 Toast（Render 免费实例冷启动时
+  // 容易一次性失败好几个），runLimited 内部会自动重试，最终仍失败的部分由下面的 loadWarning 提示
+  const SILENT = { silent: true }
   const taskDefs = []
-  taskDefs.push({ key: 'summary', run: () => dashboardApi.rangeSummary(startMonth, endMonth, cur) })
-  taskDefs.push({ key: 'summaryLastYear', run: () => dashboardApi.rangeSummary(lastYearStart, lastYearEnd, cur) })
+  taskDefs.push({ key: 'summary', run: () => dashboardApi.rangeSummary(startMonth, endMonth, cur, SILENT) })
+  taskDefs.push({ key: 'summaryLastYear', run: () => dashboardApi.rangeSummary(lastYearStart, lastYearEnd, cur, SILENT) })
   CHART_DEFS.forEach(d => {
     taskDefs.push({
       key: d.key,
       run: d.metric === 'video'
-        ? () => dashboardApi.drilldownVideoCount(startMonth, endMonth, d.dim)
-        : () => dashboardApi[d.apiName](startMonth, endMonth, cur, d.dim)
+        ? () => dashboardApi.drilldownVideoCount(startMonth, endMonth, d.dim, SILENT)
+        : () => dashboardApi[d.apiName](startMonth, endMonth, cur, d.dim, SILENT)
     })
   })
-  taskDefs.push({ key: 'commission', run: () => dashboardApi.drilldownCommission(startMonth, endMonth, cur) })
-  taskDefs.push({ key: 'executionManager', run: () => dashboardApi.drilldownExecutionCost(startMonth, endMonth, cur, 'manager_executor') })
+  taskDefs.push({ key: 'commission', run: () => dashboardApi.drilldownCommission(startMonth, endMonth, cur, SILENT) })
+  taskDefs.push({ key: 'executionManager', run: () => dashboardApi.drilldownExecutionCost(startMonth, endMonth, cur, 'manager_executor', SILENT) })
   PIVOT_DEFS.forEach(p => {
-    taskDefs.push({ key: p.key, run: () => dashboardApi.pivot(startMonth, endMonth, cur, p.row, p.col) })
+    taskDefs.push({ key: p.key, run: () => dashboardApi.pivot(startMonth, endMonth, cur, p.row, p.col, SILENT) })
   })
-  taskDefs.push({ key: 'trendManager', run: () => dashboardApi.managerTrend(startMonth, endMonth, cur, 'manager') })
-  taskDefs.push({ key: 'trendExecutor', run: () => dashboardApi.managerTrend(startMonth, endMonth, cur, 'executor') })
+  taskDefs.push({ key: 'trendManager', run: () => dashboardApi.managerTrend(startMonth, endMonth, cur, 'manager', SILENT) })
+  taskDefs.push({ key: 'trendExecutor', run: () => dashboardApi.managerTrend(startMonth, endMonth, cur, 'executor', SILENT) })
 
   try {
-    const results = await runLimited(taskDefs.map(t => t.run), 4)
+    const { results, failedCount } = await runLimited(taskDefs.map(t => t.run))
+    loadWarning.value = failedCount > 0
+      ? `有 ${failedCount} 个数据请求最终未加载成功（可能是服务器冷启动导致的临时性问题），对应图表会显示为空，建议刷新页面重试`
+      : ''
     const byKey = {}
     taskDefs.forEach((t, idx) => { byKey[t.key] = results[idx] })
 

@@ -39,6 +39,11 @@ http.interceptors.response.use(
     return data
   },
   error => {
+    // silent：批量并发请求（年度报告/双月对比一次发几十个下钻请求）专用——单个请求失败/超时
+    // 不该弹一次全局 Toast，Render 免费实例冷启动时一次性失败十几个会刷屏报错。这类调用方
+    // 自己（report/useReportFetch.js 的重试机制、页面里的"部分数据未加载成功"提示）负责
+    // 处理失败，401 登录过期除外——不管是不是静音请求都要正常跳转登录页
+    const silent = error.config?.silent === true
     if (error.response) {
       const status = error.response.status
       if (status === 401) {
@@ -52,15 +57,17 @@ http.interceptors.response.use(
           message.error('登录已过期，请重新登录')
           router.push('/login')
         }
-      } else if (status === 403) {
-        message.error('无权限执行此操作')
-      } else if (status === 400) {
-        const msg = error.response.data?.message || '请求参数错误'
-        message.error(msg)
-      } else {
-        message.error('服务器错误，请稍后重试')
+      } else if (!silent) {
+        if (status === 403) {
+          message.error('无权限执行此操作')
+        } else if (status === 400) {
+          const msg = error.response.data?.message || '请求参数错误'
+          message.error(msg)
+        } else {
+          message.error('服务器错误，请稍后重试')
+        }
       }
-    } else {
+    } else if (!silent) {
       message.error('网络连接失败')
     }
     return Promise.reject(error)

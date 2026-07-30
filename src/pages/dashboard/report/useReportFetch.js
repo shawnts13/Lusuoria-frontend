@@ -3,34 +3,59 @@
  *
  * 这两个报告页面一次加载要发几十到上百个下钻请求，Render 免费层数据库连接池只有3个连接，
  * 不能用 Promise.all 一次性把所有请求全部同时发出去，否则会打满连接池导致排队/超时。
- * 用这个按批次控制并发数（默认4个一批）。
+ * 用这个按批次控制并发数（默认3个一批，跟连接池大小对齐）。
+ *
+ * 2026-07-30 补充：Render 免费实例闲置一段时间会休眠，报告页面刚打开时如果实例正在冷启动，
+ * 前几个请求经常直接超时/连接失败——单纯"失败就放弃"会导致部分图表长期空白，用户体验是
+ * "刷了好几次才有数据"。这里加了自动重试（默认2次，间隔递增），让实例冷启动这类瞬时性失败
+ * 能自己恢复，不需要用户手动刷新页面。
  *
  * @param tasks 一组"无参数、返回 Promise"的函数（不要传已经发出去的 Promise，要传函数，
  *              这样才能真正控制"什么时候发起下一个请求"，而不是全部立刻发出去再等待）
  * @param concurrency 同时进行的最大请求数
- * @returns 按 tasks 顺序对应的结果数组；某个请求失败时对应位置是 null，不影响其他请求
+ * @param retries 单个请求失败后的最大重试次数
+ * @returns { results, failedCount } —— results 按 tasks 顺序对应，某个请求重试耗尽后仍失败时
+ *          对应位置是 null；failedCount 是最终失败（重试耗尽）的请求数，供页面显示"部分数据未
+ *          加载成功"提示用
  */
-export function runLimited(tasks, concurrency = 4) {
+export function runLimited(tasks, concurrency = 3, retries = 2) {
   return new Promise((resolve) => {
     const results = new Array(tasks.length)
     if (tasks.length === 0) {
-      resolve(results)
+      resolve({ results, failedCount: 0 })
       return
     }
     let nextIndex = 0
     let finishedCount = 0
+    let failedCount = 0
+
+    function sleep(ms) {
+      return new Promise(r => setTimeout(r, ms))
+    }
+
+    async function runWithRetry(task) {
+      let lastError = null
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        if (attempt > 0) await sleep(800 * attempt) // 800ms、1600ms 递增间隔
+        try {
+          return await task()
+        } catch (e) {
+          lastError = e
+        }
+      }
+      throw lastError
+    }
 
     function runNext() {
       const i = nextIndex++
       if (i >= tasks.length) return
-      Promise.resolve()
-        .then(() => tasks[i]())
+      runWithRetry(tasks[i])
         .then(r => { results[i] = r })
-        .catch(() => { results[i] = null })
+        .catch(() => { results[i] = null; failedCount++ })
         .finally(() => {
           finishedCount++
           if (finishedCount === tasks.length) {
-            resolve(results)
+            resolve({ results, failedCount })
           } else {
             runNext()
           }

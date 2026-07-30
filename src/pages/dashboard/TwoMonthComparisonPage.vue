@@ -15,6 +15,8 @@
       </a-space>
     </div>
     <div class="print-title">{{ monthA }} vs {{ monthB }} 双月对比（{{ currency }}）</div>
+    <a-alert v-if="loadWarning" type="warning" show-icon closable class="no-print" style="margin-bottom:16px"
+      :message="loadWarning" @close="loadWarning = ''" />
 
     <a-spin :spinning="loading">
       <template v-if="summaryA && summaryB">
@@ -81,6 +83,7 @@ const monthB = computed(() => monthBValue.value ? dayjs(monthBValue.value).forma
 const currency = ref('USD')
 const currencyPrefix = computed(() => currency.value === 'RMB' ? '¥' : '$')
 const loading = ref(false)
+const loadWarning = ref('')
 
 const summaryA = ref(null)
 const summaryB = ref(null)
@@ -103,23 +106,29 @@ async function loadAll() {
 
   // 双月对比是两个任意（不一定相邻）的自然月，不能像年度报告那样传区间——中间月份会被
   // 一并算进去，这里统一对现有单月接口各调用两次
+  // silent: true —— 批量请求里单个失败/超时不弹全局 Toast（Render 免费实例冷启动时容易一次性
+  // 失败好几个），runLimited 内部会自动重试，最终仍失败的部分由下面的 loadWarning 提示
+  const SILENT = { silent: true }
   const taskDefs = []
-  taskDefs.push({ key: 'summaryA', run: () => dashboardApi.summary(mA, cur) })
-  taskDefs.push({ key: 'summaryB', run: () => dashboardApi.summary(mB, cur) })
+  taskDefs.push({ key: 'summaryA', run: () => dashboardApi.summary(mA, cur, SILENT) })
+  taskDefs.push({ key: 'summaryB', run: () => dashboardApi.summary(mB, cur, SILENT) })
   CHART_DEFS.forEach(d => {
     const fetcher = d.metric === 'video'
-      ? (m) => dashboardApi.drilldownVideoCount(m, m, d.dim)
-      : (m) => dashboardApi[d.apiName](m, m, cur, d.dim)
+      ? (m) => dashboardApi.drilldownVideoCount(m, m, d.dim, SILENT)
+      : (m) => dashboardApi[d.apiName](m, m, cur, d.dim, SILENT)
     taskDefs.push({ key: d.key + '_A', run: () => fetcher(mA) })
     taskDefs.push({ key: d.key + '_B', run: () => fetcher(mB) })
   })
-  taskDefs.push({ key: 'commissionA', run: () => dashboardApi.drilldownCommission(mA, mA, cur) })
-  taskDefs.push({ key: 'commissionB', run: () => dashboardApi.drilldownCommission(mB, mB, cur) })
-  taskDefs.push({ key: 'executionA', run: () => dashboardApi.drilldownExecutionCost(mA, mA, cur, 'manager_executor') })
-  taskDefs.push({ key: 'executionB', run: () => dashboardApi.drilldownExecutionCost(mB, mB, cur, 'manager_executor') })
+  taskDefs.push({ key: 'commissionA', run: () => dashboardApi.drilldownCommission(mA, mA, cur, SILENT) })
+  taskDefs.push({ key: 'commissionB', run: () => dashboardApi.drilldownCommission(mB, mB, cur, SILENT) })
+  taskDefs.push({ key: 'executionA', run: () => dashboardApi.drilldownExecutionCost(mA, mA, cur, 'manager_executor', SILENT) })
+  taskDefs.push({ key: 'executionB', run: () => dashboardApi.drilldownExecutionCost(mB, mB, cur, 'manager_executor', SILENT) })
 
   try {
-    const results = await runLimited(taskDefs.map(t => t.run), 4)
+    const { results, failedCount } = await runLimited(taskDefs.map(t => t.run))
+    loadWarning.value = failedCount > 0
+      ? `有 ${failedCount} 个数据请求最终未加载成功（可能是服务器冷启动导致的临时性问题），对应图表会显示为空，建议刷新页面重试`
+      : ''
     const byKey = {}
     taskDefs.forEach((t, idx) => { byKey[t.key] = results[idx] })
 
