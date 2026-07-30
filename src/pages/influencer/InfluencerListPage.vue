@@ -305,7 +305,7 @@ const allColumns = [
   { title: '建联情况',      key: 'contactStatus',   width: 120, sorter: true, dataIndex: 'contactStatus' },
   { title: '跟进人',        dataIndex: 'followerPerson', key: 'followerPerson', width: 90, sorter: true },
   { title: '备注',          dataIndex: 'notes',     key: 'notes',         width: 160, ellipsis: true },
-  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 170, sensitive: true },
+  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 230, sensitive: true },
   { title: '视频投流成本（$）',           key: 'adSpendCost',    width: 140, sensitive: true },
   { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 140, sensitive: true },
   { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160, sorter: true },
