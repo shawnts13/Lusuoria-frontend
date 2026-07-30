@@ -67,3 +67,30 @@ export function runLimited(tasks, concurrency = 3, retries = 2) {
     }
   })
 }
+
+/**
+ * 服务器"预热"（2026-07-30 新增）：Render 免费实例闲置一段时间会休眠，冷启动可能要几十秒。
+ * 之前的做法是直接把几十个下钻请求全部打过去，冷启动期间大量超时失败，失败后只能提示用户
+ * "刷新页面重试"——但刷新页面本质上就是把同样几十个请求原样再打一遍，并不能真正解决"服务器
+ * 还没醒"这个问题，用户体验是反复刷新、反复失败。
+ *
+ * 改成：真正发年度报告/双月对比那一大批请求之前，先反复 ping 一个很轻量的接口
+ * （/actuator/health，不查数据库），直到它成功或者等够 maxWaitMs——这样后面的大批请求
+ * 发出去的时候服务器已经是醒着的，不需要事后靠重试/刷新来补救。
+ *
+ * @param pingFn 一个轻量级探测请求（如 systemApi.health()）
+ * @returns 服务器是否在 maxWaitMs 内醒了（超时仍然会 resolve false，调用方决定要不要继续发正式请求——
+ *          等太久也不该无限卡住用户，实在没醒也让后面的自动重试机制兜底）
+ */
+export async function warmUpBackend(pingFn, { maxWaitMs = 60000, intervalMs = 3000 } = {}) {
+  const start = Date.now()
+  while (true) {
+    try {
+      await pingFn()
+      return true
+    } catch (e) {
+      if (Date.now() - start >= maxWaitMs) return false
+      await new Promise(r => setTimeout(r, intervalMs))
+    }
+  }
+}

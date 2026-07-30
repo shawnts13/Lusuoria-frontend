@@ -13,8 +13,15 @@
       </a-space>
     </div>
     <div class="print-title">{{ year }} 年度报告（{{ currency }}）</div>
+    <a-alert v-if="warmingUp" type="info" show-icon class="no-print" style="margin-bottom:16px"
+      message="正在连接服务器"
+      description="服务器长时间未使用会自动休眠，首次访问需要等待它启动，通常不超过1分钟，请耐心等待……" />
     <a-alert v-if="loadWarning" type="warning" show-icon closable class="no-print" style="margin-bottom:16px"
-      :message="loadWarning" @close="loadWarning = ''" />
+      :message="loadWarning" @close="loadWarning = ''">
+      <template #action>
+        <a-button size="small" type="primary" ghost @click="loadAll">重新生成报告</a-button>
+      </template>
+    </a-alert>
 
     <a-spin :spinning="loading">
       <template v-if="rangeSummary">
@@ -109,8 +116,8 @@
 import '../../echarts-setup'
 import { ref, reactive, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
-import { dashboardApi } from '../../api/index'
-import { runLimited } from './report/useReportFetch'
+import { dashboardApi, systemApi } from '../../api/index'
+import { runLimited, warmUpBackend } from './report/useReportFetch'
 import { pctChange } from './report/deltaMath'
 import { buildBarOption, buildLineOption, buildColumnOption } from './report/chartOptions'
 import { KPI_METRICS, TREND_METRICS, CHART_DEFS, CHART_GROUP_NAMES, PARETO_DEFS, PIVOT_DEFS, findChartDef } from './report/reportDefs'
@@ -128,6 +135,7 @@ const year = computed(() => yearValue.value ? Number(dayjs(yearValue.value).form
 const currency = ref('USD')
 const currencyPrefix = computed(() => currency.value === 'RMB' ? '¥' : '$')
 const loading = ref(false)
+const warmingUp = ref(false)
 const loadWarning = ref('')
 
 const rangeSummary = ref(null)
@@ -145,6 +153,15 @@ const findDef = findChartDef
 async function loadAll() {
   if (!year.value) return
   loading.value = true
+  loadWarning.value = ''
+
+  // 真正发年度报告这几十个请求之前，先确认服务器是醒着的（Render 免费实例闲置会休眠，冷启动
+  // 可能要几十秒）——直接把几十个请求打过去、冷启动期间大量失败、失败后指望用户刷新页面，
+  // 刷新本质上只是把同样的请求原样再打一遍，并不能真正解决"服务器还没醒"这个问题
+  warmingUp.value = true
+  await warmUpBackend(() => systemApi.health())
+  warmingUp.value = false
+
   const y = year.value
   const startMonth = `${y}01`
   const endMonth = `${y}12`
@@ -152,8 +169,8 @@ async function loadAll() {
   const lastYearEnd = `${y - 1}12`
   const cur = currency.value
 
-  // silent: true —— 这一批几十个请求里单个失败/超时不弹全局 Toast（Render 免费实例冷启动时
-  // 容易一次性失败好几个），runLimited 内部会自动重试，最终仍失败的部分由下面的 loadWarning 提示
+  // silent: true —— 这一批几十个请求里单个失败/超时不弹全局 Toast，runLimited 内部会自动重试，
+  // 最终仍失败的部分由下面的 loadWarning 提示（此时服务器已经预热过，理论上不该再大批失败了）
   const SILENT = { silent: true }
   const taskDefs = []
   taskDefs.push({ key: 'summary', run: () => dashboardApi.rangeSummary(startMonth, endMonth, cur, SILENT) })
@@ -177,7 +194,7 @@ async function loadAll() {
   try {
     const { results, failedCount } = await runLimited(taskDefs.map(t => t.run))
     loadWarning.value = failedCount > 0
-      ? `有 ${failedCount} 个数据请求最终未加载成功（可能是服务器冷启动导致的临时性问题），对应图表会显示为空，建议刷新页面重试`
+      ? `有 ${failedCount} 个数据请求最终未加载成功，对应图表会显示为空，可以点右侧按钮重新生成`
       : ''
     const byKey = {}
     taskDefs.forEach((t, idx) => { byKey[t.key] = results[idx] })

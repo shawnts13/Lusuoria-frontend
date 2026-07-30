@@ -16,6 +16,13 @@ function downloadWithAuth(url, filename) {
     })
 }
 
+// ===== 系统 =====
+// health：轻量健康检查（不查数据库），供年度报告/双月对比在发起大批请求前"预热"服务器用，
+// 见 pages/dashboard/report/useReportFetch.js 的 warmUpBackend
+export const systemApi = {
+  health: () => http.get('/actuator/health', { silent: true, timeout: 8000 })
+}
+
 // ===== Auth =====
 export const authApi = {
   login:     (data) => http.post('/api/auth/login', data),

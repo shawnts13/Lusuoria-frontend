@@ -15,8 +15,15 @@
       </a-space>
     </div>
     <div class="print-title">{{ monthA }} vs {{ monthB }} 双月对比（{{ currency }}）</div>
+    <a-alert v-if="warmingUp" type="info" show-icon class="no-print" style="margin-bottom:16px"
+      message="正在连接服务器"
+      description="服务器长时间未使用会自动休眠，首次访问需要等待它启动，通常不超过1分钟，请耐心等待……" />
     <a-alert v-if="loadWarning" type="warning" show-icon closable class="no-print" style="margin-bottom:16px"
-      :message="loadWarning" @close="loadWarning = ''" />
+      :message="loadWarning" @close="loadWarning = ''">
+      <template #action>
+        <a-button size="small" type="primary" ghost @click="loadAll">重新生成对比</a-button>
+      </template>
+    </a-alert>
 
     <a-spin :spinning="loading">
       <template v-if="summaryA && summaryB">
@@ -68,8 +75,8 @@
 import '../../echarts-setup'
 import { ref, reactive, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
-import { dashboardApi } from '../../api/index'
-import { runLimited } from './report/useReportFetch'
+import { dashboardApi, systemApi } from '../../api/index'
+import { runLimited, warmUpBackend } from './report/useReportFetch'
 import { delta, pctChange } from './report/deltaMath'
 import { buildGroupedBarOption, buildDivergingBarOption } from './report/chartOptions'
 import { KPI_METRICS, CHART_DEFS, CHART_GROUP_NAMES, PARETO_DEFS, findChartDef } from './report/reportDefs'
@@ -83,6 +90,7 @@ const monthB = computed(() => monthBValue.value ? dayjs(monthBValue.value).forma
 const currency = ref('USD')
 const currencyPrefix = computed(() => currency.value === 'RMB' ? '¥' : '$')
 const loading = ref(false)
+const warmingUp = ref(false)
 const loadWarning = ref('')
 
 const summaryA = ref(null)
@@ -100,14 +108,23 @@ const chartGroups = computed(() => CHART_GROUP_NAMES.map(name => ({ name, defs: 
 async function loadAll() {
   if (!monthA.value || !monthB.value) return
   loading.value = true
+  loadWarning.value = ''
+
+  // 真正发这几十个请求之前，先确认服务器是醒着的（Render 免费实例闲置会休眠）——直接把
+  // 大批请求打过去、冷启动期间大量失败、失败后指望用户刷新页面并不能真正解决问题，见
+  // AnnualReportPage.vue 同一处的注释
+  warmingUp.value = true
+  await warmUpBackend(() => systemApi.health())
+  warmingUp.value = false
+
   const cur = currency.value
   const mA = monthA.value
   const mB = monthB.value
 
   // 双月对比是两个任意（不一定相邻）的自然月，不能像年度报告那样传区间——中间月份会被
   // 一并算进去，这里统一对现有单月接口各调用两次
-  // silent: true —— 批量请求里单个失败/超时不弹全局 Toast（Render 免费实例冷启动时容易一次性
-  // 失败好几个），runLimited 内部会自动重试，最终仍失败的部分由下面的 loadWarning 提示
+  // silent: true —— 批量请求里单个失败/超时不弹全局 Toast，runLimited 内部会自动重试，
+  // 最终仍失败的部分由下面的 loadWarning 提示（此时服务器已经预热过，理论上不该再大批失败了）
   const SILENT = { silent: true }
   const taskDefs = []
   taskDefs.push({ key: 'summaryA', run: () => dashboardApi.summary(mA, cur, SILENT) })
@@ -127,7 +144,7 @@ async function loadAll() {
   try {
     const { results, failedCount } = await runLimited(taskDefs.map(t => t.run))
     loadWarning.value = failedCount > 0
-      ? `有 ${failedCount} 个数据请求最终未加载成功（可能是服务器冷启动导致的临时性问题），对应图表会显示为空，建议刷新页面重试`
+      ? `有 ${failedCount} 个数据请求最终未加载成功，对应图表会显示为空，可以点右侧按钮重新生成`
       : ''
     const byKey = {}
     taskDefs.forEach((t, idx) => { byKey[t.key] = results[idx] })
