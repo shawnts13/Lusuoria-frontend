@@ -61,7 +61,7 @@
           <div class="chart-grid">
             <ReportChartCard v-for="d in group.defs" :key="d.key"
               :title="`${group.name} · ${d.title}`"
-              :option="dimBarOption(d)" height="300px">
+              :option="dimBarOption(d)" :height="dimChartHeight(d)">
               <template #table>
                 <a-table :columns="dimTableColumns(d)" :data-source="dimensionRows[d.key] || []"
                   size="small" row-key="dimensionLabel" :pagination="{ pageSize: 10 }" />
@@ -93,10 +93,10 @@
         <section class="report-section">
           <div class="section-title">员工理论数据（按项目负责人/执行人员，基于合作跟踪记录现算）</div>
           <div class="chart-grid">
-            <ReportChartCard title="项目负责人 · 项目毛利排名" :option="dimBarOption(findDef('gross_manager'))" height="300px" />
-            <ReportChartCard title="项目负责人 · 公司利润排名" :option="dimBarOption(findDef('company_manager'))" height="300px" />
-            <ReportChartCard title="项目负责人 · 提成排名" :option="buildBarOption(commissionRows, 'amount', currencyPrefix)" height="300px" />
-            <ReportChartCard title="项目负责人/执行人员 · 内部执行成本" :option="buildBarOption(executionRows, 'amount', currencyPrefix)" height="300px" />
+            <ReportChartCard title="项目负责人 · 项目毛利排名" :option="dimBarOption(findDef('gross_manager'))" :height="dimChartHeight(findDef('gross_manager'))" />
+            <ReportChartCard title="项目负责人 · 公司利润排名" :option="dimBarOption(findDef('company_manager'))" :height="dimChartHeight(findDef('company_manager'))" />
+            <ReportChartCard title="项目负责人 · 提成排名" :option="buildBarOption(commissionRows, 'amount', currencyPrefix)" :height="rowsChartHeight(commissionRows)" />
+            <ReportChartCard title="项目负责人/执行人员 · 内部执行成本" :option="buildBarOption(executionRows, 'amount', currencyPrefix)" :height="rowsChartHeight(executionRows)" />
           </div>
         </section>
 
@@ -119,7 +119,7 @@ import dayjs from 'dayjs'
 import { dashboardApi, systemApi } from '../../api/index'
 import { runLimited, warmUpBackend } from './report/useReportFetch'
 import { pctChange } from './report/deltaMath'
-import { buildBarOption, buildLineOption, buildColumnOption } from './report/chartOptions'
+import { buildBarOption, buildLineOption, buildColumnOption, barChartHeight } from './report/chartOptions'
 import { KPI_METRICS, TREND_METRICS, CHART_DEFS, CHART_GROUP_NAMES, PARETO_DEFS, PIVOT_DEFS, findChartDef } from './report/reportDefs'
 import ReportChartCard from './report/ReportChartCard.vue'
 import ParetoChartCard from './report/ParetoChartCard.vue'
@@ -263,6 +263,14 @@ function quarterColumnOption(m) {
 function dimBarOption(d) {
   if (!d) return {}
   return buildBarOption(dimensionRows[d.key] || [], d.field, currencyPrefix.value, { isCount: !!d.isCount })
+}
+// 类别（品牌方/项目负责人这些）一多，固定高度会导致类目名称/数值挤在一起，改成按实际类别
+// 数量（截断到跟 buildBarOption 一致的 15 条上限）动态算高度
+function dimChartHeight(d) {
+  return barChartHeight(Math.min((dimensionRows[d?.key] || []).length, 15) || 1)
+}
+function rowsChartHeight(rows) {
+  return barChartHeight(Math.min(rows.length, 15) || 1)
 }
 function dimTableColumns(d) {
   if (d.isCount) {

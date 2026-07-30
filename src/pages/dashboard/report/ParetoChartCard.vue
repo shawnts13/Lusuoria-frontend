@@ -16,7 +16,7 @@
     <ReportChartCard
       :title="`${title}（原始金额，降序，前 ${cappedRows.length} 项）`"
       :option="barOption"
-      height="280px"
+      :height="barChartHeightPx"
     />
     <ReportChartCard
       :title="`${title} · 累计占比`"
@@ -31,6 +31,7 @@
 import { computed } from 'vue'
 import ReportChartCard from './ReportChartCard.vue'
 import { topNShare, cumulativeShareCurve } from './deltaMath'
+import { barChartHeight } from './chartOptions'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -66,10 +67,11 @@ const barOption = computed(() => {
     grid: { left: 120, right: 24, top: 10, bottom: 24 },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: fmt },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: cats },
+    yAxis: { type: 'category', data: cats, axisLabel: { interval: 0 } },
     series: [{ type: 'bar', data: vals, itemStyle: { color: '#2a78d6' }, barMaxWidth: 22 }]
   }
 })
+const barChartHeightPx = computed(() => barChartHeight(cappedRows.value.length || 1))
 
 const lineOption = computed(() => {
   const cats = cappedRows.value.map(r => r.dimensionLabel)

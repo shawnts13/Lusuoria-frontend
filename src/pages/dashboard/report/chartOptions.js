@@ -1,5 +1,15 @@
 // 年度报告/双月对比共用的 ECharts option 构建函数（2026-07 新增），避免两个页面各写一份。
 
+/**
+ * 横向柱状图（品牌方/项目负责人这类维度分类很多的场景）按固定高度渲染时，类别一多每一类
+ * 分到的行高就会被压缩，类目名称/数值会挤在一起甚至互相压住（2026-07-31 Shawn 反馈）。
+ * 改成按类别数量动态算高度，保证每一类至少有 rowHeight 像素，不再是所有图表死死用同一个
+ * 固定高度。
+ */
+export function barChartHeight(categoryCount, { rowHeight = 32, minHeight = 240, chrome = 70 } = {}) {
+  return Math.max(minHeight, categoryCount * rowHeight + chrome) + 'px'
+}
+
 function fmtFactory(prefix, isCount) {
   return (v) => {
     const n = Number(v) || 0
@@ -23,7 +33,7 @@ export function buildBarOption(rows, field, currencyPrefix, { maxCategories = 15
     grid: { left: 120, right: 24, top: 10, bottom: 24 },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: fmt },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: cats },
+    yAxis: { type: 'category', data: cats, axisLabel: { interval: 0 } },
     series: [{ type: 'bar', data: vals, itemStyle: { color: '#2a78d6' }, barMaxWidth: 22 }]
   }
 }
@@ -70,7 +80,7 @@ export function buildGroupedBarOption(rowsA, rowsB, labelA, labelB, field, curre
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: fmt },
     legend: { top: 0, data: [labelA, labelB] },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: display },
+    yAxis: { type: 'category', data: display, axisLabel: { interval: 0 } },
     series: [
       { name: labelA, type: 'bar', data: display.map(l => mapA.get(l) || 0), itemStyle: { color: '#2a78d6' } },
       { name: labelB, type: 'bar', data: display.map(l => mapB.get(l) || 0), itemStyle: { color: '#fa8c16' } }
@@ -93,7 +103,7 @@ export function buildDivergingBarOption(rowsA, rowsB, field, currencyPrefix, { m
     grid: { left: 120, right: 24, top: 10, bottom: 24 },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: fmt },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: display.map(d => d.label) },
+    yAxis: { type: 'category', data: display.map(d => d.label), axisLabel: { interval: 0 } },
     series: [{
       type: 'bar',
       data: display.map(d => ({

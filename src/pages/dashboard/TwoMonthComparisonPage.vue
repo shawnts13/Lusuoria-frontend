@@ -38,8 +38,8 @@
           <div class="section-title">{{ group.name }}</div>
           <div class="chart-grid">
             <template v-for="d in group.defs" :key="d.key">
-              <ReportChartCard :title="`${group.name} · ${d.title}（${monthA} vs ${monthB}）`" :option="groupedOption(d)" height="300px" />
-              <ReportChartCard :title="`${group.name} · ${d.title} · 涨跌幅`" :option="divergingOption(d)" height="300px" />
+              <ReportChartCard :title="`${group.name} · ${d.title}（${monthA} vs ${monthB}）`" :option="groupedOption(d)" :height="pairChartHeight(d)" />
+              <ReportChartCard :title="`${group.name} · ${d.title} · 涨跌幅`" :option="divergingOption(d)" :height="pairChartHeight(d)" />
             </template>
           </div>
         </section>
@@ -57,12 +57,12 @@
         <section class="report-section">
           <div class="section-title">员工理论数据（按项目负责人/执行人员，基于合作跟踪记录现算）</div>
           <div class="chart-grid">
-            <ReportChartCard title="项目负责人 · 项目毛利排名对比" :option="groupedOption(findDef('gross_manager'))" height="300px" />
-            <ReportChartCard title="项目负责人 · 公司利润排名对比" :option="groupedOption(findDef('company_manager'))" height="300px" />
+            <ReportChartCard title="项目负责人 · 项目毛利排名对比" :option="groupedOption(findDef('gross_manager'))" :height="pairChartHeight(findDef('gross_manager'))" />
+            <ReportChartCard title="项目负责人 · 公司利润排名对比" :option="groupedOption(findDef('company_manager'))" :height="pairChartHeight(findDef('company_manager'))" />
             <ReportChartCard title="项目负责人 · 提成排名对比"
-              :option="buildGroupedBarOption(commissionRowsA, commissionRowsB, monthA, monthB, 'amount', currencyPrefix)" height="300px" />
+              :option="buildGroupedBarOption(commissionRowsA, commissionRowsB, monthA, monthB, 'amount', currencyPrefix)" :height="rowsPairChartHeight(commissionRowsA, commissionRowsB)" />
             <ReportChartCard title="项目负责人/执行人员 · 内部执行成本对比"
-              :option="buildGroupedBarOption(executionRowsA, executionRowsB, monthA, monthB, 'amount', currencyPrefix)" height="300px" />
+              :option="buildGroupedBarOption(executionRowsA, executionRowsB, monthA, monthB, 'amount', currencyPrefix)" :height="rowsPairChartHeight(executionRowsA, executionRowsB)" />
           </div>
         </section>
       </template>
@@ -78,7 +78,7 @@ import dayjs from 'dayjs'
 import { dashboardApi, systemApi } from '../../api/index'
 import { runLimited, warmUpBackend } from './report/useReportFetch'
 import { delta, pctChange } from './report/deltaMath'
-import { buildGroupedBarOption, buildDivergingBarOption } from './report/chartOptions'
+import { buildGroupedBarOption, buildDivergingBarOption, barChartHeight } from './report/chartOptions'
 import { KPI_METRICS, CHART_DEFS, CHART_GROUP_NAMES, PARETO_DEFS, findChartDef } from './report/reportDefs'
 import ReportChartCard from './report/ReportChartCard.vue'
 import ParetoChartCard from './report/ParetoChartCard.vue'
@@ -197,6 +197,20 @@ function groupedOption(d) {
 }
 function divergingOption(d) {
   return buildDivergingBarOption(dimensionRowsA[d.key] || [], dimensionRowsB[d.key] || [], d.field, currencyPrefix.value, { isCount: !!d.isCount })
+}
+// 类别（品牌方/项目负责人这些）一多，固定高度会导致类目名称/数值挤在一起，改成按两个月
+// 类别并集数量（截断到跟 buildGroupedBarOption/buildDivergingBarOption 一致的 15 条上限）
+// 动态算高度
+function unionCategoryCount(rowsA, rowsB) {
+  const labels = new Set([...rowsA.map(r => r.dimensionLabel), ...rowsB.map(r => r.dimensionLabel)])
+  return Math.min(labels.size, 15) || 1
+}
+function pairChartHeight(d) {
+  if (!d) return barChartHeight(1)
+  return barChartHeight(unionCategoryCount(dimensionRowsA[d.key] || [], dimensionRowsB[d.key] || []))
+}
+function rowsPairChartHeight(rowsA, rowsB) {
+  return barChartHeight(unionCategoryCount(rowsA, rowsB))
 }
 
 function printReport() {
