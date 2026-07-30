@@ -136,9 +136,6 @@
             <a-button type="dashed" size="small" @click="form.links.push('')">+ 添加链接</a-button>
           </a-form-item>
 
-          <!-- "合作案例链接"手动维护的入口 2026-07 起去掉了：红人管理列表页的"已完结项目"
-               已经是从红人合作跟踪数据自动算出来的"客户已结算"记录，不再需要手动维护一份案例链接 -->
-
           <a-form-item label="已签署合同" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
             <template v-if="props.record?.id">
               <template v-if="!hasAnyAnnualBrand">
@@ -281,7 +278,7 @@ const form = reactive({
   accountName: '',
   brandTeamPairs: [], countryMarkets: [], platforms: [],
   domains: [],
-  followerCount: null, links: [], casesLinks: [],
+  followerCount: null, links: [],
   email: '',
   contacts: EMPTY_CONTACTS(),
   contactStatus: 'UNDEVELOPED',
@@ -376,7 +373,6 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       domains:        splitMulti(rec.domains),
       followerCount:  rec.followerCount  || null,
       links:          splitMulti(rec.links),
-      casesLinks:     splitMulti(rec.casesLinks),
       email:          rec.email          || '',
       contacts:       contactsToObj(rec.contacts),
       contactStatus:  rec.contactStatus  || 'UNDEVELOPED',
@@ -390,7 +386,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
     Object.assign(form, {
       id:null, influencerType:'OVERSEAS_INFLUENCER', accountName:'',
       brandTeamPairs:[], countryMarkets:[], platforms:[], domains:[],
-      followerCount:null, links:[], casesLinks:[],
+      followerCount:null, links:[],
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', followerPerson:null,
       influencerCost:'', notes:'',
@@ -444,7 +440,6 @@ async function handleSave() {
       domains:        form.domains,
       followerCount:  form.followerCount,
       links:          form.links.filter(l => l.includes('http')),
-      casesLinks:     form.casesLinks.filter(l => l.includes('http')),
       email:          form.email,
       contacts:       contactsToJson(form.contacts),
       contactStatus:  form.contactStatus,
