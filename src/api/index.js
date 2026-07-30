@@ -250,7 +250,17 @@ export const dashboardApi = {
     http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency } }),
 
   drilldownExtraBonus: (startMonth, endMonth, currency) =>
-    http.get('/api/dashboard/drilldown/extra-bonus', { params: { startMonth, endMonth, currency } })
+    http.get('/api/dashboard/drilldown/extra-bonus', { params: { startMonth, endMonth, currency } }),
+
+  // 2026-07 新增：年度报告 / 双月对比 / 业务分析
+  rangeSummary: (startMonth, endMonth, currency) =>
+    http.get('/api/dashboard/range-summary', { params: { startMonth, endMonth, currency } }),
+
+  pivot: (startMonth, endMonth, currency, rowDimension, colDimension) =>
+    http.get('/api/dashboard/pivot', { params: { startMonth, endMonth, currency, rowDimension, colDimension } }),
+
+  managerTrend: (startMonth, endMonth, currency, role) =>
+    http.get('/api/dashboard/manager-trend', { params: { startMonth, endMonth, currency, role } })
 }
 
 // ===== 工资单 =====

@@ -18,6 +18,18 @@ const routes = [
         component: () => import('./pages/dashboard/DashboardPage.vue'),
         meta: { financialOnly: true }       // 仅 ADMIN / AUDITOR
       },
+      {
+        path: 'dashboard/annual-report',
+        name: 'AnnualReport',
+        component: () => import('./pages/dashboard/AnnualReportPage.vue'),
+        meta: { financialOnly: true }
+      },
+      {
+        path: 'dashboard/comparison',
+        name: 'TwoMonthComparison',
+        component: () => import('./pages/dashboard/TwoMonthComparisonPage.vue'),
+        meta: { financialOnly: true }
+      },
       { path: 'requirements', name: 'Requirements', component: () => import('./pages/requirement/RequirementListPage.vue') },
       { path: 'collaborations', name: 'Collaborations', component: () => import('./pages/collaboration/CollaborationListPage.vue') },
       { path: 'import-batches', name: 'ImportBatches', component: () => import('./pages/collaboration/ImportBatchListPage.vue') },

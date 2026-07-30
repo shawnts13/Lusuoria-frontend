@@ -135,3 +135,24 @@ body {
   font-size: 13px;
   margin-top: 8px;
 }
+
+/* 2026-07 新增：年度报告/双月对比页面的"导出PDF"用浏览器原生打印（见两个页面自身的注释），
+   打印时隐藏侧边栏/顶部导航和任何标了 .no-print 的操作控件，只保留报告正文内容 */
+.no-print {
+  display: initial;
+}
+@media print {
+  .ant-layout-sider,
+  .site-header,
+  .no-print {
+    display: none !important;
+  }
+  .ant-layout-content.main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

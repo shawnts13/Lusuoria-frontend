@@ -4,6 +4,8 @@
     <div class="page-header">
       <span class="page-title">数据看板</span>
       <a-space :size="16">
+        <router-link to="/dashboard/annual-report">年度报告 ›</router-link>
+        <router-link to="/dashboard/comparison">双月对比 ›</router-link>
         <a-date-picker
           v-model:value="selectedMonth"
           picker="month"
@@ -255,12 +257,15 @@ const hasExtraBonus = computed(() => {
   return !isNaN(v) && v !== 0
 })
 
-// 2026-07 起去掉"按红人团队"（红人成本/项目毛利/公司利润这三个下钻共用这份维度列表）
+// 2026-07 起去掉"按红人团队"（红人成本/项目毛利/公司利润这三个下钻共用这份维度列表）；
+// 同一批新增"按服务国家/市场""按合作平台"（2026-07 年度报告功能顺带加到现有单月下钻弹窗）
 const dimensionOptions = [
-  { value: 'brand',      label: '按品牌方' },
-  { value: 'brand_team', label: '按品牌方/红人团队' },
-  { value: 'account',    label: '按红人账号' },
-  { value: 'type',       label: '按红人类型' }
+  { value: 'brand',         label: '按品牌方' },
+  { value: 'brand_team',    label: '按品牌方/红人团队' },
+  { value: 'account',       label: '按红人账号' },
+  { value: 'type',          label: '按红人类型' },
+  { value: 'countryMarket', label: '按服务国家/市场' },
+  { value: 'platform',      label: '按合作平台' }
 ]
 // 项目毛利/公司利润专用：在通用维度基础上追加"按项目负责人"，不影响红人成本明细的可选维度
 const dimensionOptionsWithManager = [
@@ -269,9 +274,11 @@ const dimensionOptionsWithManager = [
 ]
 
 const clientPriceDimensionOptions = [
-  { value: 'brand',       label: '按品牌方' },
-  { value: 'brand_team',  label: '按品牌方/红人团队' },
-  { value: 'manager',     label: '按项目负责人' }
+  { value: 'brand',         label: '按品牌方' },
+  { value: 'brand_team',    label: '按品牌方/红人团队' },
+  { value: 'manager',       label: '按项目负责人' },
+  { value: 'countryMarket', label: '按服务国家/市场' },
+  { value: 'platform',      label: '按合作平台' }
 ]
 
 const executionCostDimensionOptions = [
@@ -280,11 +287,14 @@ const executionCostDimensionOptions = [
   { value: 'manager_brand_team', label: '按项目负责人/品牌方/红人团队' }
 ]
 
-// 2026-07 起："按品牌方"排最前面，去掉"按项目视频发布时间"
+// 2026-07 起："按品牌方"排最前面，去掉"按项目视频发布时间"；同一批新增执行人员/国家市场/合作平台
 const videoDimensionOptions = [
-  { value: 'brand',      label: '按品牌方' },
-  { value: 'brand_team', label: '按品牌方/红人团队' },
-  { value: 'manager',    label: '按项目负责人' }
+  { value: 'brand',         label: '按品牌方' },
+  { value: 'brand_team',    label: '按品牌方/红人团队' },
+  { value: 'manager',       label: '按项目负责人' },
+  { value: 'executor',      label: '按执行人员' },
+  { value: 'countryMarket', label: '按服务国家/市场' },
+  { value: 'platform',      label: '按合作平台' }
 ]
 
 function openDrilldown(metric) {
