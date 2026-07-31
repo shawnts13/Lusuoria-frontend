@@ -133,6 +133,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
+import dayjs from 'dayjs'
 import { paymentApi, exchangeRateApi, brandApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
 import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
@@ -227,6 +228,22 @@ const brandCycleHint = computed(() => {
   }
   return ''
 })
+
+// 新建时，选了对账日期、且品牌方是"月结"（有固定的对账日后N天）时，自动把"预计付款日"
+// 默认填成"对账日期+N天"，用户仍然可以在这基础上手动改（之前一直没做这个自动填充，是个bug）。
+// 只在新建态生效——编辑已有记录时 reconcileDate 从 rec 带入也会触发这个 watch，
+// 不能因此覆盖掉已经保存好的 expectedPaymentDate。"按红人成本阈值分档"这种周期类型
+// 取决于具体勾选的红人视频项目成本，选日期这一步还不知道，不在这里自动填。
+// 两个字段（对账日期/品牌方）不管谁先填，只要凑齐了都要试一次自动填充，所以两边都要 watch
+function tryAutoFillExpectedPaymentDate() {
+  if (form.id || !form.reconcileDate) return
+  const brand = props.brands.find(b => b.id === form.brandId)
+  if (brand?.paymentCycleType === 'MONTH_END' && brand.daysAfterMonthEnd != null) {
+    form.expectedPaymentDate = dayjs(form.reconcileDate).add(brand.daysAfterMonthEnd, 'day').format('YYYY-MM-DD')
+  }
+}
+watch(() => form.reconcileDate, tryAutoFillExpectedPaymentDate)
+watch(() => form.brandId, tryAutoFillExpectedPaymentDate)
 
 // 付款状态/实际付款日这两个字段只在"新建"表单里出现（编辑态用"状态流转"改），
 // 编辑态时 form.paymentStatus/actualPaymentDate 只是从记录带过来的展示用残留值，

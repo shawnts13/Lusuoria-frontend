@@ -40,6 +40,15 @@
         </p>
         <a-textarea v-model:value="reason" :rows="3" placeholder="请说明原因" />
       </a-form-item>
+      <a-form-item label="备注" v-if="progress === 'DELAYED'" required>
+        <p v-if="record?.notes" style="color:#595959;font-size:13px;margin-bottom:8px">
+          当前已填备注：{{ record.notes }}
+        </p>
+        <a-textarea v-model:value="notes" :rows="3" placeholder="请填写备注" />
+      </a-form-item>
+      <a-form-item label="客户方付款批次单号" v-if="progress === 'SETTLED' && authStore.employeeRole === '财务'" required>
+        <a-input v-model:value="clientPaymentBatch" placeholder="请填写客户方付款批次单号" />
+      </a-form-item>
     </a-form>
   </a-modal>
 </template>
@@ -70,6 +79,8 @@ function qualifies(v) { return !!v && QUALIFYING_PROGRESS.includes(v) }
 
 const progress = ref(null)
 const reason = ref('')
+const notes = ref('')
+const clientPaymentBatch = ref('')
 const saving = ref(false)
 
 // 弹窗打开那一刻的原始值，用来判断这次改动算不算"倒退"（不随下面 progress 的实时编辑而变化，
@@ -81,6 +92,9 @@ watch(() => props.visible, v => {
   if (v && props.record) {
     progress.value = props.record.progress || null
     reason.value = ''
+    // 默认带入当前已有的值，用户可以直接沿用也可以改——不是每次都要求从空白重填
+    notes.value = props.record.notes || ''
+    clientPaymentBatch.value = props.record.clientPaymentBatch || ''
     original.progress = props.record.progress || null
     original.paymentProgress = props.record.influencerPaymentProgress || null
   }
@@ -113,9 +127,12 @@ function isBlockedByMissingPublishInfo(optionValue) {
 }
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
-// 这次要改成不符合条件的另一个状态，就是"倒退"，需要走审核
+// 这次要改成不符合条件的另一个状态，就是"倒退"，需要走审核。
+// "折损"永远不算倒退（2026-07 修复，跟后端 isRollback 的排除条件保持一致）——
+// 折损代表记录彻底作废，走下面单独的"备注必填、直接生效"分支，不需要审核
 const isRollback = computed(() =>
-  !!original.paymentProgress
+  progress.value !== 'DELAYED'
+  && !!original.paymentProgress
   && qualifies(original.progress)
   && !!progress.value
   && !qualifies(progress.value)
@@ -129,11 +146,22 @@ async function handleSave() {
     message.warning('请填写倒退原因')
     return
   }
+  if (progress.value === 'DELAYED' && !notes.value?.trim()) {
+    message.warning('请填写备注')
+    return
+  }
+  const needsPaymentBatch = progress.value === 'SETTLED' && authStore.employeeRole === '财务'
+  if (needsPaymentBatch && !clientPaymentBatch.value?.trim()) {
+    message.warning('请填写客户方付款批次单号')
+    return
+  }
   saving.value = true
   try {
     const res = await collaborationApi.updateStatus(props.record.id, {
       progress: progress.value,
-      reason: isRollback.value ? reason.value.trim() : null
+      reason: isRollback.value ? reason.value.trim() : null,
+      notes: progress.value === 'DELAYED' ? notes.value.trim() : null,
+      clientPaymentBatch: needsPaymentBatch ? clientPaymentBatch.value.trim() : null
     })
     if (res.data?.pendingApproval) {
       message.success('已提交审核，待管理员同意后生效')

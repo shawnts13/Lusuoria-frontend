@@ -375,7 +375,7 @@ async function handleParseContent() {
       form.items.push({
         tempId: ++itemSeq,
         id: null,
-        videoType: null,
+        videoType: item.videoType || null,
         platform: item.platform || [],
         videoCount: item.videoCount,
         clientUnitPrice: item.clientUnitPrice,
@@ -383,7 +383,10 @@ async function handleParseContent() {
         fulfilledCount: 0
       })
     }
-    message.success(`已识别红人「${data.accountName}」，请手动选择识别出的条目的项目视频类型`)
+    // 项目视频类型现在也会尝试从文本里识别（要求原文精确写了"视频类型：xxx"/"项目视频类型：xxx"），
+    // 没识别出来的条目才需要手动选，提示语按实际情况区分，不然明明识别出来了还提示"请手动选择"会显得矛盾
+    const missingVideoType = (data.items || []).some(i => !i.videoType)
+    message.success(`已识别红人「${data.accountName}」${missingVideoType ? '，有条目未识别出项目视频类型，请手动选择' : ''}`)
   } catch {
     // 后端已返回具体报错文案，全局错误提示已经弹出，这里不用重复处理
   } finally {
