@@ -78,7 +78,7 @@
         <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
       <a-date-picker v-model:value="filters.videoMonthVal" picker="month"
-        format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布月份" style="width:140px"
+        format="YYYYMM" value-format="YYYYMM" placeholder="视频发布月份" style="width:140px"
         @change="onVideoMonthChange" />
       <a-range-picker v-model:value="filters.videoDateRange" value-format="YYYY-MM-DD"
         :placeholder="['视频发布开始日期', '视频发布结束日期']" style="width:240px"
