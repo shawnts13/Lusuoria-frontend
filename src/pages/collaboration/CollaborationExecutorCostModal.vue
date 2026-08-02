@@ -25,8 +25,17 @@
           <a-form-item label="内部执行成本（元）">
             <a-input-number v-model:value="amount" :min="0" :precision="2" style="width:100%" />
           </a-form-item>
-          <div v-if="alreadySet" style="font-size:12px; color:#595959">
-            以上是这条记录当前已保存的金额，如需调整可以直接修改后再保存。
+          <!-- 已保存金额 vs 文本框里目前计划设置的金额，两者分开展示，改了之后一眼能看出差异
+               （Shawn 反馈：之前只在说明文字里提过一次已保存金额，改了文本框之后就分不清哪个是
+               原值、哪个是准备保存的新值了） -->
+          <div v-if="alreadySet" style="font-size:12px; color:#262626; margin-bottom:4px">
+            之前已设置：<b>¥{{ fmtAmount(savedAmount) }}</b>
+            <template v-if="amountChanged">
+              <span style="color:#8c8c8c"> → </span>
+              <b style="color:#d4380d">¥{{ fmtAmount(amount) }}</b>
+              <span style="color:#d4380d">（保存后会覆盖为这个新值）</span>
+            </template>
+            <span v-else style="color:#595959">（如需调整可以直接修改后再保存）</span>
           </div>
           <div v-else-if="rateBasedSuggestion" style="font-size:12px; color:#595959">
             以上是根据该执行人员在员工管理里维护的费率档位自动算出的建议金额，可以手动修改后再保存。
@@ -64,10 +73,22 @@ const amount = ref(null)
 const breakdown = ref('')
 const rateBasedSuggestion = ref(false)
 const alreadySet = ref(false)
+// 已保存金额的快照，跟 amount 分开存——amount 会随用户编辑文本框实时变化，savedAmount 保持
+// 不变，用来跟 amount 对比展示"之前已设置" vs "目前计划设置"这两个值的差异
+const savedAmount = ref(null)
 const saving = ref(false)
 const loadingSuggestion = ref(false)
 const selectedExecutorId = ref(null)
 const notApplicable = ref(false)
+
+const amountChanged = computed(() =>
+  alreadySet.value && savedAmount.value != null
+  && Number(amount.value) !== Number(savedAmount.value))
+
+function fmtAmount(v) {
+  if (v == null || v === '') return '—'
+  return parseFloat(v).toFixed(2)
+}
 
 const effectiveExecutorId = computed(() => props.record?.executorId || selectedExecutorId.value)
 
@@ -85,6 +106,9 @@ async function loadSuggestion() {
     breakdown.value = res.data.breakdown
     rateBasedSuggestion.value = !!res.data.rateBasedSuggestion
     alreadySet.value = !!res.data.alreadySet
+    // alreadySet 时后端返回的 suggestedAmount 就是当前已保存的金额，存一份快照，
+    // 不随用户后续编辑 amount 变化
+    savedAmount.value = alreadySet.value ? res.data.suggestedAmount : null
   } finally {
     loadingSuggestion.value = false
   }
@@ -96,6 +120,7 @@ watch(() => props.visible, v => {
     breakdown.value = ''
     rateBasedSuggestion.value = false
     alreadySet.value = false
+    savedAmount.value = null
     selectedExecutorId.value = null
     notApplicable.value = false
     loadSuggestion()
