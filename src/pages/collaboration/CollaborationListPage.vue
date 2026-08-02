@@ -79,7 +79,10 @@
       </a-select>
       <a-date-picker v-model:value="filters.videoMonthVal" picker="month"
         format="YYYYMM" value-format="YYYYMM" placeholder="项目视频发布月份" style="width:140px"
-        @change="v => { filters.videoMonth = v; loadData() }" />
+        @change="onVideoMonthChange" />
+      <a-range-picker v-model:value="filters.videoDateRange" value-format="YYYY-MM-DD"
+        :placeholder="['视频发布开始日期', '视频发布结束日期']" style="width:240px"
+        @change="onVideoDateRangeChange" />
       <a-input v-model:value="filters.clientOrderId" placeholder="客户方的项目订单" style="width:150px"
         allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.internalRequirementNo" placeholder="内部需求编号" style="width:180px"
@@ -359,6 +362,8 @@ const filters = reactive({
   progress: route.query.progress || undefined,
   influencerPaymentProgress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
+  // 视频发布日期区间跟视频发布月份互斥（选一个会清空另一个），见 onVideoMonthChange/onVideoDateRangeChange
+  videoDateRange: undefined,
   internalProjectNo: route.query.internalProjectNo || undefined,
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined,
@@ -458,6 +463,20 @@ function getTeamName(teamId) {
   const t = teams.value.find(t => t.id === teamId)
   return t ? t.name : ''
 }
+// 视频发布月份/视频发布日期区间互斥：选了一个就清空另一个，避免同时生效时用户设了矛盾的
+// 区间反而筛出0条、自己却搞不清楚是为什么（跟数据看板那边的月份/日期互斥是同一个思路）
+function onVideoMonthChange(v) {
+  filters.videoMonth = v
+  if (v) filters.videoDateRange = undefined
+  loadData()
+}
+function onVideoDateRangeChange(v) {
+  if (v && v.length === 2) {
+    filters.videoMonth = undefined
+    filters.videoMonthVal = undefined
+  }
+  loadData()
+}
 function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
@@ -476,6 +495,8 @@ async function loadData() {
       influencerPaymentProgress: filters.influencerPaymentProgress,
       videoType:          filters.videoType,
       videoMonth:         filters.videoMonth,
+      videoDateStart:     filters.videoDateRange?.[0],
+      videoDateEnd:       filters.videoDateRange?.[1],
       internalProjectNo:  filters.internalProjectNo?.trim() || undefined,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
@@ -510,7 +531,7 @@ function resetFilters() {
   Object.assign(filters, {
     brandId:undefined, teamId:undefined, countryMarket:undefined,
     accountName:undefined, influencerId:undefined, platform:undefined, progress:undefined, influencerPaymentProgress:undefined, videoType:undefined,
-    videoMonth:undefined, videoMonthVal:undefined, internalProjectNo:undefined,
+    videoMonth:undefined, videoMonthVal:undefined, videoDateRange:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined,
     onlyMyResponsibility: false, onlyIncomplete: false
@@ -573,7 +594,16 @@ async function handleDeleteConfirm() {
     loadData()
   } finally { deleting.value = false }
 }
-function handleExport() { collaborationApi.exportExcel(filters) }
+function handleExport() {
+  // filters.videoDateRange 是个数组，后端认的是 videoDateStart/videoDateEnd 两个独立参数，
+  // 不能直接把整个 filters 对象透传（exportExcel 内部会把 videoDateRange 数组 toString 成
+  // 逗号拼接的字符串，后端不认识这个参数名，日期区间筛选就不会生效）
+  collaborationApi.exportExcel({
+    ...filters,
+    videoDateStart: filters.videoDateRange?.[0],
+    videoDateEnd: filters.videoDateRange?.[1]
+  })
+}
 
 async function handleRecomputeProfits() {
   recomputing.value = true

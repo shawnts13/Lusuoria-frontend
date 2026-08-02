@@ -231,33 +231,52 @@ export const importBatchApi = {
 // extraConfig：2026-07 新增，年度报告/双月对比批量拉取时传 { silent: true }，单个请求失败/超时
 // 不弹全局 Toast（见 src/api/http.js 的 silent 处理），避免 Render 免费实例冷启动时刷屏报错
 export const dashboardApi = {
-  summary:      (yearMonth, currency, extraConfig = {}) =>
-    http.get('/api/dashboard/summary', { params: { yearMonth, currency }, ...extraConfig }),
+  // dateRange（[startDate, endDate]，'YYYY-MM-DD'，2026-08 新增"视频发布日期"筛选用）传了就按
+  // 日期区间查，不传按 yearMonth/startMonth+endMonth 查——跟后端 /summary 等接口"二选一"的
+  // 约定一致，两边都不传时后端会报错，调用方要保证至少传一种
+  summary:      (yearMonth, currency, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/summary', {
+      params: { yearMonth, currency, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
   exchangeRate: (yearMonth)           => http.get('/api/dashboard/exchange-rate', { params: { yearMonth } }),
 
-  drilldownVideoCount: (startMonth, endMonth, dimension, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/video-count', { params: { startMonth, endMonth, dimension }, ...extraConfig }),
+  drilldownVideoCount: (startMonth, endMonth, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/video-count', {
+      params: { startMonth, endMonth, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
-  drilldownClientPrice: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/client-price', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
+  drilldownClientPrice: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/client-price', {
+      params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
-  drilldownInfluencerCost: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/influencer-cost', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
+  drilldownInfluencerCost: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/influencer-cost', {
+      params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
-  drilldownGrossProfit: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/gross-profit', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
+  drilldownGrossProfit: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/gross-profit', {
+      params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
-  drilldownCompanyProfit: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/company-profit', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
+  drilldownCompanyProfit: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/company-profit', {
+      params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
-  drilldownExecutionCost: (startMonth, endMonth, currency, dimension, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/execution-cost', { params: { startMonth, endMonth, currency, dimension }, ...extraConfig }),
+  drilldownExecutionCost: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/execution-cost', {
+      params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
   drilldownOtherStaffCost: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/other-staff-cost', { params: { startMonth, endMonth, currency } }),
 
-  drilldownCommission: (startMonth, endMonth, currency, extraConfig = {}) =>
-    http.get('/api/dashboard/drilldown/commission', { params: { startMonth, endMonth, currency }, ...extraConfig }),
+  drilldownCommission: (startMonth, endMonth, currency, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/commission', {
+      params: { startMonth, endMonth, currency, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
 
   drilldownExtraBonus: (startMonth, endMonth, currency) =>
     http.get('/api/dashboard/drilldown/extra-bonus', { params: { startMonth, endMonth, currency } }),

@@ -2,10 +2,18 @@
   <a-modal :open="visible" :title="title" width="640px" :footer="null" @cancel="close">
     <div class="drilldown-toolbar">
       <a-range-picker
+        v-if="!dateMode"
         v-model:value="monthRange"
         picker="month"
         format="YYYYMM"
         value-format="YYYYMM"
+        @change="reload"
+        style="width:240px"
+      />
+      <a-range-picker
+        v-else
+        v-model:value="dateRangeVal"
+        value-format="YYYY-MM-DD"
         @change="reload"
         style="width:240px"
       />
@@ -98,6 +106,16 @@ const props = defineProps({
   // 'video' | 'client-price' | 'influencer-cost' | 'gross-profit' | 'commission'
   metric: { type: String, required: true },
   defaultMonth: { type: String, default: '' },
+  // 主看板在"日期区间"模式下，"内部其他员工成本"/"奖金"这两个不支持按天筛选的下钻
+  // 默认要显示日期区间覆盖到的完整月份范围（不是只截一个月），传这个代替 defaultMonth
+  defaultMonthRange: { type: Array, default: null },
+  // "视频发布日期"筛选（2026-08 新增）：主看板页选了日期区间而不是月份时，dateMode=true，
+  // 弹窗改成显示精确到天的区间选择器，fetcher 的第5个参数也从 undefined 变成 [startDate,endDate]。
+  // 不是所有下钻都支持——"内部其他员工成本"/"奖金"这两个是按月设置的工资/奖金数据，日期区间
+  // 模式下由 DashboardPage.vue 的 fetcher 自己把日期区间换算成覆盖到的月份范围，
+  // 这个弹窗本身继续显示月份选择器（dateMode 传 false），不装作能精确到天
+  dateMode: { type: Boolean, default: false },
+  defaultDateRange: { type: Array, default: null },
   showCurrencyToggle: { type: Boolean, default: false },
   dimensionOptions: { type: Array, default: null }, // null = 不显示维度切换
   countLabel: { type: String, default: '笔数' }, // 计数列的标签文字，大部分是"笔数"，员工成本这类是"人数"
@@ -115,6 +133,7 @@ const currentDimensionLabel = computed(() => {
   return opt ? opt.label : ''
 })
 const monthRange = ref([props.defaultMonth, props.defaultMonth])
+const dateRangeVal = ref(props.defaultDateRange ? [...props.defaultDateRange] : [])
 
 const tablePagination = reactive({
   current: 1,
@@ -163,11 +182,17 @@ function fmtAmount(v) {
 }
 
 async function reload() {
-  if (!monthRange.value || monthRange.value.length !== 2) return
+  let start, end, dateRangeArg
+  if (props.dateMode) {
+    if (!dateRangeVal.value || dateRangeVal.value.length !== 2) return
+    dateRangeArg = dateRangeVal.value
+  } else {
+    if (!monthRange.value || monthRange.value.length !== 2) return
+    ;[start, end] = monthRange.value
+  }
   loading.value = true
   try {
-    const [start, end] = monthRange.value
-    const res = await props.fetcher(start, end, currency.value, dimension.value)
+    const res = await props.fetcher(start, end, currency.value, dimension.value, dateRangeArg)
     rows.value = res.data?.rows || []
     exchangeRateInfo.value = res.data?.exchangeRateInfo || null
     tablePagination.current = 1
@@ -180,7 +205,8 @@ async function reload() {
 
 watch(() => props.visible, (v) => {
   if (v) {
-    monthRange.value = [props.defaultMonth, props.defaultMonth]
+    monthRange.value = props.defaultMonthRange ? [...props.defaultMonthRange] : [props.defaultMonth, props.defaultMonth]
+    dateRangeVal.value = props.defaultDateRange ? [...props.defaultDateRange] : []
     currency.value = 'USD'
     if (props.dimensionOptions?.length) dimension.value = props.dimensionOptions[0].value
     tablePagination.current = 1

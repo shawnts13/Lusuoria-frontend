@@ -12,7 +12,13 @@
           format="YYYYMM"
           value-format="YYYYMM"
           placeholder="选择月份"
-          @change="loadSummary"
+          @change="onMonthChange"
+        />
+        <a-range-picker
+          v-model:value="selectedDateRange"
+          value-format="YYYY-MM-DD"
+          :placeholder="['视频发布开始日期', '视频发布结束日期']"
+          @change="onDateRangeChange"
         />
         <a-radio-group v-model:value="currency" button-style="solid" @change="loadSummary">
           <a-radio-button value="USD">USD</a-radio-button>
@@ -138,6 +144,8 @@
       title="视频项目数量明细"
       metric="video"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="false"
       :dimension-options="videoDimensionOptions"
       :fetcher="fetchVideoDrilldown"
@@ -149,6 +157,8 @@
       title="客户合作价格明细"
       metric="client-price"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="true"
       :dimension-options="clientPriceDimensionOptions"
       :fetcher="fetchClientPriceDrilldown"
@@ -160,6 +170,8 @@
       title="红人成本明细"
       metric="influencer-cost"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="true"
       :dimension-options="dimensionOptions"
       :fetcher="fetchInfluencerCostDrilldown"
@@ -171,6 +183,8 @@
       title="项目毛利明细"
       metric="gross-profit"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="true"
       :dimension-options="dimensionOptionsWithManager"
       :fetcher="fetchGrossProfitDrilldown"
@@ -182,6 +196,8 @@
       title="公司利润明细"
       metric="company-profit"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="true"
       :dimension-options="dimensionOptionsWithManager"
       :fetcher="fetchCompanyProfitDrilldown"
@@ -193,17 +209,21 @@
       title="内部执行人力成本明细"
       metric="execution-cost"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="true"
       :dimension-options="executionCostDimensionOptions"
       :fetcher="fetchExecutionCostDrilldown"
     />
 
-    <!-- 内部其他员工成本下钻：财务/IT后勤的固定月薪，按"员工角色-姓名"展示 -->
+    <!-- 内部其他员工成本下钻：财务/IT后勤的固定月薪，按"员工角色-姓名"展示。这两项是按月设置的
+         数据，不支持按天筛选，弹窗固定用月份区间选择器（不传 date-mode），日期区间模式下默认
+         显示区间覆盖到的完整月份范围 -->
     <DrilldownModal
       v-model:visible="modals.otherStaffCost"
       title="内部其他员工成本明细"
       metric="other-staff-cost"
-      :default-month="selectedMonth"
+      :default-month-range="payslipMetricMonthRange"
       :show-currency-toggle="true"
       :count-label="'人数'"
       :fetcher="fetchOtherStaffCostDrilldown"
@@ -215,16 +235,19 @@
       title="项目负责人提成明细"
       metric="commission"
       :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
       :show-currency-toggle="true"
       :fetcher="fetchCommissionDrilldown"
     />
 
-    <!-- 奖金下钻：仅员工维度，当月没有人设置奖金时卡片本身不显示，弹窗也就打不开 -->
+    <!-- 奖金下钻：仅员工维度，当月没有人设置奖金时卡片本身不显示，弹窗也就打不开。跟"内部其他
+         员工成本"一样是按月数据，不支持按天筛选，固定用月份区间选择器 -->
     <DrilldownModal
       v-model:visible="modals.extraBonus"
       title="奖金明细"
       metric="extra-bonus"
-      :default-month="selectedMonth"
+      :default-month-range="payslipMetricMonthRange"
       :show-currency-toggle="true"
       :count-label="'人数'"
       :fetcher="fetchExtraBonusDrilldown"
@@ -242,8 +265,34 @@ import DrilldownModal from './DrilldownModal.vue'
 const authStore = useAuthStore()
 const loading = ref(false)
 const selectedMonth = ref(dayjs().format('YYYYMM'))
+// "视频发布日期"区间筛选（2026-08 新增）：跟"月份"互斥，默认显示"当前月份"，选了日期区间就
+// 清空月份（反之亦然）。isDateMode 为 true 时，看板数字和所有下钻弹窗都改用日期区间查询
+const selectedDateRange = ref(undefined)
+const isDateMode = computed(() => !!(selectedDateRange.value && selectedDateRange.value.length === 2))
 const currency = ref('USD')
 const summary = ref({})
+
+function onMonthChange(v) {
+  selectedMonth.value = v
+  if (v) selectedDateRange.value = undefined
+  loadSummary()
+}
+function onDateRangeChange(v) {
+  if (v && v.length === 2) selectedMonth.value = undefined
+  loadSummary()
+}
+// "内部其他员工成本"/"奖金"这两个下钻是按月设置的工资/奖金数据，没有"某天的工资"这个概念，
+// 日期区间模式下把区间换算成覆盖到的月份范围（哪怕区间只覆盖某个月的几天，也按整月算），
+// 交给现有的月份区间下钻接口，不需要后端为这两个单独支持按天筛选
+function touchedMonthRange(dateRange) {
+  const toMonth = d => d.slice(0, 7).replace('-', '')
+  return [toMonth(dateRange[0]), toMonth(dateRange[1])]
+}
+// "内部其他员工成本"/"奖金"下钻弹窗用（这两个固定显示月份区间选择器，不管主看板是月份模式
+// 还是日期区间模式）：日期区间模式下默认显示区间覆盖到的完整月份范围，月份模式下就是当前选的这一个月
+const payslipMetricMonthRange = computed(() =>
+  isDateMode.value ? touchedMonthRange(selectedDateRange.value) : [selectedMonth.value, selectedMonth.value]
+)
 
 const modals = reactive({
   video: false, clientPrice: false, influencerCost: false,
@@ -306,10 +355,12 @@ function openDrilldown(metric) {
 }
 
 async function loadSummary() {
-  if (!selectedMonth.value) return
+  if (!isDateMode.value && !selectedMonth.value) return
   loading.value = true
   try {
-    const res = await dashboardApi.summary(selectedMonth.value, currency.value)
+    const res = isDateMode.value
+      ? await dashboardApi.summary(undefined, currency.value, selectedDateRange.value)
+      : await dashboardApi.summary(selectedMonth.value, currency.value)
     summary.value = res.data || {}
   } catch {
     summary.value = {}
@@ -326,30 +377,33 @@ function fmt(val) {
   return prefix + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// 下钻请求函数：统一签名 (startMonth, endMonth, currency, dimension) -> Promise
-function fetchVideoDrilldown(start, end, cur, dim) {
-  return dashboardApi.drilldownVideoCount(start, end, dim)
+// 下钻请求函数：统一签名 (startMonth, endMonth, currency, dimension, dateRange) -> Promise。
+// dateRange 只在主看板处于"日期区间"模式时才有值（[startDate,endDate]），月份模式下是 undefined
+function fetchVideoDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownVideoCount(start, end, dim, dateRange)
 }
-function fetchClientPriceDrilldown(start, end, cur, dim) {
-  return dashboardApi.drilldownClientPrice(start, end, cur, dim)
+function fetchClientPriceDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownClientPrice(start, end, cur, dim, dateRange)
 }
-function fetchInfluencerCostDrilldown(start, end, cur, dim) {
-  return dashboardApi.drilldownInfluencerCost(start, end, cur, dim)
+function fetchInfluencerCostDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownInfluencerCost(start, end, cur, dim, dateRange)
 }
-function fetchGrossProfitDrilldown(start, end, cur, dim) {
-  return dashboardApi.drilldownGrossProfit(start, end, cur, dim)
+function fetchGrossProfitDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownGrossProfit(start, end, cur, dim, dateRange)
 }
-function fetchCompanyProfitDrilldown(start, end, cur, dim) {
-  return dashboardApi.drilldownCompanyProfit(start, end, cur, dim)
+function fetchCompanyProfitDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownCompanyProfit(start, end, cur, dim, dateRange)
 }
-function fetchExecutionCostDrilldown(start, end, cur, dim) {
-  return dashboardApi.drilldownExecutionCost(start, end, cur, dim)
+function fetchExecutionCostDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownExecutionCost(start, end, cur, dim, dateRange)
 }
+// 这两个是按月设置的工资/奖金数据，不支持按天筛选——弹窗本身固定用月份区间选择器
+// （DrilldownModal 的 date-mode 没传给这两个实例），所以这里始终只会收到月份区间参数
 function fetchOtherStaffCostDrilldown(start, end, cur) {
   return dashboardApi.drilldownOtherStaffCost(start, end, cur)
 }
-function fetchCommissionDrilldown(start, end, cur) {
-  return dashboardApi.drilldownCommission(start, end, cur)
+function fetchCommissionDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownCommission(start, end, cur, dateRange)
 }
 function fetchExtraBonusDrilldown(start, end, cur) {
   return dashboardApi.drilldownExtraBonus(start, end, cur)
