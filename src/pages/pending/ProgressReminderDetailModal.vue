@@ -186,7 +186,7 @@ const paymentProgressOptions = computed(() => {
 
 // 排序：未标记已处理的排在最前面，已标记已处理的排在最后（不跟未处理的交错），
 // 每个分组内部再按红人社媒完整名字归组、组内按截止时间升序（越早到期的越靠前）；
-// 没有截止时间的记录排在同名分组的最后
+// 没有截止时间的记录排在同名分组的最后。其余5个类别（进度滞留/Invoice逾期等）都用这个。
 function compareRows(a, b) {
   const ackCompare = (a.acknowledged ? 1 : 0) - (b.acknowledged ? 1 : 0)
   if (ackCompare !== 0) return ackCompare
@@ -198,12 +198,34 @@ function compareRows(a, b) {
   return new Date(a.deadlineDate) - new Date(b.deadlineDate)
 }
 
+// COLLAB_PAYMENT_DUE 专属排序（2026-08 新增）：需要invoice的品牌方，同一个内部需求编号下
+// 可能有多条视频各占一行，之前用 compareRows 按红人名字归组只是巧合能让它们看起来连在一起
+// （因为一个需求只关联一个红人）——如果同一个红人名下同时有两个不同需求都进了这份提醒，
+// 会被最迟结款日交错拆开，不是真正按需求分组。这里改成显式按需求编号分组：先比最迟结款日
+// （同一需求下所有行的最迟结款日必然相同，见后端 runCollabPaymentDue，天然会让同需求连续），
+// 结款日相同时再按需求编号本身兜底排序，最后没有需求编号的记录（不需要invoice/未关联需求）
+// 退回按红人名字排序。
+function compareCollabPaymentDueRows(a, b) {
+  const ackCompare = (a.acknowledged ? 1 : 0) - (b.acknowledged ? 1 : 0)
+  if (ackCompare !== 0) return ackCompare
+  if (a.deadlineDate || b.deadlineDate) {
+    if (!a.deadlineDate) return 1
+    if (!b.deadlineDate) return -1
+    const dateCompare = new Date(a.deadlineDate) - new Date(b.deadlineDate)
+    if (dateCompare !== 0) return dateCompare
+  }
+  const reqCompare = (a.internalRequirementNo || '').localeCompare(b.internalRequirementNo || '')
+  if (reqCompare !== 0) return reqCompare
+  return (a.accountName || '').localeCompare(b.accountName || '')
+}
+
 const filteredList = computed(() => {
   let result = list.value
   if (brandTeamFilter.value) result = result.filter(r => brandTeamKey(r) === brandTeamFilter.value)
   if (accountNameFilter.value) result = result.filter(r => r.accountName === accountNameFilter.value)
   if (paymentProgressFilter.value) result = result.filter(r => r.paymentProgressLabel === paymentProgressFilter.value)
-  return [...result].sort(compareRows)
+  const comparator = props.category === 'COLLAB_PAYMENT_DUE' ? compareCollabPaymentDueRows : compareRows
+  return [...result].sort(comparator)
 })
 
 // 汇总合计的金额列：老类目/进度滞留两类是"红人视频制作与发布成本"，Invoice逾期是"总成本"——
