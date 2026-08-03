@@ -255,16 +255,18 @@ watch(() => form.brandId, tryAutoFillExpectedPaymentDate)
 // 需要invoice + 按红人成本阈值分档的品牌方：勾选完"涉及的红人视频项目"后自动算好"预计付款日"
 // 回填，用户仍可在此基础上手动改。此时勾选的这批记录必然属于同一个需求（见
 // PaymentItemSelectorModal 的互斥勾选规则，一次结款只能对应一个需求/一张invoice），取第一条
-// 的 requirementTotalInfluencerCost/requirementCompletedAt 即可代表整批。只在新建态生效，
-// 跟上面"月结"那段自动填充同一个道理——编辑已有记录时不该因为重新勾选就悄悄覆盖已保存的值。
+// 的 requirementPayableCost/requirementCompletedAt 即可代表整批。requirementPayableCost 是
+// "实际可结款成本"（已排除"折损"条目，2026-08 修正——不是 InfluencerRequirement 的计划总成本）。
+// 只在新建态生效，跟上面"月结"那段自动填充同一个道理——编辑已有记录时不该因为重新勾选就悄悄
+// 覆盖已保存的值。
 function tryAutoFillExpectedPaymentDateFromCostThreshold(selected) {
   if (form.id) return
   const brand = props.brands.find(b => b.id === form.brandId)
   if (!brand || brand.paymentCycleType !== 'COST_THRESHOLD' || brand.requiresInvoice === false) return
   if (brand.costThresholdAmount == null || brand.daysWithinThreshold == null || brand.daysAboveThreshold == null) return
   const first = selected[0]
-  if (!first || first.requirementTotalInfluencerCost == null || !first.requirementCompletedAt) return
-  const days = +first.requirementTotalInfluencerCost <= +brand.costThresholdAmount
+  if (!first || first.requirementPayableCost == null || !first.requirementCompletedAt) return
+  const days = +first.requirementPayableCost <= +brand.costThresholdAmount
     ? brand.daysWithinThreshold : brand.daysAboveThreshold
   form.expectedPaymentDate = dayjs(first.requirementCompletedAt).add(days, 'day').format('YYYY-MM-DD')
 }

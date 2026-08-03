@@ -4,6 +4,11 @@
     <div v-if="mode === 'select'" class="summary-bar">
       已勾选 <strong>{{ selectedRowKeys.length }}</strong> 条，涉及金额
       <strong>{{ fmtNum(selectedAmount) }}</strong> 美元
+      <template v-if="activeRequirementDelayedInfo">
+        。该需求有<strong>{{ activeRequirementDelayedInfo.count }}</strong>条红人视频进度为
+        <span class="delayed-text">"已折损"</span>状态，涉及金额
+        <strong>{{ fmtNum(activeRequirementDelayedInfo.cost) }}</strong>美元
+      </template>
     </div>
 
     <div class="filter-bar">
@@ -23,7 +28,7 @@
     </div>
 
     <a-table :columns="columns" :data-source="filteredList" :loading="loading" row-key="trackingId"
-      size="small" :pagination="false" :scroll="{ x: 1500, y: 480 }"
+      size="small" :pagination="false" :scroll="{ x: tableScrollX, y: 480 }"
       :row-selection="mode === 'select' ? rowSelection : undefined"
       :custom-row="mode === 'select' ? customRow : undefined"
       :row-class-name="rowClassName">
@@ -37,7 +42,8 @@
           <span v-else style="color:#bbb">—</span>
         </template>
         <template v-if="column.key === 'internalRequirementNo'">
-          <a-tag v-if="record.internalRequirementNo && groupedFlowActive" :color="colorForValue(record.internalRequirementNo)">
+          <a-tag v-if="record.internalRequirementNo && groupedFlowActive" :color="colorForValue(record.internalRequirementNo)"
+            :title="record.internalRequirementNo" class="requirement-no-tag">
             {{ record.internalRequirementNo }}
           </a-tag>
           <span v-else-if="record.internalRequirementNo">{{ record.internalRequirementNo }}</span>
@@ -45,8 +51,20 @@
         </template>
         <template v-if="column.key === 'requirementProgress'">
           <span v-if="record.internalRequirementNo">
-            {{ record.requirementCompletedCount ?? 0 }}/{{ record.requirementTotalItemCount ?? 0 }}
-            <span v-if="requirementComplete(record)" style="color:#389e0d">（100%）</span>
+            <a-tooltip v-if="(record.requirementDelayedCount ?? 0) > 0" placement="top">
+              <template #title>
+                该需求里的{{ record.requirementDelayedCount }}笔红人视频为
+                <span class="delayed-text">"已折损"</span>状态
+              </template>
+              <span class="requirement-progress-hoverable">
+                {{ record.requirementCompletedCount ?? 0 }}/{{ record.requirementTotalItemCount ?? 0 }}
+                <span v-if="requirementComplete(record)" style="color:#389e0d">（100%）</span>
+              </span>
+            </a-tooltip>
+            <span v-else>
+              {{ record.requirementCompletedCount ?? 0 }}/{{ record.requirementTotalItemCount ?? 0 }}
+              <span v-if="requirementComplete(record)" style="color:#389e0d">（100%）</span>
+            </span>
           </span>
           <span v-else style="color:#bbb">—</span>
         </template>
@@ -144,7 +162,13 @@ const groupedFlowActive = computed(() =>
 
 const columns = computed(() => {
   const projectNoCol = { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 }
-  const requirementNoCol = { title: '内部需求编号', key: 'internalRequirementNo', width: 190 }
+  // groupedFlowActive 时"内部需求编号"渲染成带色 a-tag（比纯文本宽，标签本身不换行），需求编号
+  // 本身格式是"品牌-团队-月份-账号-序号"可能较长，190px 在这套渲染下明显不够，之前就是因为这个
+  // 宽度不够导致跟"需求完成进度"错位重叠（2026-08 反馈修复）——同时给 a-tag 加了 ellipsis+title
+  // 兜底，即使遇到更长的编号也是内部截断，不会再往相邻列溢出
+  const requirementNoCol = groupedFlowActive.value
+    ? { title: '内部需求编号', key: 'internalRequirementNo', width: 230 }
+    : { title: '内部需求编号', key: 'internalRequirementNo', width: 190 }
   const rest = [
     { title: '品牌方', key: 'brandName', width: 110 },
     { title: '红人团队', key: 'teamName', width: 160 },
@@ -159,10 +183,16 @@ const columns = computed(() => {
     { title: '最迟结款日', key: 'deadlineDate', width: 110 }
   ]
   if (groupedFlowActive.value) {
-    return [requirementNoCol, { title: '需求完成进度', key: 'requirementProgress', width: 150 }, projectNoCol, ...rest]
+    // 200px：内容是"12/12（100%）"这种短结构化文本，之前 150px 在小号字体表格下也偏窄，
+    // 一并加宽，跟上面 requirementNoCol 的宽度调整是同一次修复
+    return [requirementNoCol, { title: '需求完成进度', key: 'requirementProgress', width: 200 }, projectNoCol, ...rest]
   }
   return [projectNoCol, requirementNoCol, ...rest]
 })
+
+// groupedFlowActive 比原来多一个"需求完成进度"列、且"内部需求编号"列变宽，表格实际需要的
+// 横向空间更大，滚动条触发宽度也要跟着调整，不然到 1500px 就会提前挤压后面的列
+const tableScrollX = computed(() => groupedFlowActive.value ? 1700 : 1500)
 
 const selectedAmount = computed(() => {
   const set = new Set(selectedRowKeys.value)
@@ -229,6 +259,15 @@ const activeRequirementNo = computed(() => {
   if (!selectedRowKeys.value.length) return null
   const first = list.value.find(r => r.trackingId === selectedRowKeys.value[0])
   return first ? first.internalRequirementNo : null
+})
+// 已勾选的需求下"折损"条目的数量/金额（同一需求下所有候选行的 requirementDelayedCount/Cost
+// 字段值都相同，取任意一条即可）——顶部汇总栏用，提醒管理层"需求完成进度"里的总数包含了折损、
+// 实际勾中的条数会比这个总数少
+const activeRequirementDelayedInfo = computed(() => {
+  if (!groupedFlowActive.value || !activeRequirementNo.value) return null
+  const rec = list.value.find(r => r.internalRequirementNo === activeRequirementNo.value)
+  if (!rec || !((rec.requirementDelayedCount ?? 0) > 0)) return null
+  return { count: rec.requirementDelayedCount, cost: rec.requirementDelayedCost }
 })
 function isRowSelectable(record) {
   if (!groupedFlowActive.value) return true
@@ -425,6 +464,21 @@ function doConfirm(selected) {
   border-radius: 4px;
   padding: 0 6px;
 }
+/* "内部需求编号" a-tag 宽度撑满单元格后超出部分省略号截断，不让它挤到相邻列——
+   跟"最迟结款日"错位重叠是同一个根因（a-tag 本身 white-space:nowrap 不会自动换行），
+   title 属性兜底显示完整编号 */
+.requirement-no-tag {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: bottom;
+}
+/* "需求完成进度"单元格里，涉及折损提示的那部分文字加个虚线下划线，暗示可以悬浮查看说明 */
+.requirement-progress-hoverable {
+  border-bottom: 1px dashed #999;
+  cursor: help;
+}
 </style>
 
 <style>
@@ -439,5 +493,12 @@ function doConfirm(selected) {
 .payment-selector-disabled-row > td {
   background: #f5f5f5 !important;
   color: #8c8c8c !important;
+}
+/* "折损"高亮文字：不能用 scoped——这个 class 除了在本组件正常渲染的 DOM 里用（汇总栏），
+   还会出现在 a-tooltip 弹出层内容里，而 a-tooltip 的浮层是 teleport 到组件外层渲染的，
+   scoped 属性选择器加不上去，必须放在这个不带 scoped 的样式块才能生效 */
+.delayed-text {
+  color: #ff4d4f;
+  font-weight: 600;
 }
 </style>
