@@ -3,7 +3,7 @@
     <div class="page-header">
       <span class="page-title">汇率维护</span>
       <a-space>
-        <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">
+        <a href="https://www.boc.cn/sourcedb/whpjSearch/index.html" target="_blank" rel="noopener">
           <a-button>
             <template #icon><LinkOutlined /></template>查看中国银行汇率
           </a-button>
@@ -69,7 +69,7 @@
           <a-input-number v-model:value="form.usdToCny" style="width:100%" :precision="4" :min="0" />
           <div style="font-size:12px;color:#595959;margin-top:4px">
             即 1 美元 = 多少人民币，对照
-            <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">中国银行官网</a>
+            <a href="https://www.boc.cn/sourcedb/whpjSearch/index.html" target="_blank" rel="noopener">中国银行官网</a>
             填写「现汇买入价」并 ÷ 100（官网按每100美元报价）
           </div>
         </a-form-item>
