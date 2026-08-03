@@ -89,7 +89,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { progressReminderApi } from '../../api/index'
-import { formatDate } from '../../utils/dateFormat'
+import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
@@ -214,8 +214,14 @@ const totalCost = computed(() =>
 const totalClientPrice = computed(() =>
   filteredList.value.reduce((sum, r) => sum + (r.clientPrice != null ? +r.clientPrice : 0), 0))
 
-// 老类目（COLLAB_PAYMENT_DUE）列定义，保持不变
+// 老类目（COLLAB_PAYMENT_DUE）列定义。2026-08 新增"内部需求编号"（放最前，需要invoice的
+// 品牌方才会有值，宽度按这类编号"品牌-团队-月份-账号-序号"的实际长度留够，参考
+// PaymentItemSelectorModal.vue 那次因为列宽不够导致错位重叠的教训）+ "需求完成时间"
+// （放在"视频发布时间"右边，需要invoice的品牌方"最迟结款日"是从这个时间起算的，不是从
+// 视频发布时间起算，两列并排方便核对）
 const PAYMENT_DUE_COLUMNS = [
+  { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 210,
+    customRender: ({ text }) => text || '—' },
   { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
     customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
@@ -229,6 +235,8 @@ const PAYMENT_DUE_COLUMNS = [
   { title: '红人结款进度',  key: 'paymentProgressLabel',      width: 160 },
   { title: '视频发布时间',  dataIndex: 'publishDate',         key: 'publishDate',         width: 110,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
+  { title: '需求完成时间',  dataIndex: 'requirementCompletedAt', key: 'requirementCompletedAt', width: 150,
+    customRender: ({ text }) => text ? formatDateTime(text) : '—' },
   { title: '结款周期',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '最迟结款日',    dataIndex: 'deadlineDate',        key: 'deadlineDate',        width: 110,
@@ -414,7 +422,11 @@ function close() { emit('update:visible', false) }
 // Invoice逾期那种跳转到"红人需求管理"）；其余几类（临近结款/进度滞留）跳转到"红人合作跟踪"
 // 按内部项目编号定位。2026-07-29 起改成新开 tab（router.resolve 只算 URL，不跳转，
 // window.open 才真正打开），而不是在当前"待处理"页面的 tab 里直接跳走——之前点了详情弹窗
-// 就没了，还得重新打开弹窗才能继续看其他行
+// 就没了，还得重新打开弹窗才能继续看其他行。
+// 2026-08 起 COLLAB_PAYMENT_DUE（临近结款）需要invoice的记录也会带上真正的
+// internalRequirementNo（纯展示用，见后端 ProgressReminderDetail.internalRequirementNo
+// 注释），必须在下面"有值就跳需求管理"这条通用分支之前单独排除，否则这一类的"查看详情"会被
+// 误判成需求维度，跳去"红人需求管理"而不是本该去的"红人合作跟踪"这条具体记录
 function goToDetail(record) {
   let route
   if (props.category === 'CONTRACT_EXPIRING_SOON') {
@@ -423,6 +435,8 @@ function goToDetail(record) {
   } else if (props.category === 'INFLUENCER_PAYMENT_DUE') {
     // internalRequirementNo 这一类借用来存结款单号（见后端 runInfluencerPaymentDue 的注释）
     route = { path: '/payments', query: { paymentNo: record.internalRequirementNo } }
+  } else if (props.category === 'COLLAB_PAYMENT_DUE') {
+    route = { path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } }
   } else if (record.internalRequirementNo) {
     route = { path: '/requirements', query: { internalRequirementNo: record.internalRequirementNo } }
   } else {
