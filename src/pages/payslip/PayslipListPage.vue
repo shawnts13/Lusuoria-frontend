@@ -29,9 +29,7 @@
           <template v-if="managementRow">
             <div class="mgmt-top">
               <span class="mgmt-title">管理层（{{ managementRow.employeeName }}）</span>
-              <a-tag :color="managementRow.confirmed ? 'green' : 'orange'">
-                {{ managementRow.confirmed ? '已确认' : '预计（实时更新）' }}
-              </a-tag>
+              <a-tag :color="managementTagColor(managementRow)">{{ managementTagLabel(managementRow) }}</a-tag>
             </div>
             <div class="mgmt-body">
               <span class="mgmt-label">公司利润</span>
@@ -570,6 +568,21 @@ function pmSelfTagLabel(detail) {
 function pmSelfTagColor(detail) {
   if (detail.confirmed) return 'green'
   if (detail.ownActionConfirmed) return 'yellow'
+  return 'orange'
+}
+
+// 管理层自己顶部卡片的状态标签：2026-08 起管理层也可能是"手下执行人员工资"的相关项目
+// 负责人，confirmed（=finalConfirmed）不再等于 ownActionConfirmed，需要跟项目负责人一样
+// 补一个中间态——管理层已经点了自己整体工资单的"确认"，但"管理层手下执行人员工资"还没
+// 全部确认完，此时不算最终版，公司利润仍按实时数据展示
+function managementTagLabel(record) {
+  if (record.confirmed) return '已确认'
+  if (record.ownActionConfirmed) return '等待确认手下执行人员工资'
+  return '预计（实时更新）'
+}
+function managementTagColor(record) {
+  if (record.confirmed) return 'green'
+  if (record.ownActionConfirmed) return 'yellow'
   return 'orange'
 }
 
