@@ -89,7 +89,11 @@
         <template v-if="form.paymentCycleType === 'COST_THRESHOLD'">
           <a-form-item label="成本阈值">
             <a-input-number v-model:value="form.costThresholdAmount" style="width:100%" :precision="2" :min="0" />
-            <div class="hint-box">单笔「红人视频制作与发布成本」金额阈值，单位为上面选择的结算币种。</div>
+            <div class="hint-box">
+              {{ form.requiresInvoice === false
+                ? '单笔「红人视频制作与发布成本」金额阈值，单位为上面选择的结算币种。'
+                : '单个需求「红人视频制作与发布」总成本阈值，单位为上面选择的结算币种——该品牌方需要invoice，一次结款只能对应一个需求（一张invoice），所以按需求总成本分档，不是单笔视频成本。' }}
+            </div>
           </a-form-item>
           <a-form-item label="≤ 阈值，几天内结款（天）">
             <a-input-number v-model:value="form.daysWithinThreshold" style="width:100%" :precision="0" :min="0" />

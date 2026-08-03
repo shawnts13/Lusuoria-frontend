@@ -112,6 +112,8 @@
       v-model:visible="itemsViewVisible"
       mode="view"
       :existing-payment-id="itemsViewPaymentId"
+      :payment-cycle-type="itemsViewBrand?.paymentCycleType"
+      :requires-invoice="itemsViewBrand?.requiresInvoice"
       :initial-requirement-no-filter="itemsViewRequirementNoFilter" />
   </div>
 </template>
@@ -146,6 +148,10 @@ const statusModalRecord  = ref(null)
 const itemsViewVisible   = ref(false)
 const itemsViewPaymentId = ref(null)
 const itemsViewRequirementNoFilter = ref(null)
+// 查看模式也要传品牌方信息，"需要invoice + 按红人成本阈值分档"的品牌方才能展示跟编辑弹窗
+// 一致的"需求完成进度"列/需求分组样式（见 PaymentItemSelectorModal.groupedFlowActive）
+const itemsViewBrandId = ref(null)
+const itemsViewBrand = computed(() => brands.value.find(b => b.id === itemsViewBrandId.value) || null)
 
 const pagination = reactive({ current: 1, pageSize: 20, total: 0,
   showTotal: t => `共 ${t} 条` })
@@ -257,12 +263,14 @@ function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
 function openItemsView(r) {
   itemsViewPaymentId.value = r.id
+  itemsViewBrandId.value = r.brandId
   itemsViewRequirementNoFilter.value = null
   itemsViewVisible.value = true
 }
 // 双击"涉及的内部需求编号"列里的某一个具体编号，直接定位到那一个需求下涉及的视频
 function openRequirementItemsView(r, requirementNo) {
   itemsViewPaymentId.value = r.id
+  itemsViewBrandId.value = r.brandId
   itemsViewRequirementNoFilter.value = requirementNo
   itemsViewVisible.value = true
 }

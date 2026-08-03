@@ -12,9 +12,14 @@
       <a-select v-model:value="requirementNoFilter" placeholder="内部需求编号" allow-clear show-search
         style="width:220px" :options="requirementNoOptions" />
     </div>
-    <div v-if="mode === 'select'" style="font-size:12px;color:#595959;margin-bottom:8px">
+    <div v-if="mode === 'select' && !groupedFlowActive" style="font-size:12px;color:#595959;margin-bottom:8px">
       提示：切换上面的筛选条件不会影响已经勾选的记录——可以先按一个需求编号筛选、勾选完，
       再切换成另一个需求编号继续勾选，之前勾的会一直保留，直到点"确定"。
+    </div>
+    <div v-if="mode === 'select' && groupedFlowActive" style="font-size:12px;color:#595959;margin-bottom:8px">
+      提示：该品牌方需要invoice，一次结款只能对应一个需求（一张invoice）——按需求编号分组展示，
+      "需求完成进度"未达100%的整行置灰、暂时无法勾选；勾选某个需求下的一条记录会自动带上同一需求
+      下的其他记录，且其他需求会被禁用，需先取消勾选才能改选别的需求。
     </div>
 
     <a-table :columns="columns" :data-source="filteredList" :loading="loading" row-key="trackingId"
@@ -32,7 +37,17 @@
           <span v-else style="color:#bbb">—</span>
         </template>
         <template v-if="column.key === 'internalRequirementNo'">
-          <span v-if="record.internalRequirementNo">{{ record.internalRequirementNo }}</span>
+          <a-tag v-if="record.internalRequirementNo && groupedFlowActive" :color="colorForValue(record.internalRequirementNo)">
+            {{ record.internalRequirementNo }}
+          </a-tag>
+          <span v-else-if="record.internalRequirementNo">{{ record.internalRequirementNo }}</span>
+          <span v-else style="color:#bbb">—</span>
+        </template>
+        <template v-if="column.key === 'requirementProgress'">
+          <span v-if="record.internalRequirementNo">
+            {{ record.requirementCompletedCount ?? 0 }}/{{ record.requirementTotalItemCount ?? 0 }}
+            <span v-if="requirementComplete(record)" style="color:#389e0d">（100%）</span>
+          </span>
           <span v-else style="color:#bbb">—</span>
         </template>
         <template v-if="column.key === 'progressLabel'">
@@ -94,6 +109,12 @@ const props = defineProps({
   brandId: { type: [Number, String], default: null },
   // 品牌方名称，仅用于判断是不是"TEMU中国"（该品牌方排序/展示有专属规则，见下方 TEMU_CN 相关逻辑）
   brandName: { type: String, default: null },
+  // 品牌方付款周期类型 + 是否需要invoice：两者同时是 COST_THRESHOLD + 需要invoice 时，
+  // 触发"按需求分组、需求完成进度未100%禁选、一次只能选一个需求"这套专属流程，见下方
+  // groupedFlowActive 相关逻辑（2026-08 新增，跟 TEMU_CN 那套按品牌名判断的专属规则是并列的
+  // 两套机制，不要混在一起改）
+  paymentCycleType: { type: String, default: null },
+  requiresInvoice: { type: Boolean, default: null },
   // 这次结款涉及的团队范围，元素可能是 null（代表"不选团队"也在范围内），支持跨团队合并结款
   teamIds: { type: Array, default: () => [] },
   reconcileDate: { type: String, default: null },
@@ -115,21 +136,33 @@ const selectedRowKeys = ref([])
 const accountFilter = ref(undefined)
 const requirementNoFilter = ref(undefined)
 
-const columns = [
-  { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 },
-  { title: '内部需求编号', key: 'internalRequirementNo', width: 190 },
-  { title: '品牌方', key: 'brandName', width: 110 },
-  { title: '红人团队', key: 'teamName', width: 160 },
-  { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 150 },
-  { title: '需求内容', dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true,
-    customRender: ({ text }) => text || '—' },
-  { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180 },
-  { title: '视频项目进度', key: 'progressLabel', width: 140 },
-  { title: '红人结款进度', key: 'paymentProgressLabel', width: 170 },
-  { title: '视频发布时间', key: 'publishDate', width: 110 },
-  { title: '结款周期', key: 'cycleDays', width: 90 },
-  { title: '最迟结款日', key: 'deadlineDate', width: 110 }
-]
+// 需要invoice + 按红人成本阈值分档的品牌方（COST_THRESHOLD 且 requiresInvoice !== false）：
+// 一次结款只能对应一个需求，"内部需求编号"/"需求完成进度"排到最前面，方便管理层先看清楚
+// 这批候选记录按需求分了几组、哪些组已经100%完成。其余品牌方保持原有列顺序不变。
+const groupedFlowActive = computed(() =>
+  props.paymentCycleType === 'COST_THRESHOLD' && props.requiresInvoice !== false)
+
+const columns = computed(() => {
+  const projectNoCol = { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190 }
+  const requirementNoCol = { title: '内部需求编号', key: 'internalRequirementNo', width: 190 }
+  const rest = [
+    { title: '品牌方', key: 'brandName', width: 110 },
+    { title: '红人团队', key: 'teamName', width: 160 },
+    { title: '红人社媒完整名字', dataIndex: 'accountName', key: 'accountName', width: 150 },
+    { title: '需求内容', dataIndex: 'demandContent', key: 'demandContent', width: 160, ellipsis: true,
+      customRender: ({ text }) => text || '—' },
+    { title: '红人视频制作与发布成本（$）', key: 'influencerCost', width: 180 },
+    { title: '视频项目进度', key: 'progressLabel', width: 140 },
+    { title: '红人结款进度', key: 'paymentProgressLabel', width: 170 },
+    { title: '视频发布时间', key: 'publishDate', width: 110 },
+    { title: '结款周期', key: 'cycleDays', width: 90 },
+    { title: '最迟结款日', key: 'deadlineDate', width: 110 }
+  ]
+  if (groupedFlowActive.value) {
+    return [requirementNoCol, { title: '需求完成进度', key: 'requirementProgress', width: 150 }, projectNoCol, ...rest]
+  }
+  return [projectNoCol, requirementNoCol, ...rest]
+})
 
 const selectedAmount = computed(() => {
   const set = new Set(selectedRowKeys.value)
@@ -182,13 +215,57 @@ function isOffMonth(record) {
   return props.brandName === TEMU_CN && !!props.settlementMonth
     && monthKeyOf(record.publishDate) !== props.settlementMonth
 }
+
+// ===== 需要invoice + 按红人成本阈值分档品牌方专属：需求完成进度100%才能勾选，且一次结款
+// 只能勾选一个需求（groupedFlowActive 时才生效，见上面 columns 旁边的说明） =====
+
+/** 这条记录关联的需求是否"需求完成进度"=100%（口径跟"红人需求管理"列表页一致：total>0 且 completed>=total） */
+function requirementComplete(record) {
+  const total = record.requirementTotalItemCount ?? 0
+  return total > 0 && (record.requirementCompletedCount ?? 0) >= total
+}
+// 当前已勾选的需求编号（互斥选择下最多只有一个），没有勾选任何记录时为 null
+const activeRequirementNo = computed(() => {
+  if (!selectedRowKeys.value.length) return null
+  const first = list.value.find(r => r.trackingId === selectedRowKeys.value[0])
+  return first ? first.internalRequirementNo : null
+})
+function isRowSelectable(record) {
+  if (!groupedFlowActive.value) return true
+  if (!requirementComplete(record)) return false
+  if (activeRequirementNo.value && record.internalRequirementNo !== activeRequirementNo.value) return false
+  return true
+}
+function disabledTooltip(record) {
+  if (!groupedFlowActive.value || isRowSelectable(record)) return ''
+  if (!requirementComplete(record)) return '该需求尚未整体完成，暂时无法结款'
+  return '1个结款订单只能包含1个需求（1张invoice）：请先取消当前已勾选的需求，才能勾选这一个'
+}
+/** 同一个需求编号下、当前候选列表里的所有 trackingId（勾选/取消勾选整个需求时用） */
+function groupMemberKeys(record) {
+  return list.value.filter(r => r.internalRequirementNo === record.internalRequirementNo).map(r => r.trackingId)
+}
+
 function rowClassName(record) {
-  return isOffMonth(record) ? 'off-month-row' : ''
+  if (isOffMonth(record)) return 'off-month-row'
+  if (groupedFlowActive.value && !isRowSelectable(record)) return 'payment-selector-disabled-row'
+  return ''
 }
 
 // TEMU中国专属排序：视频发布月份=本次结算月份的排最前；组内再按最迟结款日从近到远排
-// （越紧迫越靠前，没有最迟结款日的排最后）。其余品牌方保持原有按红人社媒完整名字排序
+// （越紧迫越靠前，没有最迟结款日的排最后）。groupedFlowActive 品牌方按需求分组，需求完成
+// 进度=100%的组排最前（同 100%/未100% 组内再按需求编号、然后账号名排序，保证同需求连续
+// 展示在一起）。其余品牌方保持原有按红人社媒完整名字排序
 function sortForDisplay(items) {
+  if (groupedFlowActive.value) {
+    return [...items].sort((a, b) => {
+      const aComplete = requirementComplete(a), bComplete = requirementComplete(b)
+      if (aComplete !== bComplete) return aComplete ? -1 : 1
+      const reqCmp = (a.internalRequirementNo || '').localeCompare(b.internalRequirementNo || '')
+      if (reqCmp !== 0) return reqCmp
+      return (a.accountName || '').localeCompare(b.accountName || '')
+    })
+  }
   if (props.brandName !== TEMU_CN) {
     return [...items].sort((a, b) => (a.accountName || '').localeCompare(b.accountName || ''))
   }
@@ -204,20 +281,43 @@ function sortForDisplay(items) {
 
 const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
-  onChange: keys => { selectedRowKeys.value = keys }
+  getCheckboxProps: record => ({ disabled: groupedFlowActive.value && !isRowSelectable(record) }),
+  onChange: keys => {
+    if (!groupedFlowActive.value) { selectedRowKeys.value = keys; return }
+    // 需求维度勾选：取消勾选（不管取消的是哪一条）直接清空整个当前已选需求；新增勾选则把
+    // 新勾中的那条记录所在需求的所有记录一起选上（antd 表头"全选"理论上可能一次性传入好几个
+    // 不同需求的 key，这里只认第一条新增的、把其余的忽略——那种场景本来就该被禁用勾选框拦住，
+    // 这里只是兜底，不追求覆盖所有理论组合）
+    const removed = selectedRowKeys.value.filter(k => !keys.includes(k))
+    if (removed.length) { selectedRowKeys.value = []; return }
+    const added = keys.filter(k => !selectedRowKeys.value.includes(k))
+    if (added.length) {
+      const rec = list.value.find(r => r.trackingId === added[0])
+      selectedRowKeys.value = rec ? groupMemberKeys(rec) : keys
+    }
+  }
 }))
 
 // 点击行内任意位置也能勾选/取消勾选，不用非得精准点中前面那个小方框——方便先横向滑到最右边
-// 看完信息再选的操作习惯
+// 看完信息再选的操作习惯。groupedFlowActive 时按需求整组勾选/取消，且置灰的行完全不响应点击
 function toggleRow(record) {
-  const idx = selectedRowKeys.value.indexOf(record.trackingId)
-  selectedRowKeys.value = idx === -1
-    ? [...selectedRowKeys.value, record.trackingId]
-    : selectedRowKeys.value.filter(k => k !== record.trackingId)
+  if (groupedFlowActive.value && !isRowSelectable(record)) return
+  if (!groupedFlowActive.value) {
+    const idx = selectedRowKeys.value.indexOf(record.trackingId)
+    selectedRowKeys.value = idx === -1
+      ? [...selectedRowKeys.value, record.trackingId]
+      : selectedRowKeys.value.filter(k => k !== record.trackingId)
+    return
+  }
+  const groupKeys = groupMemberKeys(record)
+  const alreadySelected = groupKeys.length > 0 && groupKeys.every(k => selectedRowKeys.value.includes(k))
+  selectedRowKeys.value = alreadySelected ? [] : groupKeys
 }
 function customRow(record) {
+  const disabled = groupedFlowActive.value && !isRowSelectable(record)
   return {
-    style: { cursor: 'pointer' },
+    style: { cursor: disabled ? 'not-allowed' : 'pointer' },
+    title: disabledTooltip(record),
     onClick: (e) => {
       // 点在勾选框本身上时，勾选框自己的 change 已经处理过了，这里不要再触发一次，
       // 不然会跟勾选框的状态互相抵消
@@ -332,5 +432,12 @@ function doConfirm(selected) {
    （不能用 scoped，antd a-table 的行是通过 :row-class-name 渲染到组件外层的 DOM 上的） */
 .off-month-row > td {
   background: #fafafa !important;
+}
+/* 需要invoice + 按红人成本阈值分档品牌方：需求完成进度未100%、或已选了别的需求时，
+   整行置灰+不可点击，文字用中等灰度而不是浅灰——这些行的内容（成本/发布时间等）用户
+   仍然可能需要看清楚，只是暂时不能勾选，不能因为"禁用"就把字压到看不清 */
+.payment-selector-disabled-row > td {
+  background: #f5f5f5 !important;
+  color: #8c8c8c !important;
 }
 </style>

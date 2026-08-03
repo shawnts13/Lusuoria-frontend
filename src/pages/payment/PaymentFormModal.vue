@@ -120,6 +120,8 @@
       :mode="selectorMode"
       :brand-id="form.brandId"
       :brand-name="selectedBrandName"
+      :payment-cycle-type="selectedBrand?.paymentCycleType"
+      :requires-invoice="selectedBrand?.requiresInvoice"
       :team-ids="requestTeamIds"
       :reconcile-date="form.reconcileDate"
       :settlement-month="form.settlementMonth"
@@ -169,8 +171,9 @@ const form = reactive({
 })
 
 const record = computed(() => props.record)
+const selectedBrand = computed(() => props.brands.find(b => b.id === form.brandId) || null)
 // 传给"选择涉及的红人视频项目"弹窗，供它判断是不是 TEMU中国（排序/展示有专属规则，见该组件）
-const selectedBrandName = computed(() => props.brands.find(b => b.id === form.brandId)?.name || null)
+const selectedBrandName = computed(() => selectedBrand.value?.name || null)
 // 编辑态且已付款：只能查看，不能再调整勾选；其余情况（新建 / 编辑态待付款）可选
 const selectorMode = computed(() => (form.id && record.value?.paymentStatus === 'PAID') ? 'view' : 'select')
 
@@ -223,7 +226,11 @@ const brandCycleHint = computed(() => {
   }
   if (brand.paymentCycleType === 'COST_THRESHOLD') {
     if (brand.costThresholdAmount == null) return ''
-    return `该品牌方按红人成本阈值分档结款：单笔≤${brand.costThresholdAmount}时${brand.daysWithinThreshold}天内结款，`
+    if (brand.requiresInvoice === false) {
+      return `该品牌方按红人成本阈值分档结款：单笔≤${brand.costThresholdAmount}时${brand.daysWithinThreshold}天内结款，`
+        + `超过时${brand.daysAboveThreshold}天内结款`
+    }
+    return `该品牌方按红人总成本阈值分档结款：需求总成本≤${brand.costThresholdAmount}时${brand.daysWithinThreshold}天内结款，`
       + `超过时${brand.daysAboveThreshold}天内结款`
   }
   return ''
@@ -244,6 +251,23 @@ function tryAutoFillExpectedPaymentDate() {
 }
 watch(() => form.reconcileDate, tryAutoFillExpectedPaymentDate)
 watch(() => form.brandId, tryAutoFillExpectedPaymentDate)
+
+// 需要invoice + 按红人成本阈值分档的品牌方：勾选完"涉及的红人视频项目"后自动算好"预计付款日"
+// 回填，用户仍可在此基础上手动改。此时勾选的这批记录必然属于同一个需求（见
+// PaymentItemSelectorModal 的互斥勾选规则，一次结款只能对应一个需求/一张invoice），取第一条
+// 的 requirementTotalInfluencerCost/requirementCompletedAt 即可代表整批。只在新建态生效，
+// 跟上面"月结"那段自动填充同一个道理——编辑已有记录时不该因为重新勾选就悄悄覆盖已保存的值。
+function tryAutoFillExpectedPaymentDateFromCostThreshold(selected) {
+  if (form.id) return
+  const brand = props.brands.find(b => b.id === form.brandId)
+  if (!brand || brand.paymentCycleType !== 'COST_THRESHOLD' || brand.requiresInvoice === false) return
+  if (brand.costThresholdAmount == null || brand.daysWithinThreshold == null || brand.daysAboveThreshold == null) return
+  const first = selected[0]
+  if (!first || first.requirementTotalInfluencerCost == null || !first.requirementCompletedAt) return
+  const days = +first.requirementTotalInfluencerCost <= +brand.costThresholdAmount
+    ? brand.daysWithinThreshold : brand.daysAboveThreshold
+  form.expectedPaymentDate = dayjs(first.requirementCompletedAt).add(days, 'day').format('YYYY-MM-DD')
+}
 
 // 付款状态/实际付款日这两个字段只在"新建"表单里出现（编辑态用"状态流转"改），
 // 编辑态时 form.paymentStatus/actualPaymentDate 只是从记录带过来的展示用残留值，
@@ -290,6 +314,8 @@ async function handleSelectorConfirm(selected) {
     } catch {
       form.exchangeRate = null
     }
+
+    tryAutoFillExpectedPaymentDateFromCostThreshold(selected)
   }
   recomputeRmb()
 }
