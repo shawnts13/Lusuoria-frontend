@@ -18,7 +18,7 @@
       type="warning"
       show-icon
       style="margin-bottom:16px"
-      message="填写规则：业务月份「X月」要填的是「上一个月最后一个工作日」的汇率（如业务月份202606，要查2026年5月最后一个工作日的中行折算价）。汇率改为人工维护，不再自动抓取。点击「查看中国银行汇率」跳转官网，修改某月汇率会自动覆盖该月所有已存在项目订单的汇率字段。"
+      message="填写规则：业务月份「X月」要填的是「上一个月最后一个工作日」的汇率（如业务月份202606，要查2026年5月最后一个工作日的现汇买入价）。汇率改为人工维护，不再自动抓取。点击「查看中国银行汇率」跳转官网，修改某月汇率会自动覆盖该月所有已存在红人合作跟踪记录的汇率字段，并连带重新计算利润；已确认/已冻结的历史工资单不会自动跟着变，需要管理层手动取消确认再重新确认才会按新汇率重算。"
     />
 
     <div class="table-card">
@@ -50,7 +50,7 @@
       :destroy-on-close="true">
       <div class="rate-rule-hint">
         填写规则：业务月份 <b>{{ form.yearMonth || 'XXXX06' }}</b> 应填写
-        <b>{{ prevMonthLabel(form.yearMonth) }}最后一个工作日</b>（中国银行汇率页查询日期需对应该日）的「中行折算价」，
+        <b>{{ prevMonthLabel(form.yearMonth) }}最后一个工作日</b>（中国银行汇率页查询日期需对应该日）的「现汇买入价」，
         并将百元单位的报价 ÷ 100 后填入下方。
       </div>
       <a-alert v-if="form.yearMonth && existingRate(form.yearMonth)" type="warning" show-icon
@@ -70,7 +70,7 @@
           <div style="font-size:12px;color:#595959;margin-top:4px">
             即 1 美元 = 多少人民币，对照
             <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">中国银行官网</a>
-            填写「中行折算价」并 ÷ 100（官网按每100美元报价）
+            填写「现汇买入价」并 ÷ 100（官网按每100美元报价）
           </div>
         </a-form-item>
       </a-form>
