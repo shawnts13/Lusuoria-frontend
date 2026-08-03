@@ -75,6 +75,9 @@
               </a>
             </div>
           </template>
+          <template v-if="column.key === 'completedAt'">
+            {{ record.completedAt ? formatDateTime(record.completedAt) : '—' }}
+          </template>
           <template v-if="column.key === 'notes'">
             <span v-if="record.notes" style="color:#ff4d4f">{{ record.notes }}</span>
             <span v-else style="color:#bbb">—</span>
@@ -254,6 +257,7 @@ const columns = [
   { title: '客户合作总价格（$）', key: 'totalClientPrice', width: 160, sorter: true },
   { title: '红人视频制作与发布总成本（$）', key: 'totalInfluencerCost', width: 200, sorter: true },
   { title: '需求完成进度', key: 'progress', width: 140 },
+  { title: '需求完成时间', key: 'completedAt', width: 150 },
   { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
   { title: 'Invoice链接', key: 'invoiceLink', width: 110 },
   { title: '合同链接', key: 'contractLink', width: 220 },

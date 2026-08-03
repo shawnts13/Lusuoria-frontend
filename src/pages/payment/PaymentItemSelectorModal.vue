@@ -94,6 +94,9 @@
             {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
           </span>
         </template>
+        <template v-if="column.key === 'requirementCompletedAt'">
+          {{ record.requirementCompletedAt ? formatDateTime(record.requirementCompletedAt) : '—' }}
+        </template>
         <template v-if="column.key === 'cycleDays'">
           {{ record.cycleDays != null ? record.cycleDays + '天' : '—' }}
         </template>
@@ -117,7 +120,7 @@ import { ref, computed, watch } from 'vue'
 import { Modal } from 'ant-design-vue'
 import { ExclamationCircleFilled } from '@ant-design/icons-vue'
 import { paymentApi } from '../../api/index'
-import { formatDate } from '../../utils/dateFormat'
+import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { paymentProgressColor, collabProgressColor } from '../../utils/enumColors'
 import { colorForValue } from '../../utils/tagColor'
 
@@ -179,6 +182,9 @@ const columns = computed(() => {
     { title: '视频项目进度', key: 'progressLabel', width: 140 },
     { title: '红人结款进度', key: 'paymentProgressLabel', width: 170 },
     { title: '视频发布时间', key: 'publishDate', width: 110 },
+    // 需求完成进度=100%的记录才会有值（=需求完成进度达到100%的那一刻），"结款周期"/"最迟结款日"
+    // 就是从这个时间起算的（不是"视频发布时间"），放在发布时间右边方便对照两者是否一致
+    { title: '需求完成时间', key: 'requirementCompletedAt', width: 150 },
     { title: '结款周期', key: 'cycleDays', width: 90 },
     { title: '最迟结款日', key: 'deadlineDate', width: 110 }
   ]
@@ -192,7 +198,7 @@ const columns = computed(() => {
 
 // groupedFlowActive 比原来多一个"需求完成进度"列、且"内部需求编号"列变宽，表格实际需要的
 // 横向空间更大，滚动条触发宽度也要跟着调整，不然到 1500px 就会提前挤压后面的列
-const tableScrollX = computed(() => groupedFlowActive.value ? 1700 : 1500)
+const tableScrollX = computed(() => groupedFlowActive.value ? 1850 : 1650)
 
 const selectedAmount = computed(() => {
   const set = new Set(selectedRowKeys.value)
