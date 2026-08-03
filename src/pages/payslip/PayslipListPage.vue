@@ -37,15 +37,17 @@
                 <a class="mgmt-amount" @click="openDetail(managementRow)">{{ fmt(managementRow.totalAmount) }}</a>
                 <a-space>
                   <a-button size="small" @click="openDetail(managementRow)">查看明细</a-button>
-                  <a-tooltip :title="managementRow.blockedReason">
+                  <a-tooltip v-if="!managementRow.ownActionConfirmed && managementRow.blockedReason" :title="managementRow.blockedReason">
                     <span>
-                      <a-button v-if="!managementRow.ownActionConfirmed" type="primary" size="small"
+                      <a-button type="primary" size="small"
                         :disabled="!!managementRow.blockedReason" @click="confirmRow(managementRow)">确认</a-button>
-                      <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(managementRow)">
-                        <a-button size="small">取消确认</a-button>
-                      </a-popconfirm>
                     </span>
                   </a-tooltip>
+                  <a-button v-else-if="!managementRow.ownActionConfirmed" type="primary" size="small"
+                    @click="confirmRow(managementRow)">确认</a-button>
+                  <a-popconfirm v-else title="确认取消这份工资单的确认？" @confirm="unconfirmRow(managementRow)">
+                    <a-button size="small">取消确认</a-button>
+                  </a-popconfirm>
                 </a-space>
               </div>
             </div>
