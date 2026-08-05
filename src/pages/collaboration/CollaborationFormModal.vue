@@ -141,25 +141,15 @@
         </a-col>
         <a-col :span="8">
           <a-form-item label="红人结款进度">
-            <a-select v-model:value="form.influencerPaymentProgress" allow-clear placeholder="选择红人结款进度"
-              :disabled="!!form.id || !paymentProgressEnabled">
-              <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value"
-                :disabled="SYSTEM_MANAGED_PROGRESS.includes(o.value)">
-                {{ o.label }}
-              </a-select-option>
-            </a-select>
-            <div v-if="form.id" style="font-size:12px;color:#595959;margin-top:2px">
-              该状态通过"红人需求管理"的"上传Invoice"（若相关品牌方涉及）、以及管理层的"红人结款"
-              功能来流转（项目负责人/执行人员不涉及），不能在这里手动修改
+            <a-tag v-if="form.influencerPaymentProgress" :color="paymentProgressColor(form.influencerPaymentProgress)">
+              {{ getLabel('influencer_payment_progress', form.influencerPaymentProgress) }}
+            </a-tag>
+            <span v-else style="color:#595959">—</span>
+            <div style="font-size:12px;color:#595959;margin-top:2px">
+              完全由系统自动判定/流转，不能在这里手动修改：视频项目进度首次进入"已发布（未结算）"时
+              按品牌方是否需要invoice自动赋初始值，之后通过"红人需求管理"的"上传Invoice"、管理层的
+              "红人结款"功能继续流转
             </div>
-            <template v-else>
-              <div v-if="!paymentProgressEnabled" style="font-size:12px;color:#595959;margin-top:2px">
-                仅当视频项目进度为"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"时才能设置
-              </div>
-              <div style="font-size:12px;color:#ff4d4f;margin-top:2px">
-                "已纳入红人结款批次"/"已纳入红人结款批次（缺少invoice）"仅能由管理层通过"红人结款"功能设置，此处无法选中
-              </div>
-            </template>
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -354,6 +344,7 @@ import { collaborationApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
 import { formatDate } from '../../utils/dateFormat'
+import { paymentProgressColor } from '../../utils/enumColors'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -368,7 +359,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
-const { getOptions } = useOptions()
+const { getOptions, getLabel } = useOptions()
 const authStore = useAuthStore()
 // 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
 const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
@@ -439,20 +430,6 @@ const projectManagerCandidates = computed(() =>
   props.employees.filter(e => e.role === '项目负责人' || e.role === '管理层'))
 const executorCandidates = computed(() =>
   props.employees.filter(e => e.role === '执行人员'))
-
-// 红人结款进度只有在视频项目进度达到前置条件时才能设置，跟后端
-// CollaborationProgress.allowsPaymentProgress() 保持一致。这个字段只有"新建"时能在这里手动填
-// 一个初始值（编辑已有记录时这里永远禁用，见上面的提示文案）——2026-07 起"状态流转"弹窗已经
-// 不再提供这个字段的编辑入口，改成完全由"红人需求管理"上传Invoice/"红人结款"纳入批次来流转
-const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
-const paymentProgressEnabled = computed(() => !!form.progress && QUALIFYING_PROGRESS.includes(form.progress))
-
-// "已纳入红人结款批次"这两个状态只能由红人结款模块内部设置：选项本身仍然展示出来（不隐藏），
-// 只是单独禁用这两项，不让用户选中，跟后端 InfluencerPaymentProgress.isSystemManagedOnly() 保持一致
-const SYSTEM_MANAGED_PROGRESS = ['INCLUDED_IN_PAYMENT_BATCH', 'INCLUDED_IN_PAYMENT_BATCH_MISSING_INVOICE']
-watch(() => form.progress, () => {
-  if (!paymentProgressEnabled.value) form.influencerPaymentProgress = null
-})
 
 watch(() => props.visible, (v) => {
   if (v) {
@@ -646,7 +623,7 @@ function buildPayload() {
     publishLink:   form.publishLinks.map(l => l.trim()).filter(Boolean).join('\n') || null,
     publishDate:   form.publishDate || null,
     progress:      form.progress || null,
-    influencerPaymentProgress: paymentProgressEnabled.value ? (form.influencerPaymentProgress || null) : null,
+    // 红人结款进度完全由后端系统控制（见 InfluencerPaymentProgress 类注释），这里不再提交
     videoType:     form.videoType || null,
     oldMaterialSourceLink: form.videoType === 'OLD_MATERIAL_REPOST' ? (form.oldMaterialSourceLink || null) : null,
     clientOrderId: form.clientOrderId || null,
