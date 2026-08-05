@@ -34,12 +34,16 @@
             </template>
             <template v-if="column.key === 'amount'">{{ record.isTierSummaryRow ? '' : fmt(record.amount) }}</template>
             <template v-if="column.key === 'amount2'">{{ record.isTierSummaryRow ? '' : fmt(record.amount2) }}</template>
+            <template v-if="column.key === 'profit'">{{ record.isTierSummaryRow ? '' : fmt(record.profit) }}</template>
           </template>
         </a-table>
 
         <div class="summary-lines">
           <div v-if="detail.type === 'PROJECT_MANAGER'" class="line">
             <span>提成比例</span><span>{{ fmtRate(detail.commissionRate) }}</span>
+          </div>
+          <div v-if="detail.type === 'PROJECT_MANAGER'" class="hint-line">
+            提成金额 = 上表"利润"汇总行 × 提成比例（不扣内部执行成本——那部分是您自己发给执行人员的）
           </div>
           <div v-if="detail.type === 'PROJECT_MANAGER' || detail.type === 'EXECUTOR'" class="line">
             <span>{{ detail.type === 'PROJECT_MANAGER' ? '提成金额' : '薪酬合计' }}</span>
@@ -197,11 +201,14 @@ const columns = computed(() => {
       { title: '红人成本', key: 'amount2', width: 140 }
     ]
   }
-  // PROJECT_MANAGER
+  // PROJECT_MANAGER：2026-08 新增红人成本/利润两列——提成金额是拿利润乘以提成比例算出来的，
+  // 光看提成金额看不出这个依据，补上这两列（含表格自带的汇总行）让项目负责人能自己核对
   return [
-    { title: '品牌方/红人团队', key: 'brandTeam', width: 200 },
-    { title: '视频数', key: 'videoCount', width: 80 },
-    { title: '客户合作价格', key: 'amount', width: 140 }
+    { title: '品牌方/红人团队', key: 'brandTeam', width: 180 },
+    { title: '视频数', key: 'videoCount', width: 70 },
+    { title: '客户合作价格', key: 'amount', width: 130 },
+    { title: '红人成本', key: 'amount2', width: 130 },
+    { title: '利润', key: 'profit', width: 130 }
   ]
 })
 
@@ -291,6 +298,11 @@ function close() { emit('update:visible', false) }
   justify-content: space-between;
   padding: 4px 0;
   font-size: 13px;
+}
+.hint-line {
+  font-size: 12px;
+  color: #595959;
+  padding: 0 0 4px;
 }
 .line.total {
   font-weight: 700;
