@@ -292,8 +292,9 @@ function groupMemberKeys(record) {
 }
 
 function rowClassName(record) {
-  if (isOffMonth(record)) return 'off-month-row'
   if (groupedFlowActive.value && !isRowSelectable(record)) return 'payment-selector-disabled-row'
+  if (selectedRowKeys.value.includes(record.trackingId)) return 'payment-selector-selected-row'
+  if (isOffMonth(record)) return 'off-month-row'
   return ''
 }
 
@@ -499,6 +500,14 @@ function doConfirm(selected) {
 .payment-selector-disabled-row > td {
   background: #f5f5f5 !important;
   color: #8c8c8c !important;
+}
+/* 已勾选的行整行淡蓝底+左侧色条，跟未勾选的行拉开对比度，方便一眼扫出有没有漏选
+   （2026-08 反馈：原来只有勾选框本身的对勾，跟未勾选行几乎看不出区别） */
+.payment-selector-selected-row > td {
+  background: #e6f4ff !important;
+}
+.payment-selector-selected-row > td:first-child {
+  box-shadow: inset 3px 0 0 #1677ff;
 }
 /* "折损"高亮文字：不能用 scoped——这个 class 除了在本组件正常渲染的 DOM 里用（汇总栏），
    还会出现在 a-tooltip 弹出层内容里，而 a-tooltip 的浮层是 teleport 到组件外层渲染的，
