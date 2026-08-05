@@ -21,8 +21,14 @@
  * 组件内部自己拉取/保存数据，父组件只需要在保存整体表单时调用 exposed 的 save() 方法。
  */
 import { reactive, ref, watch } from 'vue'
+import { message } from 'ant-design-vue'
 import { executorPayRateApi } from '../../api/index'
 import RateTierEditor from './RateTierEditor.vue'
+
+const VIDEO_TYPE_LABELS = {
+  REAL_SHOT_NEW: '实拍新视频', REAL_SHOT_NEW_PHOTO: '实拍新图片',
+  AI_NEW_MATERIAL: 'AI新素材', OLD_MATERIAL_REPOST: '旧素材重发'
+}
 
 const props = defineProps({
   executorId: { type: [Number, String], default: null },
@@ -62,12 +68,28 @@ async function load() {
 
 watch(() => [props.executorId, props.managerId], load, { immediate: true })
 
-/** 保存这份费率，供父组件在整体表单保存时调用 */
+/**
+ * 保存这份费率，供父组件在整体表单保存时调用。
+ *
+ * 2026-08 修复：之前对"最低条数"/"单价"任意一个没填的档位直接静默过滤掉不提交，
+ * 导致用户以为填了单价就保存成功了，实际上那一档整个被丢弃、什么都没存进去，
+ * 没有任何提示（Shawn 反馈）。现在改成：只要这一档"沾了手"（任意一个字段有值），
+ * 就必须同时填了"最低条数"和"单价"才允许保存，否则直接拦下来报错，不再悄悄丢弃。
+ * 真正完全没碰过的空行（比如点了"新增档位"又反悔不填了）才会被当成没意义的空行忽略。
+ */
 async function save() {
   if (!props.executorId) return
   const tiersByTypeToSave = {}
   for (const type of VIDEO_TYPES) {
-    tiersByTypeToSave[type] = tiersByType[type].filter(t => t.minCount != null && t.rate != null)
+    const rows = tiersByType[type]
+    const touchedRows = rows.filter(t =>
+      t.minCount != null || t.maxCount != null || t.rate != null || t.monthlyCap != null)
+    const incompleteIdx = touchedRows.findIndex(t => t.minCount == null || t.rate == null)
+    if (incompleteIdx !== -1) {
+      message.error(`${VIDEO_TYPE_LABELS[type]}：第 ${incompleteIdx + 1} 档"最低条数"和"单价"必须都填写，请检查后再保存`)
+      throw new Error('executor-rate-tier-incomplete')
+    }
+    tiersByTypeToSave[type] = touchedRows
   }
   await executorPayRateApi.save({
     managerId: props.managerId || null,
