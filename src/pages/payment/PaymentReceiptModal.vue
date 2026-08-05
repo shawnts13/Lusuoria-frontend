@@ -16,8 +16,8 @@
     </a-form>
     <div class="upload-hint">
       请点击"前往Receipts上传Google Drive页面"按钮，将发票上传至对应年份的Receipts文件夹里
-      （跟Invoice共用同一个Google Drive）。文件命名规则：年月日-receipt-结款单号，
-      例如20260805-receipt-{{ record?.paymentNo || 'PAY-XXXXXX' }}
+      （跟Invoice共用同一个Google Drive）。文件命名规则：年月日-receipt-品牌方-团队，
+      例如20260805-receipt-TEMU中国-田震团队
     </div>
   </a-modal>
 </template>

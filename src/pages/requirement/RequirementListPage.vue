@@ -9,6 +9,11 @@
         <a-button v-if="authStore.canWrite" type="primary" @click="openCreate">
           <template #icon><PlusOutlined /></template>新建需求
         </a-button>
+        <a-popconfirm v-if="authStore.isAdmin"
+          title="重新计算所有需求的需求完成时间？用于'存量记录关联需求'历史遗留数据的善后，正常使用不需要点这个。"
+          @confirm="handleRecomputeCompletedAt">
+          <a-button :loading="recomputingCompletedAt">重新计算需求完成时间</a-button>
+        </a-popconfirm>
       </a-space>
     </div>
 
@@ -178,9 +183,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined, FilterOutlined } from '@ant-design/icons-vue'
 import { requirementApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
@@ -202,6 +207,7 @@ const router = useRouter()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading     = ref(false)
+const recomputingCompletedAt = ref(false)
 const tableData   = ref([])
 const brands      = ref([])
 const teams       = ref([])
@@ -499,6 +505,19 @@ function toggleOnlyMissingContract() {
   if (filters.onlyMissingContract) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false }
   pagination.current = 1
   loadData()
+}
+
+async function handleRecomputeCompletedAt() {
+  recomputingCompletedAt.value = true
+  try {
+    const res = await requirementApi.recomputeCompletedAt()
+    Modal.info({
+      title: '重新计算需求完成时间完成',
+      width: 520,
+      content: h('div', { style: 'white-space:pre-line;line-height:1.7' }, res.data || '重新计算完成')
+    })
+    loadData()
+  } finally { recomputingCompletedAt.value = false }
 }
 
 function openCreate() { editingRecord.value = null; modalVisible.value = true }

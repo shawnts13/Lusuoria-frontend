@@ -207,6 +207,9 @@ export const requirementApi = {
   linkLegacy: (internalRequirementNo, trackingIds) =>
     http.post('/api/influencer-requirements/link-legacy', { internalRequirementNo, trackingIds }),
 
+  // "重新计算需求完成时间"（仅ADMIN，善后用，2026-08 新增）
+  recomputeCompletedAt: () => http.post('/api/influencer-requirements/recompute-completed-at'),
+
   uploadInvoiceLink: (id, invoiceLink) =>
     http.post(`/api/influencer-requirements/${id}/invoice-link`, { invoiceLink }),
   uploadContractLink: (id, contractLink) =>
