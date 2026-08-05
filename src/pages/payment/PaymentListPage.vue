@@ -40,6 +40,10 @@
         style="margin-left:16px" @click="toggleOnlyUnpaid">
         查看未付款的记录
       </a-button>
+      <a-button class="orange-filter-btn" :class="{ active: filters.onlyMissingReceipt }"
+        @click="toggleOnlyMissingReceipt">
+        {{ filters.onlyMissingReceipt ? '查看全部记录' : '查看未上传发票的记录' }}
+      </a-button>
     </div>
 
     <div class="table-card" ref="tableWrapperRef">
@@ -185,7 +189,9 @@ const filters = reactive({
   internalRequirementNo: undefined,
   // 支持从"红人结款临近付款日"提醒"查看详情"跳转过来时按结款单号直接定位（见
   // ProgressReminderDetailModal.vue 的 goToDetail）
-  paymentNo: route.query.paymentNo || undefined
+  paymentNo: route.query.paymentNo || undefined,
+  // "查看未上传发票的记录"开关（2026-08 新增）：只看涉及公对公发票、且还没上传发票链接的记录
+  onlyMissingReceipt: false
 })
 
 const paymentStatuses = [
@@ -269,6 +275,7 @@ async function loadData() {
       paymentStatus:   filters.paymentStatus,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       paymentNo: filters.paymentNo?.trim() || undefined,
+      onlyMissingReceipt: filters.onlyMissingReceipt,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -293,13 +300,18 @@ function handleTableChange(pag, _filters, sorter) {
 function resetFilters() {
   Object.assign(filters, { settlementMonth:undefined, settlementMonthVal:undefined,
     brandId:undefined, teamId:undefined, paymentStatus:undefined, internalRequirementNo:undefined,
-    paymentNo:undefined })
+    paymentNo:undefined, onlyMissingReceipt: false })
   pagination.current = 1
   sortState.field = 'settlementMonth'; sortState.order = 'descend'
   loadData()
 }
 function toggleOnlyUnpaid() {
   filters.paymentStatus = filters.paymentStatus === 'PENDING' ? undefined : 'PENDING'
+  pagination.current = 1
+  loadData()
+}
+function toggleOnlyMissingReceipt() {
+  filters.onlyMissingReceipt = !filters.onlyMissingReceipt
   pagination.current = 1
   loadData()
 }
