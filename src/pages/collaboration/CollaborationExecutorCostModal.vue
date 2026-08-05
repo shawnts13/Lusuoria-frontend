@@ -1,6 +1,7 @@
 <template>
-  <a-modal :open="visible" title="设置内部执行成本" width="480px"
-    :confirm-loading="saving" @ok="handleSave" @cancel="close">
+  <a-modal :open="visible" title="内部执行成本" width="480px"
+    :confirm-loading="saving" :ok-button-props="{ disabled: saveDisabled }"
+    @ok="handleSave" @cancel="close">
     <div style="margin-bottom:12px; color:#262626; font-size:13px">
       {{ record?.internalProjectNo }}
     </div>
@@ -19,26 +20,26 @@
           执行人员：{{ record.executorName || '—' }}
         </div>
 
+        <!-- 2026-08 起内部执行成本完全由系统按"执行人员管理"配置的费率梯度自动算，
+             不再提供手动填写的输入框——这里只读展示系统算出的金额和依据 -->
         <template v-if="!notApplicable">
-          <div v-if="breakdown" style="background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:16px; font-size:13px; color:#262626; white-space:pre-line; line-height:1.6"
-            v-html="highlightBreakdown(breakdown)"></div>
-          <a-form-item label="内部执行成本（元）">
-            <a-input-number v-model:value="amount" :min="0" :precision="2" style="width:100%" />
-          </a-form-item>
-          <!-- 已保存金额 vs 文本框里目前计划设置的金额，两者分开展示，改了之后一眼能看出差异
-               （Shawn 反馈：之前只在说明文字里提过一次已保存金额，改了文本框之后就分不清哪个是
-               原值、哪个是准备保存的新值了） -->
-          <div v-if="alreadySet" style="font-size:12px; color:#262626; margin-bottom:4px">
-            之前已设置：<b>¥{{ fmtAmount(savedAmount) }}</b>
-            <template v-if="amountChanged">
-              <span style="color:#8c8c8c"> → </span>
-              <b style="color:#d4380d">¥{{ fmtAmount(amount) }}</b>
-              <span style="color:#d4380d">（保存后会覆盖为这个新值）</span>
-            </template>
-            <span v-else style="color:#595959">（如需调整可以直接修改后再保存）</span>
+          <div v-if="breakdown" :style="breakdownBoxStyle" v-html="highlightBreakdown(breakdown)"></div>
+          <div v-if="!loadingSuggestion && effectiveExecutorId" style="margin-bottom:4px">
+            <span style="font-size:13px;color:#595959">{{ alreadySet ? '目前已设置成：' : '系统算出的内部执行成本：' }}</span>
+            <b :style="{ fontSize: '16px', color: blocked ? '#bbb' : '#262626' }">
+              {{ blocked ? '—' : ('¥' + fmtAmount(suggestedAmount)) }}
+            </b>
+          </div>
+          <div v-if="blocked" style="font-size:12px; color:#d4380d; margin-bottom:4px">
+            {{ noRateConfigured ? '该执行人员还没有配置这个视频类型的费率梯度，配置好之前这条记录无法保存。'
+               : outOfRange ? '当前费率梯度没有覆盖到这个条数，补充档位配置之前这条记录无法保存。' : '' }}
+          </div>
+          <div v-else-if="cappedAtZero" style="font-size:12px; color:#d4380d; margin-bottom:4px">
+            已达到该视频类型当月的封顶金额，这一笔不再计费，金额正常保存为 ¥0.00。
           </div>
           <div v-else-if="rateBasedSuggestion" style="font-size:12px; color:#595959">
-            以上是根据该执行人员在员工管理里维护的费率档位自动算出的建议金额，可以手动修改后再保存。
+            以上是根据该执行人员在"员工管理"/"执行人员管理"维护的费率梯度自动算出的金额，如需特批一个不同的金额，
+            请联系管理层通过"编辑"表单手动设置。
           </div>
         </template>
       </a-form>
@@ -69,21 +70,24 @@ const emit = defineEmits(['update:visible', 'saved'])
 const executorCandidates = computed(() =>
   props.employees.filter(e => e.role === '执行人员'))
 
-const amount = ref(null)
+const suggestedAmount = ref(null)
 const breakdown = ref('')
 const rateBasedSuggestion = ref(false)
 const alreadySet = ref(false)
-// 已保存金额的快照，跟 amount 分开存——amount 会随用户编辑文本框实时变化，savedAmount 保持
-// 不变，用来跟 amount 对比展示"之前已设置" vs "目前计划设置"这两个值的差异
-const savedAmount = ref(null)
+const noRateConfigured = ref(false)
+const outOfRange = ref(false)
+const cappedAtZero = ref(false)
 const saving = ref(false)
 const loadingSuggestion = ref(false)
 const selectedExecutorId = ref(null)
 const notApplicable = ref(false)
 
-const amountChanged = computed(() =>
-  alreadySet.value && savedAmount.value != null
-  && Number(amount.value) !== Number(savedAmount.value))
+// noRateConfigured/outOfRange：系统算不出金额，这条记录现在没法保存，跟"算出来是0"
+// （cappedAtZero，正常业务结果，允许保存）是两回事，不能混为一谈
+const blocked = computed(() => noRateConfigured.value || outOfRange.value)
+const saveDisabled = computed(() => !notApplicable.value && (!effectiveExecutorId.value || blocked.value))
+
+const breakdownBoxStyle = 'background:#f6f8fa; border-radius:4px; padding:10px 12px; margin-bottom:12px; font-size:13px; color:#262626; white-space:pre-line; line-height:1.6'
 
 function fmtAmount(v) {
   if (v == null || v === '') return '—'
@@ -94,21 +98,24 @@ const effectiveExecutorId = computed(() => props.record?.executorId || selectedE
 
 async function loadSuggestion() {
   if (!effectiveExecutorId.value) {
-    amount.value = null
+    suggestedAmount.value = null
     breakdown.value = '请先选择内部执行人员，或选择"不涉及执行人员"'
     rateBasedSuggestion.value = false
+    noRateConfigured.value = false
+    outOfRange.value = false
+    cappedAtZero.value = false
     return
   }
   loadingSuggestion.value = true
   try {
     const res = await collaborationApi.suggestExecutorCost(props.record.id, effectiveExecutorId.value)
-    amount.value = res.data.suggestedAmount
+    suggestedAmount.value = res.data.suggestedAmount
     breakdown.value = res.data.breakdown
     rateBasedSuggestion.value = !!res.data.rateBasedSuggestion
     alreadySet.value = !!res.data.alreadySet
-    // alreadySet 时后端返回的 suggestedAmount 就是当前已保存的金额，存一份快照，
-    // 不随用户后续编辑 amount 变化
-    savedAmount.value = alreadySet.value ? res.data.suggestedAmount : null
+    noRateConfigured.value = !!res.data.noRateConfigured
+    outOfRange.value = !!res.data.outOfRange
+    cappedAtZero.value = !!res.data.cappedAtZero
   } finally {
     loadingSuggestion.value = false
   }
@@ -116,11 +123,13 @@ async function loadSuggestion() {
 
 watch(() => props.visible, v => {
   if (v && props.record) {
-    amount.value = null
+    suggestedAmount.value = null
     breakdown.value = ''
     rateBasedSuggestion.value = false
     alreadySet.value = false
-    savedAmount.value = null
+    noRateConfigured.value = false
+    outOfRange.value = false
+    cappedAtZero.value = false
     selectedExecutorId.value = null
     notApplicable.value = false
     loadSuggestion()
@@ -146,10 +155,14 @@ async function handleSave() {
     message.warning('请先选择内部执行人员，或选择"不涉及执行人员"')
     return
   }
+  if (!notApplicable.value && blocked.value) {
+    message.warning('系统还算不出这笔内部执行成本，请先按上面的提示处理后再保存')
+    return
+  }
   saving.value = true
   try {
+    // 2026-08 起金额不再由前端提交——服务端按费率梯度现场算，见后端 setExecutorCost() 注释
     const res = await collaborationApi.setExecutorCost(props.record.id, {
-      amount: notApplicable.value ? null : amount.value,
       executorId: notApplicable.value ? null : selectedExecutorId.value,
       notApplicable: notApplicable.value
     })

@@ -242,8 +242,16 @@
           </a-col>
           <a-col :span="canViewCostBookkeeping ? 8 : 24">
             <a-form-item label="内部执行成本（人民币）">
-              <a-input-number v-model:value="form.internalExecutionCost"
+              <!-- 2026-08 起完全由系统按"执行人员管理"配置的费率梯度自动算（见"内部执行成本"
+                   弹窗），这里收窄成仅 ADMIN 能手动特批一个跟梯度不一致的值（人情价/历史遗留
+                   特殊安排），其余角色只读展示 -->
+              <a-input-number v-if="canEditCommission" v-model:value="form.internalExecutionCost"
                 style="width:100%" :precision="2" @change="calcPreview" />
+              <span v-else>{{ form.internalExecutionCost ?? '—' }}</span>
+              <div v-if="canEditCommission" style="font-size:12px;color:#595959;margin-top:2px">
+                正常情况下不需要在这里填，系统会在"内部执行成本"弹窗里按费率梯度自动算；这里手动改的值会被标记成特批，
+                以后点"重新计算利润"不会被覆盖
+              </div>
             </a-form-item>
           </a-col>
         </a-row>

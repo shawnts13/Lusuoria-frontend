@@ -24,7 +24,7 @@
         </div>
       </div>
       <div v-if="tier.maxCount == null" class="tier-cap-row">
-        <label>当月封顶金额<span class="tier-field-hint">留空=不封顶</span></label>
+        <label>当月封顶金额<span class="tier-field-hint">留空=不封顶，封的是这整个视频类型当月的总额，不是这一档</span></label>
         <a-input-number v-model:value="tier.monthlyCap" :min="0" :precision="2" addon-after="元/月" style="width:220px" />
       </div>
     </div>
@@ -33,7 +33,8 @@
       <template #icon><PlusOutlined /></template>新增档位
     </a-button>
     <div class="tier-section-hint">
-      只维护一档、且最高条数留空，就等于"每条固定单价"；只有排在最后、最高条数留空的那一档才能设置当月封顶金额
+      只维护一档、且最高条数留空，就等于"每条固定单价"；只有排在最后、最高条数留空的那一档才能设置当月封顶金额——
+      封顶金额算的是这个视频类型当月的累计总额（不管命中了几档、多少笔），不是只封这一档自己的收入
     </div>
   </div>
 </template>

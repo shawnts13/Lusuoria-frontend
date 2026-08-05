@@ -211,13 +211,14 @@
               <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
               <a-divider type="vertical" />
               <a-tooltip v-if="!record.executorId" title="该记录还没有关联执行人员，若涉及的话，请先在编辑表单里选择执行人员">
-                <span style="color:#bbb;cursor:not-allowed">设置执行成本</span>
+                <span style="color:#bbb;cursor:not-allowed">内部执行成本</span>
               </a-tooltip>
               <!-- 项目负责人还没在"执行人员管理"给这个执行人员+这个视频类型配置薪资梯度，
-                   没有建议金额可给，隐藏这个快捷入口（占位不塌陷，避免"删除"错位），
-                   要设置的话去"编辑"里手动填 -->
-              <span v-else-if="!record.hasExecutorPayRateConfigured" style="visibility:hidden">设置执行成本</span>
-              <a v-else @click="openExecutorCostModal(record)">设置执行成本</a>
+                   系统算不出金额（2026-08 起也没法在这个弹窗里手动填了），隐藏这个快捷入口
+                   （占位不塌陷，避免"删除"错位），要处理的话先去"员工管理"/"执行人员管理"
+                   配置费率梯度 -->
+              <span v-else-if="!record.hasExecutorPayRateConfigured" style="visibility:hidden">内部执行成本</span>
+              <a v-else @click="openExecutorCostModal(record)">内部执行成本</a>
               <span v-if="record.hasPendingExecutorCostModifyRequest" style="color:#faad14;font-size:12px">（修改审核中）</span>
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
@@ -292,9 +293,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, LinkOutlined } from '@ant-design/icons-vue'
 import { collaborationApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
@@ -609,7 +610,13 @@ async function handleRecomputeProfits() {
   recomputing.value = true
   try {
     const res = await collaborationApi.recomputeProfits()
-    message.success(res.data || '重新计算完成')
+    // 2026-08 起这段结果摘要连带内部执行成本的重算情况，可能有好几行（含跳过了哪些费率
+    // 梯度组合），用 Modal 展示、保留换行，不能再用一闪而过的 message toast 挤成一行
+    Modal.info({
+      title: '重新计算利润完成',
+      width: 560,
+      content: h('div', { style: 'white-space:pre-line;line-height:1.7' }, res.data || '重新计算完成')
+    })
     loadData()
   } finally { recomputing.value = false }
 }
