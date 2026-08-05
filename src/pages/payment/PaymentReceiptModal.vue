@@ -16,8 +16,8 @@
     </a-form>
     <div class="upload-hint">
       请点击"前往Receipts上传Google Drive页面"按钮，将发票上传至对应年份的Receipts文件夹里
-      （跟Invoice共用同一个Google Drive）。文件命名规则：年月日-receipt-品牌方-团队，
-      例如20260805-receipt-TEMU中国-田震团队
+      （跟Invoice共用同一个Google Drive）。文件命名规则：年月日-receipt-品牌方-团队.pdf，
+      例如20260805-receipt-TEMU中国-田震团队.pdf
       <template v-if="suggestedFileName">
         <br>本发票建议命名：<span class="suggested-name">{{ suggestedFileName }}</span>
       </template>
@@ -54,7 +54,7 @@ function todayYmdBeijing() {
 const suggestedFileName = computed(() => {
   if (!props.brandName) return null
   const suffix = props.teamName ? `${props.brandName}-${props.teamName}` : props.brandName
-  return `${todayYmdBeijing()}-receipt-${suffix}`
+  return `${todayYmdBeijing()}-receipt-${suffix}.pdf`
 })
 const emit = defineEmits(['update:visible', 'saved'])
 

@@ -16,7 +16,7 @@
     </a-form>
     <div class="upload-hint">
       请点击"前往Invoice上传Google Drive页面"按钮，将Invoice上传至对应年份的Invoices文件夹里。
-      文件命名规则：年月日-invoice-红人社媒完整名字，例如20260723-invoice-kam2kute
+      文件命名规则：年月日-invoice-红人社媒完整名字.pdf，例如20260723-invoice-kam2kute.pdf
       <template v-if="suggestedFileName">
         <br>本Invoice建议命名：<span class="suggested-name">{{ suggestedFileName }}</span>
       </template>
@@ -49,7 +49,7 @@ function todayYmdBeijing() {
   return `${map.year}${map.month}${map.day}`
 }
 const suggestedFileName = computed(() =>
-  props.accountName ? `${todayYmdBeijing()}-invoice-${props.accountName}` : null)
+  props.accountName ? `${todayYmdBeijing()}-invoice-${props.accountName}.pdf` : null)
 const emit = defineEmits(['update:visible', 'saved'])
 
 const saving = ref(false)

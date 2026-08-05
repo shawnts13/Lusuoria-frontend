@@ -16,7 +16,7 @@
     </a-form>
     <div class="upload-hint">
       请点击"前往合同上传Google Drive页面"按钮，将合同上传至对应年份的Contracts文件夹里。
-      文件命名规则：年月日-contract-红人社媒完整名字，例如 20260723-contract-kam2kute
+      文件命名规则：年月日-contract-红人社媒完整名字.pdf，例如 20260723-contract-kam2kute.pdf
       <template v-if="suggestedFileName">
         <br>本合同建议命名：<span class="suggested-name">{{ suggestedFileName }}</span>
       </template>
@@ -48,7 +48,7 @@ function todayYmdBeijing() {
   return `${map.year}${map.month}${map.day}`
 }
 const suggestedFileName = computed(() =>
-  props.accountName ? `${todayYmdBeijing()}-contract-${props.accountName}` : null)
+  props.accountName ? `${todayYmdBeijing()}-contract-${props.accountName}.pdf` : null)
 const emit = defineEmits(['update:visible', 'saved'])
 
 const saving = ref(false)
