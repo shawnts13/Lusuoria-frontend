@@ -28,6 +28,16 @@
               {{ record.requiresInvoice === false ? '不需要' : '需要' }}
             </a-tag>
           </template>
+          <template v-if="column.key === 'involvesClientOrderId'">
+            <a-tag :color="record.involvesClientOrderId === false ? 'default' : 'blue'">
+              {{ record.involvesClientOrderId === false ? '不涉及' : '涉及' }}
+            </a-tag>
+          </template>
+          <template v-if="column.key === 'involvesClientPaymentBatch'">
+            <a-tag :color="record.involvesClientPaymentBatch === false ? 'default' : 'purple'">
+              {{ record.involvesClientPaymentBatch === false ? '不涉及' : '涉及' }}
+            </a-tag>
+          </template>
           <template v-if="column.key === 'paymentCycle'">
             <span :style="{ color: record.paymentCycleType ? '#262626' : '#bbb' }">{{ formatPaymentCycle(record) }}</span>
           </template>
@@ -113,6 +123,25 @@
             <a-select-option :value="false">不需要</a-select-option>
           </a-select>
         </a-form-item>
+        <a-form-item label="是否涉及客户方的项目订单">
+          <a-select v-model:value="form.involvesClientOrderId" allow-clear placeholder="默认涉及">
+            <a-select-option :value="true">涉及</a-select-option>
+            <a-select-option :value="false">不涉及</a-select-option>
+          </a-select>
+          <div class="hint-box">
+            涉及时，红人合作跟踪记录的视频项目进度流转到"已加入客户未结算列表"/"客户已结算"这两个状态，
+            必须先填写"客户方的项目订单"才能流转。
+          </div>
+        </a-form-item>
+        <a-form-item label="是否涉及客户方付款批次">
+          <a-select v-model:value="form.involvesClientPaymentBatch" allow-clear placeholder="默认涉及">
+            <a-select-option :value="true">涉及</a-select-option>
+            <a-select-option :value="false">不涉及</a-select-option>
+          </a-select>
+          <div class="hint-box">
+            涉及时，红人合作跟踪记录的视频项目进度流转到"客户已结算"，必须先填写"客户方付款批次"才能流转。
+          </div>
+        </a-form-item>
         <a-form-item label="合同签订周期">
           <a-select v-model:value="form.contractCycleType" allow-clear placeholder="尚未配置">
             <a-select-option value="ANNUAL">一年签一次合同</a-select-option>
@@ -160,7 +189,8 @@ const form = reactive({
   paymentCycleType: null, costThresholdAmount: null,
   daysWithinThreshold: null, daysAboveThreshold: null, daysAfterMonthEnd: null,
   notes: '',
-  requiresInvoice: null, contractCycleType: null
+  requiresInvoice: null, contractCycleType: null,
+  involvesClientOrderId: null, involvesClientPaymentBatch: null
 })
 
 const CONTRACT_CYCLE_LABELS = { ANNUAL: '一年签一次合同', PER_REQUIREMENT: '一次需求签一次合同' }
@@ -196,6 +226,10 @@ const columns = [
   { title: '付款周期',   key: 'paymentCycle' },
   { title: '是否需要Invoice', key: 'requiresInvoice',
     sorter: (a, b) => Number(a.requiresInvoice === false) - Number(b.requiresInvoice === false) },
+  { title: '是否涉及客户方的项目订单', key: 'involvesClientOrderId',
+    sorter: (a, b) => Number(a.involvesClientOrderId === false) - Number(b.involvesClientOrderId === false) },
+  { title: '是否涉及客户方付款批次', key: 'involvesClientPaymentBatch',
+    sorter: (a, b) => Number(a.involvesClientPaymentBatch === false) - Number(b.involvesClientPaymentBatch === false) },
   { title: '合同签订周期', key: 'contractCycleType' },
   { title: '备注',       key: 'notes', ellipsis: true },
   { title: '操作',       key: 'action',                  width: 120 }
@@ -214,7 +248,8 @@ function openCreate() {
     paymentCycleType:null, costThresholdAmount:null,
     daysWithinThreshold:null, daysAboveThreshold:null, daysAfterMonthEnd:null,
     notes:'',
-    requiresInvoice:null, contractCycleType:null })
+    requiresInvoice:null, contractCycleType:null,
+    involvesClientOrderId:null, involvesClientPaymentBatch:null })
   modalVisible.value = true
 }
 

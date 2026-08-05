@@ -46,7 +46,12 @@
         </p>
         <a-textarea v-model:value="notes" :rows="3" placeholder="请填写备注" />
       </a-form-item>
-      <a-form-item label="客户方付款批次单号" v-if="progress === 'SETTLED' && authStore.employeeRole === '财务'" required>
+      <a-form-item label="客户方的项目订单"
+        v-if="(progress === 'JOINED_CLIENT_UNSETTLED_LIST' || progress === 'SETTLED') && requiresClientOrderId" required>
+        <a-input v-model:value="clientOrderId" placeholder="请填写客户方的项目订单" />
+      </a-form-item>
+      <a-form-item label="客户方付款批次单号"
+        v-if="progress === 'SETTLED' && authStore.canSetFinanceSettlementProgress && requiresClientPaymentBatch" required>
         <a-input v-model:value="clientPaymentBatch" placeholder="请填写客户方付款批次单号" />
       </a-form-item>
     </a-form>
@@ -81,7 +86,14 @@ const progress = ref(null)
 const reason = ref('')
 const notes = ref('')
 const clientPaymentBatch = ref('')
+const clientOrderId = ref('')
 const saving = ref(false)
+
+// 品牌方是否涉及这两个字段（2026-08 新增），跟后端 Brand.requiresClientOrderId()/
+// requiresClientPaymentBatch() 保持一致：null/true 都按"涉及"处理，只有显式 false 才是"不涉及"
+const currentBrand = computed(() => props.brands?.find(b => b.id === props.record?.brandId))
+const requiresClientOrderId = computed(() => currentBrand.value?.involvesClientOrderId !== false)
+const requiresClientPaymentBatch = computed(() => currentBrand.value?.involvesClientPaymentBatch !== false)
 
 // 弹窗打开那一刻的原始值，用来判断这次改动算不算"倒退"（不随下面 progress 的实时编辑而变化，
 // 保证即使中途改来改去，isRollback 判断的始终是"跟数据库原值相比"）。红人结款进度
@@ -95,6 +107,7 @@ watch(() => props.visible, v => {
     // 默认带入当前已有的值，用户可以直接沿用也可以改——不是每次都要求从空白重填
     notes.value = props.record.notes || ''
     clientPaymentBatch.value = props.record.clientPaymentBatch || ''
+    clientOrderId.value = props.record.clientOrderId || ''
     original.progress = props.record.progress || null
     original.paymentProgress = props.record.influencerPaymentProgress || null
   }
@@ -150,9 +163,16 @@ async function handleSave() {
     message.warning('请填写备注')
     return
   }
-  const needsPaymentBatch = progress.value === 'SETTLED' && authStore.employeeRole === '财务'
+  const needsOrderId = (progress.value === 'JOINED_CLIENT_UNSETTLED_LIST' || progress.value === 'SETTLED')
+    && requiresClientOrderId.value
+  if (needsOrderId && !clientOrderId.value?.trim()) {
+    message.warning('该品牌方涉及"客户方的项目订单"，请先填写')
+    return
+  }
+  const needsPaymentBatch = progress.value === 'SETTLED' && authStore.canSetFinanceSettlementProgress
+    && requiresClientPaymentBatch.value
   if (needsPaymentBatch && !clientPaymentBatch.value?.trim()) {
-    message.warning('请填写客户方付款批次单号')
+    message.warning('该品牌方涉及"客户方付款批次"，请先填写客户方付款批次单号')
     return
   }
   saving.value = true
@@ -161,6 +181,7 @@ async function handleSave() {
       progress: progress.value,
       reason: isRollback.value ? reason.value.trim() : null,
       notes: progress.value === 'DELAYED' ? notes.value.trim() : null,
+      clientOrderId: needsOrderId ? clientOrderId.value.trim() : null,
       clientPaymentBatch: needsPaymentBatch ? clientPaymentBatch.value.trim() : null
     })
     if (res.data?.pendingApproval) {

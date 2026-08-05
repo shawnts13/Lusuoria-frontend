@@ -27,14 +27,19 @@
               style="display:flex;gap:8px;margin-bottom:8px">
               <a-tooltip :title="brandNameById(pair.brandId)">
                 <a-select v-model:value="pair.brandId" placeholder="品牌方" style="flex:1;min-width:0" allow-clear show-search
-                  :filter-option="(input, opt) => opt.label.includes(input)">
+                  :filter-option="(input, opt) => opt.label.includes(input)"
+                  @change="onBrandChangeInPair(pair)">
                   <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
                 </a-select>
               </a-tooltip>
               <a-tooltip :title="teamNameById(pair.teamId)">
+                <!-- 2026-08 修复：这里之前直接遍历全量 teams，没有按这一行选中的品牌方过滤，
+                     导致比如选了"TEMU海外"（没配团队）还是能看到、选中"TEMU中国"的团队——
+                     团队本来就归属唯一品牌方（InfluencerTeam.brandId），必须按 pair.brandId 过滤 -->
                 <a-select v-model:value="pair.teamId" placeholder="团队（可不选）" style="flex:1;min-width:0" allow-clear show-search
+                  :disabled="!pair.brandId"
                   :filter-option="(input, opt) => opt.label.includes(input)">
-                  <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
+                  <a-select-option v-for="t in teamsForBrand(pair.brandId)" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
                 </a-select>
               </a-tooltip>
               <a-button danger @click="form.brandTeamPairs.splice(idx, 1)">删除</a-button>
@@ -406,6 +411,18 @@ function teamNameById(id) {
   if (!id) return ''
   const t = props.teams.find(t => t.id === id)
   return t ? t.name : ''
+}
+// 团队归属唯一品牌方，下拉框必须按这一行选中的品牌方过滤，不能展示全量团队列表（2026-08 修复）
+function teamsForBrand(brandId) {
+  if (!brandId) return []
+  return props.teams.filter(t => t.brandId === brandId)
+}
+// 换了品牌方之后，原来选的团队大概率不属于新品牌方了，直接清空，不留一个跟品牌方对不上的
+// 团队 id 在表单里（用户之前多半也没注意到这个团队其实是别的品牌方的，是这次修复前的 bug 遗留）
+function onBrandChangeInPair(pair) {
+  if (!pair.teamId) return
+  const stillValid = teamsForBrand(pair.brandId).some(t => t.id === pair.teamId)
+  if (!stillValid) pair.teamId = null
 }
 
 async function handleAddDomain() {

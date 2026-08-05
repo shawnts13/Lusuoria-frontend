@@ -424,6 +424,13 @@ const availableBrands = computed(() => {
   return props.brands.filter(b => brandIds.includes(b.id))
 })
 
+// 2026-08 新增：品牌方是否涉及"客户方的项目订单"/"客户方付款批次"，跟后端
+// Brand.requiresClientOrderId()/requiresClientPaymentBatch() 保持一致——null/true 都按
+// "涉及"处理，只有显式 false 才是"不涉及"；找不到品牌方（理论上不会发生）也按"涉及"兜底
+const currentBrand = computed(() => props.brands.find(b => b.id === form.brandId))
+const requiresClientOrderId = computed(() => currentBrand.value?.involvesClientOrderId !== false)
+const requiresClientPaymentBatch = computed(() => currentBrand.value?.involvesClientPaymentBatch !== false)
+
 // 团队选项：跟着选中的品牌方走。0个选项时不允许选；1个选项时自动带入且禁用选择框；
 // 多个选项时列出来让用户明确选择其中一个（可能包含"不涉及团队"这个选项）
 const availableTeams = computed(() => {
@@ -728,12 +735,46 @@ function blockSaveForMissingCommissionRate() {
   })
 }
 
+// 2026-08 新增：新建时如果直接把视频项目进度选成了"已加入客户未结算列表"/"客户已结算"，
+// 跟后端 doSave() 的同一条硬性校验保持一致——品牌方涉及对应字段时必须先填。编辑时视频项目
+// 进度只能通过"状态流转"弹窗修改（这里的下拉框被禁用），那边已经有一份镜像校验，这里不重复
+function needsClientOrderIdCheck() {
+  if (form.id) return false
+  if (!(form.progress === 'JOINED_CLIENT_UNSETTLED_LIST' || form.progress === 'SETTLED')) return false
+  return requiresClientOrderId.value && !form.clientOrderId?.trim()
+}
+function needsClientPaymentBatchCheck() {
+  if (form.id) return false
+  if (form.progress !== 'SETTLED') return false
+  return requiresClientPaymentBatch.value && !form.clientPaymentBatch?.trim()
+}
+function blockSaveForMissingClientOrderId() {
+  Modal.warning({
+    title: '无法保存',
+    content: '该品牌方涉及"客户方的项目订单"，视频项目进度为"已加入客户未结算列表"/"客户已结算"时必须先填写"客户方的项目订单"。'
+  })
+}
+function blockSaveForMissingClientPaymentBatch() {
+  Modal.warning({
+    title: '无法保存',
+    content: '该品牌方涉及"客户方付款批次"，视频项目进度为"客户已结算"时必须先填写"客户方付款批次"。'
+  })
+}
+
 async function doSave() {
   if (saving.value) return   // 防止连续点击导致重复提交
   saving.value = true
   try {
     if (needsCommissionRateCheck()) {
       blockSaveForMissingCommissionRate()
+      return
+    }
+    if (needsClientOrderIdCheck()) {
+      blockSaveForMissingClientOrderId()
+      return
+    }
+    if (needsClientPaymentBatchCheck()) {
+      blockSaveForMissingClientPaymentBatch()
       return
     }
     if (await needsExecutorCostBeforeSave()) {
