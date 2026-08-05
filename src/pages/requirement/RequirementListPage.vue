@@ -165,9 +165,11 @@
     <RequirementProgressModal v-model:visible="progressModalVisible" :requirement-id="progressModalRequirementId" />
 
     <RequirementInvoiceModal v-model:visible="invoiceModalVisible" :requirement="invoiceModalRequirement"
+      :account-name="getInfluencerName(invoiceModalRequirement?.influencerId)"
       @saved="loadData" />
 
     <RequirementContractModal v-model:visible="contractModalVisible" :requirement="contractModalRequirement"
+      :account-name="getInfluencerName(contractModalRequirement?.influencerId)"
       @saved="loadData" />
 
     <CollaborationBatchCreateModal

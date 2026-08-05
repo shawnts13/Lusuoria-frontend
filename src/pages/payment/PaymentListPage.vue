@@ -130,6 +130,8 @@
     <PaymentReceiptModal
       v-model:visible="receiptModalVisible"
       :record="receiptModalRecord"
+      :brand-name="getBrandName(receiptModalRecord?.brandId)"
+      :team-name="receiptModalTeamName"
       @saved="loadData" />
 
     <PaymentItemSelectorModal
@@ -243,6 +245,13 @@ function getTeamName(teamId) {
 function teamLabelOf(teamId) {
   return teamId == null ? '（不涉及团队）' : (getTeamName(teamId) || teamId)
 }
+// "上传发票"建议命名用（2026-08 新增）：取这条结款记录范围内第一个真实团队的名字，
+// 没有真实团队（纯"不涉及团队"）时返回空——受 validateInvoiceTeamExclusivity 约束，
+// 涉及公对公发票的记录团队范围正常情况下只会有这一项，取第一个即可
+const receiptModalTeamName = computed(() => {
+  const realTeamId = (receiptModalRecord.value?.teamIds || []).find(id => id != null)
+  return realTeamId != null ? getTeamName(realTeamId) : ''
+})
 
 // "上传发票"功能（2026-08 新增）：这条结款记录整体是否涉及公对公发票——teamIds 范围内任意一个
 // 团队（含"不选团队"落回品牌方默认值）解析为 true 就算涉及，跟后端 InfluencerPaymentService.

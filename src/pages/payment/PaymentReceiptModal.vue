@@ -18,19 +18,43 @@
       请点击"前往Receipts上传Google Drive页面"按钮，将发票上传至对应年份的Receipts文件夹里
       （跟Invoice共用同一个Google Drive）。文件命名规则：年月日-receipt-品牌方-团队，
       例如20260805-receipt-TEMU中国-田震团队
+      <template v-if="suggestedFileName">
+        <br>本发票建议命名：<span class="suggested-name">{{ suggestedFileName }}</span>
+      </template>
     </div>
   </a-modal>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { LinkOutlined } from '@ant-design/icons-vue'
 import { paymentApi } from '../../api/index'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
-  record: { type: Object, default: null }
+  record: { type: Object, default: null },
+  // 品牌方名称 + 团队名称（2026-08 新增，用来直接算出建议命名，不用用户自己拼）。
+  // teamName 为空代表这条结款记录"不涉及团队"，命名里就不带团队这一段
+  brandName: { type: String, default: null },
+  teamName: { type: String, default: null }
+})
+
+// 建议命名直接算好显示出来，按北京时间取"今天"（系统约定所有时间都按北京时间，浏览器本地
+// 时区不一定是北京时间，不能直接用 new Date() 的本地年月日），跟"上传Invoice"/"上传合同"
+// 弹窗同一个套路
+function todayYmdBeijing() {
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date())
+  const map = {}
+  for (const p of parts) map[p.type] = p.value
+  return `${map.year}${map.month}${map.day}`
+}
+const suggestedFileName = computed(() => {
+  if (!props.brandName) return null
+  const suffix = props.teamName ? `${props.brandName}-${props.teamName}` : props.brandName
+  return `${todayYmdBeijing()}-receipt-${suffix}`
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
@@ -73,5 +97,10 @@ async function handleSave() {
   border: 1px solid #ffe58f;
   border-radius: 4px;
   padding: 8px 12px;
+}
+/* 建议命名的文件名直接标红加粗，跟上面说明性的文字拉开视觉优先级，一眼就能复制对照 */
+.suggested-name {
+  color: #cf1322;
+  font-weight: 600;
 }
 </style>
