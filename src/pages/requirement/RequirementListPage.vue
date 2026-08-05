@@ -34,6 +34,16 @@
         <template #icon><FilterOutlined /></template>
         {{ filters.onlyIncomplete ? '查看全部需求' : '查看未完成的需求' }}
       </a-button>
+      <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyMissingInvoice }"
+        @click="toggleOnlyMissingInvoice">
+        <template #icon><FilterOutlined /></template>
+        {{ filters.onlyMissingInvoice ? '查看全部需求' : '查看未上传invoice的需求' }}
+      </a-button>
+      <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyMissingContract }"
+        @click="toggleOnlyMissingContract">
+        <template #icon><FilterOutlined /></template>
+        {{ filters.onlyMissingContract ? '查看全部需求' : '查看未上传合同的需求' }}
+      </a-button>
     </div>
 
     <div class="table-card" ref="tableWrapperRef">
@@ -237,7 +247,13 @@ const filters = reactive({
   // 支持从"进度提醒"详情等外部入口带 internalRequirementNo 跳转过来直接定位
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   // "查看未完成的需求"开关：只看"需求完成进度"没到100%的（含还没有任何条目、显示0%的情况）
-  onlyIncomplete: false
+  onlyIncomplete: false,
+  // "查看未上传invoice的需求"/"查看未上传合同的需求"开关（2026-08 新增）：跟 onlyIncomplete
+  // 互斥（后端一次只认一个），口径分别对齐"Invoice逾期"/"合同上传逾期"提醒批次的候选范围
+  // （需求已完成 + 涉及invoice上传/每次需求签一次合同 + 还没传），只是不按超期天数分档，
+  // 方便随时自查、不用等提醒真正超出阈值才触发
+  onlyMissingInvoice: false,
+  onlyMissingContract: false
 })
 
 // 列顺序按需求描述：内部需求编号、需求月份、品牌方、红人团队、服务国家/市场、红人社媒完整名字、
@@ -427,6 +443,8 @@ async function loadData() {
       requirementMonth: filters.requirementMonth?.trim() || undefined,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       onlyIncomplete: filters.onlyIncomplete,
+      onlyMissingInvoice: filters.onlyMissingInvoice,
+      onlyMissingContract: filters.onlyMissingContract,
       sortBy: sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -454,7 +472,8 @@ function handleTableChange(pag, _filters, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     brandId: undefined, teamId: undefined, accountName: undefined,
-    requirementMonth: undefined, internalRequirementNo: undefined, onlyIncomplete: false
+    requirementMonth: undefined, internalRequirementNo: undefined,
+    onlyIncomplete: false, onlyMissingInvoice: false, onlyMissingContract: false
   })
   pagination.current = 1
   sortState.field = 'id'
@@ -462,8 +481,22 @@ function resetFilters() {
   loadData()
 }
 
+// 三个"查看未XX的需求"开关互斥（后端一次只认一个），打开一个就把另外两个关掉
 function toggleOnlyIncomplete() {
   filters.onlyIncomplete = !filters.onlyIncomplete
+  if (filters.onlyIncomplete) { filters.onlyMissingInvoice = false; filters.onlyMissingContract = false }
+  pagination.current = 1
+  loadData()
+}
+function toggleOnlyMissingInvoice() {
+  filters.onlyMissingInvoice = !filters.onlyMissingInvoice
+  if (filters.onlyMissingInvoice) { filters.onlyIncomplete = false; filters.onlyMissingContract = false }
+  pagination.current = 1
+  loadData()
+}
+function toggleOnlyMissingContract() {
+  filters.onlyMissingContract = !filters.onlyMissingContract
+  if (filters.onlyMissingContract) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false }
   pagination.current = 1
   loadData()
 }
