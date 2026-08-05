@@ -24,12 +24,17 @@
           :disabled="!!form.id"
           :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '可多选，多个团队会合并到同一条结款记录'"
           @change="onTeamChange">
-          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? NO_TEAM" :value="t.teamId ?? NO_TEAM" :label="t.teamName || '（不涉及团队）'">
+          <a-select-option v-for="t in availableTeams" :key="t.teamId ?? NO_TEAM" :value="t.teamId ?? NO_TEAM"
+            :label="t.teamName || '（不涉及团队）'" :disabled="isTeamOptionDisabled(t.teamId)">
             {{ t.teamName || '（不涉及团队）' }}
+            <span v-if="teamInvolvesInvoiceRaw(t.teamId)" style="color:#d4b106">（涉及公对公发票）</span>
           </a-select-option>
         </a-select>
         <div v-if="!form.id" style="font-size:12px;color:#595959;margin-top:4px">
           可多选，勾选多个团队时，"选择涉及的红人视频项目"会一起显示这几个团队的候选记录
+        </div>
+        <div v-if="!form.id && hasInvoiceTeamSelected" style="font-size:12px;color:#d4b106;margin-top:2px">
+          已选的团队涉及公对公发票，这类团队的结款记录不能跟其他团队合并结算，其他团队已置灰
         </div>
       </a-form-item>
       <div v-else style="font-size:12px;color:#c00000;margin:-8px 0 16px 4px">
@@ -192,6 +197,24 @@ const availableTeams = computed(() =>
 
 // 提交给后端 / 传给选择弹窗用的团队范围：把哨兵值换回 null
 const requestTeamIds = computed(() => form.teamIds.map(v => v === NO_TEAM ? null : v))
+
+// 2026-08 新增："涉及公对公发票"的团队不能跟其他团队合并结算（后端 InfluencerPaymentService.
+// validateInvoiceTeamExclusivity 同一条规则，这里前端提前拦截，给出更明确的置灰+提示）。
+// teamId 是真实团队 id 或 null（不涉及团队），跟后端 InfluencerTeam.involvesCorporateInvoice()
+// 判定优先级保持一致：团队有单独配置就用团队的值，没配置就落回品牌方默认值
+function teamInvolvesInvoiceRaw(teamId) {
+  const team = teamId != null ? props.teams.find(t => t.id === teamId) : null
+  if (team && team.involvesCorporateInvoice != null) return team.involvesCorporateInvoice === true
+  return selectedBrand.value?.defaultInvolvesCorporateInvoice === true
+}
+const hasInvoiceTeamSelected = computed(() => requestTeamIds.value.some(teamInvolvesInvoiceRaw))
+function isTeamOptionDisabled(teamId) {
+  const sentinel = teamId ?? NO_TEAM
+  if (form.teamIds.includes(sentinel)) return false // 已选中的选项本身始终可以取消勾选
+  if (form.teamIds.length === 0) return false
+  if (hasInvoiceTeamSelected.value) return true // 已经选了涉及发票的团队，不能再加其他团队
+  return teamInvolvesInvoiceRaw(teamId) // 已经选了其他团队时，涉及发票的团队不能再加进来
+}
 
 async function onBrandChange(brandId) {
   form.teamIds = []

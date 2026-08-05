@@ -38,6 +38,11 @@
               {{ record.involvesClientPaymentBatch === false ? '不涉及' : '涉及' }}
             </a-tag>
           </template>
+          <template v-if="column.key === 'defaultInvolvesCorporateInvoice'">
+            <a-tag :color="record.defaultInvolvesCorporateInvoice === true ? 'gold' : 'default'">
+              {{ record.defaultInvolvesCorporateInvoice === true ? '涉及' : '不涉及' }}
+            </a-tag>
+          </template>
           <template v-if="column.key === 'paymentCycle'">
             <span :style="{ color: record.paymentCycleType ? '#262626' : '#bbb' }">{{ formatPaymentCycle(record) }}</span>
           </template>
@@ -148,6 +153,17 @@
             <a-select-option value="PER_REQUIREMENT">一次需求签一次合同</a-select-option>
           </a-select>
         </a-form-item>
+        <a-form-item label="是否涉及公对公发票（默认值）">
+          <a-select v-model:value="form.defaultInvolvesCorporateInvoice" allow-clear placeholder="默认不涉及">
+            <a-select-option :value="true">涉及</a-select-option>
+            <a-select-option :value="false">不涉及</a-select-option>
+          </a-select>
+          <div class="hint-box">
+            该品牌方下有团队时，以"管理团队"里每个团队单独配置的值为准（团队没单独配置才会用这里的默认值）；
+            这里主要给该品牌方下没有配团队的情况（如TEMU海外、ATOMS）兜底。涉及时，"红人结款"里这个
+            品牌方-团队组合的记录才能使用"上传发票"功能。
+          </div>
+        </a-form-item>
         <a-form-item label="备注">
           <a-textarea v-model:value="form.notes" :rows="3" />
         </a-form-item>
@@ -190,7 +206,8 @@ const form = reactive({
   daysWithinThreshold: null, daysAboveThreshold: null, daysAfterMonthEnd: null,
   notes: '',
   requiresInvoice: null, contractCycleType: null,
-  involvesClientOrderId: null, involvesClientPaymentBatch: null
+  involvesClientOrderId: null, involvesClientPaymentBatch: null,
+  defaultInvolvesCorporateInvoice: null
 })
 
 const CONTRACT_CYCLE_LABELS = { ANNUAL: '一年签一次合同', PER_REQUIREMENT: '一次需求签一次合同' }
@@ -231,6 +248,8 @@ const columns = [
   { title: '是否涉及客户方付款批次', key: 'involvesClientPaymentBatch',
     sorter: (a, b) => Number(a.involvesClientPaymentBatch === false) - Number(b.involvesClientPaymentBatch === false) },
   { title: '合同签订周期', key: 'contractCycleType' },
+  { title: '公对公发票（默认值）', key: 'defaultInvolvesCorporateInvoice',
+    sorter: (a, b) => Number(a.defaultInvolvesCorporateInvoice === true) - Number(b.defaultInvolvesCorporateInvoice === true) },
   { title: '备注',       key: 'notes', ellipsis: true },
   { title: '操作',       key: 'action',                  width: 120 }
 ]
@@ -249,7 +268,8 @@ function openCreate() {
     daysWithinThreshold:null, daysAboveThreshold:null, daysAfterMonthEnd:null,
     notes:'',
     requiresInvoice:null, contractCycleType:null,
-    involvesClientOrderId:null, involvesClientPaymentBatch:null })
+    involvesClientOrderId:null, involvesClientPaymentBatch:null,
+    defaultInvolvesCorporateInvoice:null })
   modalVisible.value = true
 }
 

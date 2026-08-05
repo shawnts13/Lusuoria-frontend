@@ -30,6 +30,14 @@
           </span>
           <span v-else style="color:#8c8c8c">—</span>
         </template>
+        <template v-if="column.key === 'involvesCorporateInvoice'">
+          <a-tag :color="resolvedInvolvesCorporateInvoice(record) ? 'gold' : 'default'">
+            {{ resolvedInvolvesCorporateInvoice(record) ? '涉及' : '不涉及' }}
+          </a-tag>
+          <span v-if="record.involvesCorporateInvoice == null" style="color:#8c8c8c;font-size:12px">
+            （跟随品牌方默认）
+          </span>
+        </template>
         <template v-if="column.key === 'action'">
           <a-space v-if="canManage">
             <a @click="openEditTeam(record)">编辑</a>
@@ -69,6 +77,18 @@
             </a-form-item>
           </template>
         </template>
+        <a-form-item label="是否涉及公对公发票">
+          <a-select v-model:value="teamForm.involvesCorporateInvoice" allow-clear
+            :placeholder="`跟随品牌方默认（当前：${brand?.defaultInvolvesCorporateInvoice === true ? '涉及' : '不涉及'}）`">
+            <a-select-option :value="true">涉及</a-select-option>
+            <a-select-option :value="false">不涉及</a-select-option>
+          </a-select>
+          <div class="hint-box">
+            留空=跟随品牌方"是否涉及公对公发票（默认值）"配置；这里单独选了"涉及"或"不涉及"，
+            就以这个团队的配置为准（覆盖品牌方默认值）。涉及时，"红人结款"里这个品牌方-团队组合的
+            记录才能使用"上传发票"功能。
+          </div>
+        </a-form-item>
       </a-form>
     </a-modal>
   </a-modal>
@@ -101,15 +121,23 @@ const columns = [
   { title: '团队名称', key: 'name' },
   { title: '合同周期覆盖', key: 'forcePerRequirementContract' },
   { title: '兜底默认合同到期日期', key: 'defaultContractRange' },
+  { title: '是否涉及公对公发票', key: 'involvesCorporateInvoice' },
   { title: '操作', key: 'action', width: 140 }
 ]
+
+// 解析这个团队最终是否涉及公对公发票：团队有单独配置（非null）就用团队的值，
+// 没配置就落回品牌方默认值——跟后端 InfluencerTeam.involvesCorporateInvoice() 保持一致
+function resolvedInvolvesCorporateInvoice(record) {
+  if (record.involvesCorporateInvoice != null) return record.involvesCorporateInvoice === true
+  return props.brand?.defaultInvolvesCorporateInvoice === true
+}
 
 const teamFormVisible = ref(false)
 const editingTeam = ref(null)
 const savingTeam = ref(false)
 const teamForm = reactive({
   id: null, name: '', forcePerRequirementContract: false,
-  defaultContractEndDate: null
+  defaultContractEndDate: null, involvesCorporateInvoice: null
 })
 
 async function loadTeams() {
@@ -128,7 +156,7 @@ watch(() => props.visible, v => { if (v) loadTeams() })
 function openCreateTeam() {
   editingTeam.value = null
   Object.assign(teamForm, { id: null, name: '', forcePerRequirementContract: false,
-    defaultContractEndDate: null })
+    defaultContractEndDate: null, involvesCorporateInvoice: null })
   teamFormVisible.value = true
 }
 
@@ -137,7 +165,8 @@ function openEditTeam(record) {
   Object.assign(teamForm, {
     id: record.id, name: record.name,
     forcePerRequirementContract: !!record.forcePerRequirementContract,
-    defaultContractEndDate: record.defaultContractEndDate || null
+    defaultContractEndDate: record.defaultContractEndDate || null,
+    involvesCorporateInvoice: record.involvesCorporateInvoice ?? null
   })
   teamFormVisible.value = true
 }
@@ -154,7 +183,8 @@ async function handleSaveTeam() {
       name: teamForm.name.trim(),
       brandId: props.brand.id,
       forcePerRequirementContract: teamForm.forcePerRequirementContract,
-      defaultContractEndDate: teamForm.defaultContractEndDate
+      defaultContractEndDate: teamForm.defaultContractEndDate,
+      involvesCorporateInvoice: teamForm.involvesCorporateInvoice
     })
     message.success(teamForm.id ? '更新成功' : '创建成功')
     teamFormVisible.value = false

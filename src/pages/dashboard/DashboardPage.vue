@@ -55,6 +55,11 @@
           <div class="value">{{ fmt(summary.totalClientPrice) }}</div>
         </div>
 
+        <div class="summary-card success clickable" @click="openDrilldown('client-settled-amount')">
+          <div class="label">客户已回款总金额 <span class="drill-hint">点击查看明细 ›</span></div>
+          <div class="value">{{ fmt(summary.totalClientSettledAmount) }}</div>
+        </div>
+
         <div class="summary-card warning clickable" @click="openDrilldown('influencer-cost')">
           <div class="label">红人成本 <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalInfluencerCost) }}</div>
@@ -162,6 +167,19 @@
       :show-currency-toggle="true"
       :dimension-options="clientPriceDimensionOptions"
       :fetcher="fetchClientPriceDrilldown"
+    />
+
+    <!-- 客户已回款总金额下钻（2026-08 新增）：维度跟"客户合作价格"完全一样 -->
+    <DrilldownModal
+      v-model:visible="modals.clientSettledAmount"
+      title="客户已回款总金额明细"
+      metric="client-settled-amount"
+      :default-month="selectedMonth"
+      :date-mode="isDateMode"
+      :default-date-range="selectedDateRange"
+      :show-currency-toggle="true"
+      :dimension-options="clientPriceDimensionOptions"
+      :fetcher="fetchClientSettledAmountDrilldown"
     />
 
     <!-- 红人成本下钻：品牌方/团队/账号/类型 可切换 -->
@@ -295,7 +313,7 @@ const payslipMetricMonthRange = computed(() =>
 )
 
 const modals = reactive({
-  video: false, clientPrice: false, influencerCost: false,
+  video: false, clientPrice: false, clientSettledAmount: false, influencerCost: false,
   grossProfit: false, companyProfit: false, executionCost: false, otherStaffCost: false, commission: false,
   extraBonus: false
 })
@@ -348,6 +366,7 @@ const videoDimensionOptions = [
 
 function openDrilldown(metric) {
   const map = { video: 'video', 'client-price': 'clientPrice',
+    'client-settled-amount': 'clientSettledAmount',
     'influencer-cost': 'influencerCost', 'gross-profit': 'grossProfit',
     'company-profit': 'companyProfit', 'execution-cost': 'executionCost',
     'other-staff-cost': 'otherStaffCost', commission: 'commission', 'extra-bonus': 'extraBonus' }
@@ -384,6 +403,9 @@ function fetchVideoDrilldown(start, end, cur, dim, dateRange) {
 }
 function fetchClientPriceDrilldown(start, end, cur, dim, dateRange) {
   return dashboardApi.drilldownClientPrice(start, end, cur, dim, dateRange)
+}
+function fetchClientSettledAmountDrilldown(start, end, cur, dim, dateRange) {
+  return dashboardApi.drilldownClientSettledAmount(start, end, cur, dim, dateRange)
 }
 function fetchInfluencerCostDrilldown(start, end, cur, dim, dateRange) {
   return dashboardApi.drilldownInfluencerCost(start, end, cur, dim, dateRange)

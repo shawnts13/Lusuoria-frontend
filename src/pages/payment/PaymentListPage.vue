@@ -84,15 +84,30 @@
               {{ record.paymentStatus === 'PAID' ? '已付款' : '待付款' }}
             </a-tag>
           </template>
+          <template v-if="column.key === 'receiptLink'">
+            <template v-if="involvesCorporateInvoice(record)">
+              <a v-if="record.receiptLink" :href="record.receiptLink" target="_blank" rel="noopener">已上传，点击查看</a>
+              <a-tag v-else color="orange">未上传</a-tag>
+            </template>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'action'">
-            <a-space v-if="authStore.canManagePayments">
-              <a @click="openEdit(record)">编辑</a>
-              <a-divider type="vertical" />
-              <a @click="openStatusModal(record)">状态流转</a>
-              <a-divider type="vertical" />
-              <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                <a style="color:#ff4d4f">删除</a>
-              </a-popconfirm>
+            <a-space v-if="authStore.canManagePayments || authStore.canUploadPaymentReceipt">
+              <template v-if="authStore.canManagePayments">
+                <a @click="openEdit(record)">编辑</a>
+                <a-divider type="vertical" />
+                <a @click="openStatusModal(record)">状态流转</a>
+                <a-divider type="vertical" />
+                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
+                  <a style="color:#ff4d4f">删除</a>
+                </a-popconfirm>
+                <a-divider type="vertical" />
+              </template>
+              <!-- 财务不属于 canManagePayments（那个仅限管理层），但可以单独上传发票 -->
+              <a-tooltip :title="receiptButtonTooltip(record)">
+                <a-button size="small" :disabled="!involvesCorporateInvoice(record)"
+                  @click="openReceiptModal(record)">上传发票</a-button>
+              </a-tooltip>
             </a-space>
             <span v-else style="color:#bbb">只读</span>
           </template>
@@ -106,6 +121,11 @@
     <PaymentStatusModal
       v-model:visible="statusModalVisible"
       :record="statusModalRecord"
+      @saved="loadData" />
+
+    <PaymentReceiptModal
+      v-model:visible="receiptModalVisible"
+      :record="receiptModalRecord"
       @saved="loadData" />
 
     <PaymentItemSelectorModal
@@ -131,6 +151,7 @@ import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
 import PaymentFormModal from './PaymentFormModal.vue'
 import PaymentStatusModal from './PaymentStatusModal.vue'
+import PaymentReceiptModal from './PaymentReceiptModal.vue'
 import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
 
 const authStore = useAuthStore()
@@ -145,6 +166,8 @@ const modalVisible       = ref(false)
 const editingRecord      = ref(null)
 const statusModalVisible = ref(false)
 const statusModalRecord  = ref(null)
+const receiptModalVisible = ref(false)
+const receiptModalRecord  = ref(null)
 const itemsViewVisible   = ref(false)
 const itemsViewPaymentId = ref(null)
 const itemsViewRequirementNoFilter = ref(null)
@@ -191,8 +214,9 @@ const columns = [
   { title: '实际付款日', dataIndex: 'actualPaymentDate',   key: 'actualPaymentDate',   width: 110, sorter: true,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '付款状态',   key: 'paymentStatus', width: 100 },
+  { title: '发票',       key: 'receiptLink', width: 120 },
   { title: '备注',       dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
-  { title: '操作',       key: 'action', width: 160, fixed: 'right' }
+  { title: '操作',       key: 'action', width: 220, fixed: 'right' }
 ]
 const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
@@ -212,6 +236,27 @@ function getTeamName(teamId) {
 // 每个团队各自渲染成一个带颜色的标签，跟其他模块的"品牌方/团队"展示风格保持一致
 function teamLabelOf(teamId) {
   return teamId == null ? '（不涉及团队）' : (getTeamName(teamId) || teamId)
+}
+
+// "上传发票"功能（2026-08 新增）：这条结款记录整体是否涉及公对公发票——teamIds 范围内任意一个
+// 团队（含"不选团队"落回品牌方默认值）解析为 true 就算涉及，跟后端 InfluencerPaymentService.
+// resolveInvolvesCorporateInvoice() 保持一致（受 validateInvoiceTeamExclusivity 约束，正常
+// 情况下命中的话这个范围只会有这一项）
+function involvesCorporateInvoice(record) {
+  const brand = brands.value.find(b => b.id === record.brandId)
+  const ids = record.teamIds && record.teamIds.length ? record.teamIds : [null]
+  return ids.some(teamId => {
+    const team = teamId != null ? teams.value.find(t => t.id === teamId) : null
+    if (team && team.involvesCorporateInvoice != null) return team.involvesCorporateInvoice === true
+    return brand?.defaultInvolvesCorporateInvoice === true
+  })
+}
+function receiptButtonTooltip(record) {
+  return involvesCorporateInvoice(record) ? '' : '该品牌方-红人团队不涉及公对公发票，无需上传'
+}
+function openReceiptModal(record) {
+  receiptModalRecord.value = record
+  receiptModalVisible.value = true
 }
 
 async function loadData() {

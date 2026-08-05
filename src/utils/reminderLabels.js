@@ -9,7 +9,8 @@ export const CATEGORY_LABEL = {
   FINANCE_PROGRESS_STALL: '进度滞留-财务',
   REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期',
   REQUIREMENT_CONTRACT_OVERDUE: '合同上传逾期',
-  CONTRACT_EXPIRING_SOON: '合同即将到期'
+  CONTRACT_EXPIRING_SOON: '合同即将到期',
+  INFLUENCER_PAYMENT_RECEIPT_OVERDUE: '红人结款上传发票逾期'
 }
 
 // 跟后端 ReminderUrgency 保持一致：0天或已超期=红，1-3天=橙，3-7天=绿（"临近提醒"方向，倒数天数）
@@ -47,5 +48,6 @@ export function categoryLabel(c) { return CATEGORY_LABEL[c] || c }
 // 分类小标签用中性色，跟严重度色（红/橙/黄/绿）区分开，不会互相干扰
 export function categoryTagColor(c) {
   return ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE',
-    'REQUIREMENT_CONTRACT_OVERDUE', 'CONTRACT_EXPIRING_SOON'].includes(c) ? 'purple' : 'blue'
+    'REQUIREMENT_CONTRACT_OVERDUE', 'CONTRACT_EXPIRING_SOON',
+    'INFLUENCER_PAYMENT_RECEIPT_OVERDUE'].includes(c) ? 'purple' : 'blue'
 }

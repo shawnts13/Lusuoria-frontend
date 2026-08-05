@@ -137,6 +137,8 @@ export const paymentApi = {
   updateStatus: (id, data) => http.patch(`/api/influencer-payments/${id}/status`, data),
   candidates: (params) => http.get('/api/influencer-payments/candidates', { params }),
   items:      (id)     => http.get(`/api/influencer-payments/${id}/items`),
+  // 2026-08 新增："上传发票"（公对公发票），跟"红人需求管理"的Invoice是同一套机制，命名规则用 receipt
+  uploadReceiptLink: (id, receiptLink) => http.post(`/api/influencer-payments/${id}/receipt-link`, { receiptLink }),
 
   exportExcel: (settlementMonth) => downloadWithAuth(
     `${BASE}/api/influencer-payments/export/excel${settlementMonth ? '?settlementMonth=' + settlementMonth : ''}`,
@@ -247,6 +249,12 @@ export const dashboardApi = {
 
   drilldownClientPrice: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
     http.get('/api/dashboard/drilldown/client-price', {
+      params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
+    }),
+
+  // "客户已回款总金额"下钻（2026-08 新增），维度选项跟"客户合作价格"完全一样
+  drilldownClientSettledAmount: (startMonth, endMonth, currency, dimension, dateRange, extraConfig = {}) =>
+    http.get('/api/dashboard/drilldown/client-settled-amount', {
       params: { startMonth, endMonth, currency, dimension, startDate: dateRange?.[0], endDate: dateRange?.[1] }, ...extraConfig
     }),
 

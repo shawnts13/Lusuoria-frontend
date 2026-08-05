@@ -380,11 +380,37 @@ const INFLUENCER_PAYMENT_DUE_COLUMNS = [
   { title: '操作',          key: 'action',                    width: 170 }
 ]
 
+// 红人结款上传发票逾期（2026-08 新增）：按"结款记录"整体展示，字段复用见后端
+// ProgressReminderDetail 各字段注释里 INFLUENCER_PAYMENT_RECEIPT_OVERDUE 的说明——
+// 跟 INFLUENCER_PAYMENT_DUE_COLUMNS 共用同一批字段来源，但计时方向相反（超出阈值天数，
+// 不是距离到期还剩天数），所以额外带上"提醒阈值"/"超出天数"，跟 CONTRACT_OVERDUE_COLUMNS 一致
+const INFLUENCER_PAYMENT_RECEIPT_OVERDUE_COLUMNS = [
+  { title: '结款单号',      dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 190,
+    customRender: ({ text }) => text || '—' },
+  { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
+  { title: '红人团队',      key: 'teamName',            width: 160 },
+  { title: '结算月份',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160,
+    customRender: ({ text }) => text || '—' },
+  { title: '合作数量',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
+    customRender: ({ text }) => text != null ? text : '—' },
+  { title: '应付金额（$）', dataIndex: 'influencerCost',      key: 'influencerCost',      width: 150,
+    customRender: ({ text }) => text != null ? fmtAmount(text) : '—' },
+  { title: '实际付款日',    dataIndex: 'publishDate',         key: 'publishDate',         width: 110,
+    customRender: ({ text }) => text ? formatDate(text) : '—' },
+  { title: '付款状态',      key: 'progressLabel',       width: 100 },
+  { title: '提醒阈值（工作日）', dataIndex: 'thresholdDays', key: 'thresholdDays', width: 130,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
+    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '操作',          key: 'action',                    width: 170 }
+]
+
 const columns = computed(() => {
   if (STALL_CATEGORIES.includes(props.category)) return STALL_COLUMNS
   if (props.category === 'REQUIREMENT_INVOICE_OVERDUE') return INVOICE_OVERDUE_COLUMNS
   if (props.category === 'REQUIREMENT_CONTRACT_OVERDUE') return CONTRACT_OVERDUE_COLUMNS
   if (props.category === 'CONTRACT_EXPIRING_SOON') return CONTRACT_EXPIRING_COLUMNS
+  if (props.category === 'INFLUENCER_PAYMENT_RECEIPT_OVERDUE') return INFLUENCER_PAYMENT_RECEIPT_OVERDUE_COLUMNS
   if (props.category === 'INFLUENCER_PAYMENT_DUE') return INFLUENCER_PAYMENT_DUE_COLUMNS
   return PAYMENT_DUE_COLUMNS
 })
@@ -454,8 +480,10 @@ function goToDetail(record) {
   if (props.category === 'CONTRACT_EXPIRING_SOON') {
     // requirementId 这一类借用来存红人 id（见后端 runContractExpiringSoon 的注释）
     route = { path: '/influencers', query: { editInfluencerId: record.requirementId } }
-  } else if (props.category === 'INFLUENCER_PAYMENT_DUE') {
-    // internalRequirementNo 这一类借用来存结款单号（见后端 runInfluencerPaymentDue 的注释）
+  } else if (props.category === 'INFLUENCER_PAYMENT_DUE' || props.category === 'INFLUENCER_PAYMENT_RECEIPT_OVERDUE') {
+    // internalRequirementNo 这一类借用来存结款单号（见后端 runInfluencerPaymentDue/
+    // runInfluencerPaymentReceiptOverdue 的注释），必须在下面"有值就跳需求管理"这条通用分支
+    // 之前排除，否则会被误判成需求维度
     route = { path: '/payments', query: { paymentNo: record.internalRequirementNo } }
   } else if (props.category === 'COLLAB_PAYMENT_DUE') {
     route = { path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } }

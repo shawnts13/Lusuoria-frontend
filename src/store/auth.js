@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.150.0'
-export const APP_VERSION_TIME = '2026-08-05 23:28'
+export const APP_VERSION = '1.151.0'
+export const APP_VERSION_TIME = '2026-08-06 00:42'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -78,6 +78,8 @@ export const useAuthStore = defineStore('auth', {
     // 没有关联"管理层/财务/法务"这三个员工角色之一的账号，完全看不到这个模块
     canAccessPayments: (state) => ['管理层', '财务', '法务'].includes(state.employeeRole),
     canManagePayments: (state) => state.employeeRole === '管理层',
+    // "上传发票"（公对公发票，2026-08 新增）：管理层/财务都能做，跟 canManagePayments（仅管理层）不同
+    canUploadPaymentReceipt: (state) => ['管理层', '财务'].includes(state.employeeRole),
     // "品牌方管理"页面：严格按员工角色判断，只有"管理层"能访问（2026-07 起）
     canAccessBrands: (state) => state.employeeRole === '管理层',
     // "导入历史"删除记录按钮：只有"管理层"能看到并操作，供清理误操作/测试产生的脏历史记录用
