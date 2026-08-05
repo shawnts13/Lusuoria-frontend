@@ -22,7 +22,7 @@
             <a-input v-model:value="form.accountName" />
           </a-form-item>
 
-          <a-form-item label="品牌方-团队" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
+          <a-form-item label="品牌方-团队" required :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
             <div v-for="(pair, idx) in form.brandTeamPairs" :key="idx"
               style="display:flex;gap:8px;margin-bottom:8px">
               <a-tooltip :title="brandNameById(pair.brandId)">
@@ -428,13 +428,19 @@ function isRemark(value) {
 async function handleSave() {
   if (saving.value) return   // 防止表单校验期间（还没到 saving=true）被连续点击导致重复提交
   try { await formRef.value.validate() } catch { return }
+  // "品牌方-团队"不是简单的单值字段，没法直接挂在 a-form-item 的 :rules 上校验，这里手动查
+  const validPairs = form.brandTeamPairs.filter(p => p.brandId != null)
+  if (validPairs.length === 0) {
+    message.error('请至少选择一个"品牌方-团队"')
+    return
+  }
   saving.value = true
   try {
     await influencerApi.save({
       id:             form.id,
       influencerType: form.influencerType,
       accountName:    form.accountName,
-      brandTeamPairs: form.brandTeamPairs.filter(p => p.brandId != null),
+      brandTeamPairs: validPairs,
       countryMarket:  form.countryMarkets.join("\n") || null,
       platform:       form.platforms.join("\n") || null,
       domains:        form.domains,
