@@ -41,7 +41,8 @@
         请先选择品牌方，才能选择红人团队
       </div>
 
-      <a-form-item label="对账日期（可选）" name="reconcileDate">
+      <a-form-item :label="requiresReconcileDate ? '对账日期' : '对账日期（可选）'" name="reconcileDate"
+        :rules="requiresReconcileDate ? [{ required: true, message: '该品牌方为月结，请填写对账日期' }] : []">
         <a-date-picker v-model:value="form.reconcileDate" value-format="YYYY-MM-DD" style="width:100%" />
       </a-form-item>
 
@@ -177,6 +178,10 @@ const form = reactive({
 
 const record = computed(() => props.record)
 const selectedBrand = computed(() => props.brands.find(b => b.id === form.brandId) || null)
+// 2026-08 新增：品牌方付款周期=月结时，"对账日期"是判断结款日的必要依据（brandCycleHint/
+// tryAutoFillExpectedPaymentDate 都依赖这个字段），必填；其余付款周期（按红人成本阈值分档等）
+// 不依赖对账日期，保持可选
+const requiresReconcileDate = computed(() => selectedBrand.value?.paymentCycleType === 'MONTH_END')
 // 传给"选择涉及的红人视频项目"弹窗，供它判断是不是 TEMU中国（排序/展示有专属规则，见该组件）
 const selectedBrandName = computed(() => selectedBrand.value?.name || null)
 // 编辑态且已付款：只能查看，不能再调整勾选；其余情况（新建 / 编辑态待付款）可选
