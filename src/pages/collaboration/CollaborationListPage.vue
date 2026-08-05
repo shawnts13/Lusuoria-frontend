@@ -209,17 +209,11 @@
               <a-divider type="vertical" />
               <a @click="openStatusModal(record)">状态流转</a>
               <span v-if="record.hasPendingRollbackRequest" style="color:#faad14;font-size:12px">（倒退审核中）</span>
-              <a-divider type="vertical" />
-              <a-tooltip v-if="!record.executorId" title="该记录还没有关联执行人员，若涉及的话，请先在编辑表单里选择执行人员">
-                <span style="color:#bbb;cursor:not-allowed">内部执行成本</span>
-              </a-tooltip>
-              <!-- 项目负责人还没在"执行人员管理"给这个执行人员+这个视频类型配置薪资梯度，
-                   系统算不出金额（2026-08 起也没法在这个弹窗里手动填了），隐藏这个快捷入口
-                   （占位不塌陷，避免"删除"错位），要处理的话先去"员工管理"/"执行人员管理"
-                   配置费率梯度 -->
-              <span v-else-if="!record.hasExecutorPayRateConfigured" style="visibility:hidden">内部执行成本</span>
-              <a v-else @click="openExecutorCostModal(record)">内部执行成本</a>
-              <span v-if="record.hasPendingExecutorCostModifyRequest" style="color:#faad14;font-size:12px">（修改审核中）</span>
+              <!-- 2026-08 起去掉了这里手动打开"内部执行成本"弹窗的入口——新指定/改动执行人员
+                   时"编辑"表单会顺带自动按费率梯度算好成本存下，不需要再单独点一次；这个弹窗
+                   本身还在，只在"视频项目进度第一次流转到已发布（未结算）"时自动弹出，用于
+                   标记"不涉及执行人员"、以及非本人项目负责人重新触发核算走审核流程，
+                   见 openExecutorCostModal 的调用方（need-executor-cost 事件） -->
               <a-divider type="vertical" />
               <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
