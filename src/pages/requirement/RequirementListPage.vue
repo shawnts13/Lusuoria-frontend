@@ -148,19 +148,22 @@
                       @click="handleContractButtonClick(record)">{{ contractButtonState(record).label }}</a-button>
                   </span>
                 </a-tooltip>
-                <a-divider type="vertical" />
-                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                  <a style="color:#ff4d4f">删除</a>
-                </a-popconfirm>
               </template>
               <template v-if="authStore.canManagePayments">
                 <a-divider v-if="authStore.canWrite" type="vertical" />
                 <a-tooltip :title="isProgress100(record) ? '' : '该需求尚未实施完成，暂时无法结款'">
                   <span>
                     <a-button size="small" :disabled="!isProgress100(record)"
+                      :class="{ 'settlement-btn-ready': isProgress100(record) }"
                       @click="goToSettlement(record)">去结款</a-button>
                   </span>
                 </a-tooltip>
+              </template>
+              <template v-if="authStore.canWrite">
+                <a-divider type="vertical" />
+                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
+                  <a style="color:#ff4d4f">删除</a>
+                </a-popconfirm>
               </template>
             </a-space>
             <span v-else style="color:#bbb">只读</span>
@@ -627,6 +630,20 @@ onMounted(async () => {
   color: #fa8c16 !important;
   border-color: #ffd591 !important;
   background: #fff7e6 !important;
+}
+
+/* "去结款"按钮可点时（需求完成进度=100%）加强对比度，方便管理层在一整排操作按钮里一眼
+   注意到它——跟"上传Invoice"的橙色高亮同一个"浅底色+描边+文字同色"手法，但故意用蓝色
+   区分开，不跟橙色（本应用里"待处理/进行中"的惯用色）混淆语义 */
+.settlement-btn-ready:not(:disabled) {
+  color: #1677ff !important;
+  border-color: #91caff !important;
+  background: #e6f4ff !important;
+}
+.settlement-btn-ready:not(:disabled):hover {
+  color: #4096ff !important;
+  border-color: #4096ff !important;
+  background: #e6f4ff !important;
 }
 
 /* 一年签一次合同且该年份还没上传的"上传合同"按钮：文案跟真正能直接上传的那种一样（表格排版
