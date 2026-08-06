@@ -31,6 +31,9 @@
       <a-date-picker v-model:value="filters.requirementMonth" picker="month"
         format="YYYYMM" value-format="YYYYMM" placeholder="需求月份" style="width:150px"
         allow-clear @change="loadData" />
+      <a-date-picker v-model:value="filters.completedMonth" picker="month"
+        format="YYYYMM" value-format="YYYYMM" placeholder="需求完成月份" style="width:150px"
+        allow-clear @change="loadData" />
       <a-input-search v-model:value="filters.internalRequirementNo" placeholder="搜索内部需求编号"
         style="width:200px" @search="loadData" allow-clear />
       <a-button @click="resetFilters">重置</a-button>
@@ -277,6 +280,9 @@ const pagination = reactive({
 const filters = reactive({
   brandId: undefined, teamId: undefined, accountName: undefined,
   requirementMonth: undefined,
+  // "需求完成月份"筛选（2026-08 新增）：取需求完成时间（completedAt）对应的月份，跟"需求月份"
+  // （requirementMonth，需求本身归属的月份）是两个不同维度，不互斥、可同时筛
+  completedMonth: undefined,
   // 支持从"进度提醒"详情等外部入口带 internalRequirementNo 跳转过来直接定位
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   // "查看未完成的需求"开关：只看"需求完成进度"没到100%的（含还没有任何条目、显示0%的情况）
@@ -492,6 +498,7 @@ async function loadData() {
       teamId: filters.teamId,
       accountName: filters.accountName?.trim() || undefined,
       requirementMonth: filters.requirementMonth?.trim() || undefined,
+      completedMonth: filters.completedMonth?.trim() || undefined,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       onlyIncomplete: filters.onlyIncomplete,
       onlyMissingInvoice: filters.onlyMissingInvoice,
@@ -524,7 +531,7 @@ function handleTableChange(pag, _filters, sorter) {
 function resetFilters() {
   Object.assign(filters, {
     brandId: undefined, teamId: undefined, accountName: undefined,
-    requirementMonth: undefined, internalRequirementNo: undefined,
+    requirementMonth: undefined, completedMonth: undefined, internalRequirementNo: undefined,
     onlyIncomplete: false, onlyMissingInvoice: false, onlyMissingContract: false,
     onlyUnsettled: false
   })
@@ -590,6 +597,7 @@ function handleExport() {
     teamId: filters.teamId,
     accountName: filters.accountName,
     requirementMonth: filters.requirementMonth,
+    completedMonth: filters.completedMonth,
     internalRequirementNo: filters.internalRequirementNo
   })
 }
