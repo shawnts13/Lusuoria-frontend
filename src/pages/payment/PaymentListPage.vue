@@ -343,12 +343,11 @@ function lastWorkdayOfMonth(yyyyMM) {
  * "红人需求管理"列表页"去结款"按钮跳转过来（2026-08 新增）：按需求信息组好预填值，交给
  * PaymentFormModal 去打开新建表单并自动跳到"选择涉及的红人视频项目"弹窗。
  *   - 团队：需求自己的 teamId（可能是 null，代表不涉及团队）
- *   - 对账日期：品牌方是月结才需要。填成"结算月份（需求完成时间所在月份）的最后一个工作日"，
- *     不是"今天"（2026-08 bug 修复：之前填的是今天，但选择弹窗"自动勾选"的规则是按"红人视频
- *     的发布时间是否落在对账日期所在月份"判断的——手动新建结款记录时，管理层填的对账日期
- *     本来就是跟结算月份对应的月底附近，所以能自动勾上；"去结款"按钮之前直接填今天，
- *     如果今天不是需求完成月份，对账日期所在月份就跟视频发布月份对不上，自动勾选规则会一条
- *     都匹配不到，导致弹窗打开后没有像手动新建时那样自动勾好）
+ *   - 对账日期：品牌方是月结才需要。如果今天就在"结算月份"（需求完成时间所在月份）里，
+ *     填今天；如果今天已经是结算月份之后（比如次月才处理，或者拖了更久），填"结算月份
+ *     最后一个工作日"，不能还填今天——选择弹窗"自动勾选"的规则是按"红人视频的发布时间是否
+ *     落在对账日期所在月份"判断的，今天所在月份跟结算月份对不上的话，自动勾选规则会一条
+ *     都匹配不到，导致弹窗打开后没有像手动新建时那样自动勾好（2026-08 bug 修复）
  *   - 结算月份：需求完成时间所在的月份
  *   - autoSelectRequirementNo：只有"按红人成本阈值分档"（一次结款本来就只对应一个需求）的
  *     品牌方才传，选择弹窗打开后会自动把这个需求下的记录全部勾上；月结品牌方不传，走上面
@@ -362,11 +361,12 @@ async function openCreateFromRequirement(requirementId) {
     if (!req) { message.error('需求记录不存在'); return }
     const brand = brands.value.find(b => b.id === req.brandId)
     const settlementMonth = req.completedAt ? dayjs(req.completedAt).format('YYYYMM') : null
+    const isCurrentMonth = settlementMonth === dayjs().format('YYYYMM')
     prefillData.value = {
       brandId: req.brandId,
       teamId: req.teamId ?? null,
       reconcileDate: brand?.paymentCycleType === 'MONTH_END'
-        ? (settlementMonth ? lastWorkdayOfMonth(settlementMonth) : dayjs().format('YYYY-MM-DD'))
+        ? (!settlementMonth || isCurrentMonth ? dayjs().format('YYYY-MM-DD') : lastWorkdayOfMonth(settlementMonth))
         : null,
       settlementMonth,
       autoSelectRequirementNo: brand?.paymentCycleType === 'COST_THRESHOLD'
