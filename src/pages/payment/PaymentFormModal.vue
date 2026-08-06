@@ -134,7 +134,7 @@
       :existing-payment-id="form.id"
       :selected-tracking-ids="form.selectedItems.map(i => i.trackingId)"
       :auto-select-requirement-no="pendingAutoSelectRequirementNo"
-      :initial-requirement-no-filter="pendingAutoSelectRequirementNo"
+      :initial-requirement-no-filter="initialRequirementNoFilterForSelector"
       @confirm="handleSelectorConfirm"
     />
   </a-modal>
@@ -164,9 +164,14 @@ const emit = defineEmits(['update:visible', 'saved'])
 const formRef = ref()
 const saving  = ref(false)
 const selectorVisible = ref(false)
-// "去结款"预填流程专用：按需求结算的品牌方，打开"选择涉及的红人视频项目"弹窗时要自动
-// 勾选这个需求编号下的全部记录，见 applyPrefillAndOpenSelector()
+// "去结款"预填流程专用：不管品牌方付款周期类型，打开"选择涉及的红人视频项目"弹窗时都要
+// 自动勾选这个需求编号下的全部记录，见 applyPrefillAndOpenSelector()
 const pendingAutoSelectRequirementNo = ref(null)
+// 上面这个值只用来控制"自动勾选"；是否同时把弹窗里的筛选下拉框也预置成这个需求编号，
+// 只在"按红人成本阈值分档"（一次结款本来就只对应一个需求）时才需要——月结品牌方一次结款
+// 横跨多个需求，预置筛选会把其他也被自动勾中的候选记录从视图里筛没了，看起来像"只勾了一条"
+const initialRequirementNoFilterForSelector = computed(() =>
+  selectedBrand.value?.paymentCycleType === 'COST_THRESHOLD' ? pendingAutoSelectRequirementNo.value : null)
 
 // a-select 多选模式下用 null 代表"不选团队"这个选项会有兼容性问题（有些组件把 null/undefined
 // 当成"清空"的特殊值），所以内部用一个不会跟真实团队 id 冲突的哨兵值表示，

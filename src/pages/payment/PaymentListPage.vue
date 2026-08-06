@@ -335,12 +335,15 @@ function openCreate() { editingRecord.value = null; prefillData.value = null; mo
  * "红人需求管理"列表页"去结款"按钮跳转过来（2026-08 新增）：按需求信息组好预填值，交给
  * PaymentFormModal 去打开新建表单并自动跳到"选择涉及的红人视频项目"弹窗。
  *   - 团队：需求自己的 teamId（可能是 null，代表不涉及团队）
- *   - 对账日期：品牌方是月结才需要，填成今天（跟手动新建时"对账日期后N天内结款"是同一套
- *     口径，具体勾选到哪些记录跟手动操作完全一致，交给选择弹窗自己的默认勾选规则处理）
+ *   - 对账日期：品牌方是月结才需要，填成今天
  *   - 结算月份：需求完成时间所在的月份
- *   - autoSelectRequirementNo：只有"按红人成本阈值分档+需要invoice"（一次结款只对应一个
- *     需求）的品牌方才传，选择弹窗打开后会自动把这个需求下的记录全部勾上；月结品牌方不传，
- *     走原本"对账日期落在这个月"的默认勾选规则（本来就横跨多个需求，不该只勾这一个）
+ *   - autoSelectRequirementNo：不管品牌方付款周期类型，一律传这个需求编号，保证点击这个
+ *     按钮触发的这条需求自己的记录一定会被勾上（2026-08 bug 修复：月结品牌方之前不传这个，
+ *     只靠"对账日期落在这个月"的默认勾选规则——但这里对账日期填的是"今天"，如果这条需求
+ *     的视频实际发布月份不是本月（很常见，比如今天才把之前完成的需求处理掉），默认勾选
+ *     规则匹配不上任何记录，导致选择弹窗打开后一条都没勾中，跟手动建立结款记录的体验不一致）。
+ *     这个自动勾选是"追加"关系，不影响月结品牌方原本"对账日期落在这个月"的默认勾选规则
+ *     继续生效——两者取并集，一起决定最终勾选哪些记录
  */
 async function openCreateFromRequirement(requirementId) {
   try {
@@ -353,8 +356,7 @@ async function openCreateFromRequirement(requirementId) {
       teamId: req.teamId ?? null,
       reconcileDate: brand?.paymentCycleType === 'MONTH_END' ? dayjs().format('YYYY-MM-DD') : null,
       settlementMonth: req.completedAt ? dayjs(req.completedAt).format('YYYYMM') : null,
-      autoSelectRequirementNo: brand?.paymentCycleType === 'COST_THRESHOLD'
-        ? req.internalRequirementNo : null
+      autoSelectRequirementNo: req.internalRequirementNo
     }
     editingRecord.value = null
     modalVisible.value = true
