@@ -147,7 +147,12 @@ const props = defineProps({
   selectedTrackingIds: { type: Array, default: () => [] },
   // 从"涉及的内部需求编号"列双击某个具体编号打开时，预置这个筛选条件，直接定位到那一个
   // 需求下涉及的视频，不用打开弹窗后自己再手动选一次
-  initialRequirementNoFilter: { type: String, default: null }
+  initialRequirementNoFilter: { type: String, default: null },
+  // "红人需求管理"列表页"去结款"按钮专用（2026-08 新增）：打开时自动勾选上这个需求编号下
+  // 全部候选记录（按需求结算的品牌方——一次结款只对应一个需求，直接把这个需求的记录全部
+  // 帮操作人勾好，省得再手动选一遍）。月结品牌方不传这个，走原本"对账日期落在这个月"的
+  // 默认勾选规则（PaymentFormModal 打开这个弹窗前已经把对账日期填成了当天）
+  autoSelectRequirementNo: { type: String, default: null }
 })
 const emit = defineEmits(['update:visible', 'confirm'])
 
@@ -286,8 +291,16 @@ function disabledTooltip(record) {
   if (!requirementComplete(record)) return '该需求尚未整体完成，暂时无法结款'
   return '1个结款订单只能包含1个需求（1张invoice）：请先取消当前已勾选的需求，才能勾选这一个'
 }
-/** 同一个需求编号下、当前候选列表里的所有 trackingId（勾选/取消勾选整个需求时用） */
+/**
+ * 同一个需求编号下、当前候选列表里的所有 trackingId（勾选/取消勾选整个需求时用）。
+ * 2026-08 起不再只是 groupedFlowActive（需要invoice+按成本阈值分档）专属——所有品牌方
+ * 勾选一条记录时都会自动带上同一需求下的其他候选记录，避免同一个需求被拆分到不同的结款
+ * 批次里（后端 InfluencerPaymentService.validateNoPartialRequirement 有同一条硬性校验，
+ * 这里保证正常操作不会撞上那条报错）。没有关联需求编号的记录（存量数据）不参与分组，
+ * 按原来的方式单条独立勾选。
+ */
 function groupMemberKeys(record) {
+  if (!record.internalRequirementNo) return [record.trackingId]
   return list.value.filter(r => r.internalRequirementNo === record.internalRequirementNo).map(r => r.trackingId)
 }
 
@@ -329,35 +342,40 @@ const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
   getCheckboxProps: record => ({ disabled: groupedFlowActive.value && !isRowSelectable(record) }),
   onChange: keys => {
-    if (!groupedFlowActive.value) { selectedRowKeys.value = keys; return }
-    // 需求维度勾选：取消勾选（不管取消的是哪一条）直接清空整个当前已选需求；新增勾选则把
-    // 新勾中的那条记录所在需求的所有记录一起选上（antd 表头"全选"理论上可能一次性传入好几个
-    // 不同需求的 key，这里只认第一条新增的、把其余的忽略——那种场景本来就该被禁用勾选框拦住，
-    // 这里只是兜底，不追求覆盖所有理论组合）
+    // 需求维度勾选（2026-08 起对所有品牌方生效，不再只是 groupedFlowActive 专属）：取消勾选
+    // 时把被取消那条记录所在需求的其他记录一起取消；新增勾选则把新勾中的那条记录所在需求的
+    // 所有记录一起选上。groupedFlowActive 模式下同一时间只会有一个需求被选中，"取消这个需求
+    // 的任意一条"等价于"清空当前选择"，效果跟原来一致；非 groupedFlowActive 模式下可以同时
+    // 选中多个不同需求（月结品牌方一次结款本来就横跨多个需求），互不影响。
+    // antd 表头"全选"理论上可能一次性传入好几个不同需求的 key，这里只认第一条新增/移除的、
+    // 把其余的忽略——groupedFlowActive 那种场景本来就该被禁用勾选框拦住，这里只是兜底，
+    // 不追求覆盖所有理论组合。
     const removed = selectedRowKeys.value.filter(k => !keys.includes(k))
-    if (removed.length) { selectedRowKeys.value = []; return }
+    if (removed.length) {
+      const rec = list.value.find(r => r.trackingId === removed[0])
+      const groupKeys = rec ? groupMemberKeys(rec) : [removed[0]]
+      selectedRowKeys.value = selectedRowKeys.value.filter(k => !groupKeys.includes(k))
+      return
+    }
     const added = keys.filter(k => !selectedRowKeys.value.includes(k))
     if (added.length) {
       const rec = list.value.find(r => r.trackingId === added[0])
-      selectedRowKeys.value = rec ? groupMemberKeys(rec) : keys
+      const groupKeys = rec ? groupMemberKeys(rec) : [added[0]]
+      selectedRowKeys.value = [...new Set([...selectedRowKeys.value, ...groupKeys])]
     }
   }
 }))
 
 // 点击行内任意位置也能勾选/取消勾选，不用非得精准点中前面那个小方框——方便先横向滑到最右边
-// 看完信息再选的操作习惯。groupedFlowActive 时按需求整组勾选/取消，且置灰的行完全不响应点击
+// 看完信息再选的操作习惯。按需求整组勾选/取消（groupMemberKeys 见上），groupedFlowActive
+// 时置灰的行完全不响应点击
 function toggleRow(record) {
   if (groupedFlowActive.value && !isRowSelectable(record)) return
-  if (!groupedFlowActive.value) {
-    const idx = selectedRowKeys.value.indexOf(record.trackingId)
-    selectedRowKeys.value = idx === -1
-      ? [...selectedRowKeys.value, record.trackingId]
-      : selectedRowKeys.value.filter(k => k !== record.trackingId)
-    return
-  }
   const groupKeys = groupMemberKeys(record)
   const alreadySelected = groupKeys.length > 0 && groupKeys.every(k => selectedRowKeys.value.includes(k))
-  selectedRowKeys.value = alreadySelected ? [] : groupKeys
+  selectedRowKeys.value = alreadySelected
+    ? selectedRowKeys.value.filter(k => !groupKeys.includes(k))
+    : [...new Set([...selectedRowKeys.value, ...groupKeys])]
 }
 function customRow(record) {
   const disabled = groupedFlowActive.value && !isRowSelectable(record)
@@ -413,11 +431,13 @@ async function load() {
     items = sortForDisplay(items)
 
     list.value = items
-    // 已勾选状态取三者的并集：符合自动勾选规则的、已经落库关联到这条结款记录的、
-    // 以及表单里已经确认过但还没保存的（关掉弹窗重开一次不应该丢失之前勾好的记录）
+    // 已勾选状态取四者的并集：符合自动勾选规则的、已经落库关联到这条结款记录的、
+    // 表单里已经确认过但还没保存的（关掉弹窗重开一次不应该丢失之前勾好的记录）、以及
+    // "去结款"按钮指定要自动勾选的那个需求编号下的全部记录（2026-08 新增，见 autoSelectRequirementNo）
     const previouslySelectedIds = new Set(props.selectedTrackingIds)
     selectedRowKeys.value = items.filter(i =>
       i.defaultChecked || existingIds.has(i.trackingId) || previouslySelectedIds.has(i.trackingId)
+      || (props.autoSelectRequirementNo && i.internalRequirementNo === props.autoSelectRequirementNo)
     ).map(i => i.trackingId)
   } finally {
     loading.value = false

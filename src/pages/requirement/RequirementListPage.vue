@@ -49,6 +49,11 @@
         <template #icon><FilterOutlined /></template>
         {{ filters.onlyMissingContract ? '查看全部需求' : '查看未上传合同的需求' }}
       </a-button>
+      <a-button v-if="authStore.canManagePayments" class="incomplete-filter-btn"
+        :class="{ active: filters.onlyUnsettled }" @click="toggleOnlyUnsettled">
+        <template #icon><FilterOutlined /></template>
+        {{ filters.onlyUnsettled ? '查看全部需求' : '查看未结款的需求' }}
+      </a-button>
     </div>
 
     <div class="table-card" ref="tableWrapperRef">
@@ -93,6 +98,12 @@
           <template v-if="column.key === 'completedAt'">
             {{ record.completedAt ? formatDateTime(record.completedAt) : '—' }}
           </template>
+          <template v-if="column.key === 'settlementStatus'">
+            <a-tag v-if="record.settlementStatus" :color="record.settlementStatus === 'PAID' ? 'green' : 'orange'">
+              {{ record.settlementStatus === 'PAID' ? '已付款' : '已添加结款记录' }}
+            </a-tag>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'notes'">
             <span v-if="record.notes" style="color:#ff4d4f">{{ record.notes }}</span>
             <span v-else style="color:#bbb">—</span>
@@ -111,35 +122,46 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'action'">
-            <a-space v-if="authStore.canWrite">
-              <a @click="openEdit(record)">编辑</a>
-              <a-divider type="vertical" />
-              <a-tooltip :title="invoiceButtonState(record).tooltip">
-                <span>
-                  <a-button size="small" :disabled="invoiceButtonState(record).disabled"
-                    :class="{ 'invoice-btn-pending': invoiceButtonState(record).reason === 'notComplete' }"
-                    @click="openInvoiceModal(record)">上传Invoice</a-button>
-                </span>
-              </a-tooltip>
-              <a-divider type="vertical" />
-              <a-tooltip :title="isRequirementComplete(record) ? '该需求下所有条目都已建立跟踪记录，无需再新建合作跟踪' : ''">
-                <span>
-                  <a-button size="small" :disabled="isRequirementComplete(record)"
-                    @click="openBatchCreateForRequirement(record)">新建合作跟踪</a-button>
-                </span>
-              </a-tooltip>
-              <a-divider type="vertical" />
-              <a-tooltip :title="contractButtonState(record).tooltip">
-                <span>
-                  <a-button size="small" :disabled="contractButtonState(record).disabled"
-                    :class="{ 'contract-btn-goto': contractButtonState(record).mode === 'gotoInfluencer' }"
-                    @click="handleContractButtonClick(record)">{{ contractButtonState(record).label }}</a-button>
-                </span>
-              </a-tooltip>
-              <a-divider type="vertical" />
-              <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                <a style="color:#ff4d4f">删除</a>
-              </a-popconfirm>
+            <a-space v-if="authStore.canWrite || authStore.canManagePayments">
+              <template v-if="authStore.canWrite">
+                <a @click="openEdit(record)">编辑</a>
+                <a-divider type="vertical" />
+                <a-tooltip :title="invoiceButtonState(record).tooltip">
+                  <span>
+                    <a-button size="small" :disabled="invoiceButtonState(record).disabled"
+                      :class="{ 'invoice-btn-pending': invoiceButtonState(record).reason === 'notComplete' }"
+                      @click="openInvoiceModal(record)">上传Invoice</a-button>
+                  </span>
+                </a-tooltip>
+                <a-divider type="vertical" />
+                <a-tooltip :title="isRequirementComplete(record) ? '该需求下所有条目都已建立跟踪记录，无需再新建合作跟踪' : ''">
+                  <span>
+                    <a-button size="small" :disabled="isRequirementComplete(record)"
+                      @click="openBatchCreateForRequirement(record)">新建合作跟踪</a-button>
+                  </span>
+                </a-tooltip>
+                <a-divider type="vertical" />
+                <a-tooltip :title="contractButtonState(record).tooltip">
+                  <span>
+                    <a-button size="small" :disabled="contractButtonState(record).disabled"
+                      :class="{ 'contract-btn-goto': contractButtonState(record).mode === 'gotoInfluencer' }"
+                      @click="handleContractButtonClick(record)">{{ contractButtonState(record).label }}</a-button>
+                  </span>
+                </a-tooltip>
+                <a-divider type="vertical" />
+                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
+                  <a style="color:#ff4d4f">删除</a>
+                </a-popconfirm>
+              </template>
+              <template v-if="authStore.canManagePayments">
+                <a-divider v-if="authStore.canWrite" type="vertical" />
+                <a-tooltip :title="isProgress100(record) ? '' : '该需求尚未实施完成，暂时无法结款'">
+                  <span>
+                    <a-button size="small" :disabled="!isProgress100(record)"
+                      @click="goToSettlement(record)">去结款</a-button>
+                  </span>
+                </a-tooltip>
+              </template>
             </a-space>
             <span v-else style="color:#bbb">只读</span>
           </template>
@@ -261,7 +283,11 @@ const filters = reactive({
   // （需求已完成 + 涉及invoice上传/每次需求签一次合同 + 还没传），只是不按超期天数分档，
   // 方便随时自查、不用等提醒真正超出阈值才触发
   onlyMissingInvoice: false,
-  onlyMissingContract: false
+  onlyMissingContract: false,
+  // "查看未结款的需求"开关（2026-08 新增，仅管理层可见）：跟上面三个互斥，口径见后端
+  // InfluencerRequirementService.pageUnsettled() 的注释——不要求需求必须100%完成，
+  // 未完成的需求也会出现，只是排序上靠后
+  onlyUnsettled: false
 })
 
 // 列顺序按需求描述：内部需求编号、需求月份、品牌方、红人团队、服务国家/市场、红人社媒完整名字、
@@ -282,10 +308,11 @@ const columns = [
   { title: '红人视频制作与发布总成本（$）', key: 'totalInfluencerCost', width: 200, sorter: true },
   { title: '需求完成进度', key: 'progress', width: 140 },
   { title: '需求完成时间', key: 'completedAt', width: 150 },
+  { title: '结款状态', key: 'settlementStatus', width: 130 },
   { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
   { title: 'Invoice链接', key: 'invoiceLink', width: 110 },
   { title: '合同链接', key: 'contractLink', width: 220 },
-  { title: '操作', key: 'action', width: 360, fixed: 'right' }
+  { title: '操作', key: 'action', width: 440, fixed: 'right' }
 ]
 const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
@@ -339,6 +366,19 @@ function isRequirementComplete(record) {
 }
 function openBatchCreateForRequirement(record) {
   batchCreateModalRef.value?.openForRequirement(record)
+}
+
+// "去结款"按钮可点条件（2026-08 新增）：需求完成进度=100%，跟"上传Invoice"按钮 done 的
+// 判定口径一致（total>0 且 completedCount>=total），不是 isRequirementComplete 那个
+// "已建立跟踪记录数"口径
+function isProgress100(record) {
+  const total = record.totalItemCount ?? 0
+  return total > 0 && (record.completedCount ?? 0) >= total
+}
+// 新开一个标签页跳到"红人结款"模块，自动预填并停在"选择涉及的红人视频项目"弹窗，
+// 跟应用里其他跨模块跳转（比如"合同快到期"提醒的"查看详情"）保持一致的新标签页习惯
+function goToSettlement(record) {
+  window.open(router.resolve({ path: '/payments', query: { createFromRequirement: record.id } }).href, '_blank')
 }
 function getBrand(id) { return brands.value.find(b => b.id === id) }
 function getBrandName(id) { return getBrand(id)?.name }
@@ -453,6 +493,7 @@ async function loadData() {
       onlyIncomplete: filters.onlyIncomplete,
       onlyMissingInvoice: filters.onlyMissingInvoice,
       onlyMissingContract: filters.onlyMissingContract,
+      onlyUnsettled: filters.onlyUnsettled,
       sortBy: sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -481,7 +522,8 @@ function resetFilters() {
   Object.assign(filters, {
     brandId: undefined, teamId: undefined, accountName: undefined,
     requirementMonth: undefined, internalRequirementNo: undefined,
-    onlyIncomplete: false, onlyMissingInvoice: false, onlyMissingContract: false
+    onlyIncomplete: false, onlyMissingInvoice: false, onlyMissingContract: false,
+    onlyUnsettled: false
   })
   pagination.current = 1
   sortState.field = 'id'
@@ -489,22 +531,28 @@ function resetFilters() {
   loadData()
 }
 
-// 三个"查看未XX的需求"开关互斥（后端一次只认一个），打开一个就把另外两个关掉
+// 四个"查看未XX的需求"开关互斥（后端一次只认一个），打开一个就把其余的关掉
 function toggleOnlyIncomplete() {
   filters.onlyIncomplete = !filters.onlyIncomplete
-  if (filters.onlyIncomplete) { filters.onlyMissingInvoice = false; filters.onlyMissingContract = false }
+  if (filters.onlyIncomplete) { filters.onlyMissingInvoice = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
   pagination.current = 1
   loadData()
 }
 function toggleOnlyMissingInvoice() {
   filters.onlyMissingInvoice = !filters.onlyMissingInvoice
-  if (filters.onlyMissingInvoice) { filters.onlyIncomplete = false; filters.onlyMissingContract = false }
+  if (filters.onlyMissingInvoice) { filters.onlyIncomplete = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
   pagination.current = 1
   loadData()
 }
 function toggleOnlyMissingContract() {
   filters.onlyMissingContract = !filters.onlyMissingContract
-  if (filters.onlyMissingContract) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false }
+  if (filters.onlyMissingContract) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false; filters.onlyUnsettled = false }
+  pagination.current = 1
+  loadData()
+}
+function toggleOnlyUnsettled() {
+  filters.onlyUnsettled = !filters.onlyUnsettled
+  if (filters.onlyUnsettled) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false; filters.onlyMissingContract = false }
   pagination.current = 1
   loadData()
 }

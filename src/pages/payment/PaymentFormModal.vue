@@ -133,13 +133,15 @@
       :settlement-month="form.settlementMonth"
       :existing-payment-id="form.id"
       :selected-tracking-ids="form.selectedItems.map(i => i.trackingId)"
+      :auto-select-requirement-no="pendingAutoSelectRequirementNo"
+      :initial-requirement-no-filter="pendingAutoSelectRequirementNo"
       @confirm="handleSelectorConfirm"
     />
   </a-modal>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
 import { paymentApi, exchangeRateApi, brandApi } from '../../api/index'
@@ -150,13 +152,21 @@ const props = defineProps({
   visible: Boolean,
   record:  Object,
   brands: { type: Array, default: () => [] },
-  teams:  { type: Array, default: () => [] }
+  teams:  { type: Array, default: () => [] },
+  // "红人需求管理"列表页"去结款"按钮专用（2026-08 新增）：新建态下用这批值预填表单，填完
+  // 自动打开"选择涉及的红人视频项目"弹窗，停在那个界面让操作人核对勾选，不直接跳过这一步。
+  // 形状：{ brandId, teamId（真实团队id或null）, reconcileDate（'YYYY-MM-DD'或null）,
+  //         settlementMonth（'YYYYMM'）, autoSelectRequirementNo（按需求结算的品牌方才传） }
+  prefill: { type: Object, default: null }
 })
 const emit = defineEmits(['update:visible', 'saved'])
 
 const formRef = ref()
 const saving  = ref(false)
 const selectorVisible = ref(false)
+// "去结款"预填流程专用：按需求结算的品牌方，打开"选择涉及的红人视频项目"弹窗时要自动
+// 勾选这个需求编号下的全部记录，见 applyPrefillAndOpenSelector()
+const pendingAutoSelectRequirementNo = ref(null)
 
 // a-select 多选模式下用 null 代表"不选团队"这个选项会有兼容性问题（有些组件把 null/undefined
 // 当成"清空"的特殊值），所以内部用一个不会跟真实团队 id 冲突的哨兵值表示，
@@ -366,6 +376,7 @@ async function syncFromRecord(rec) {
       paymentStatus:'PENDING', actualPaymentDate:null, notes:''
     })
     brandTeamOptions.value = []
+    pendingAutoSelectRequirementNo.value = null
     return
   }
   Object.assign(form, {
@@ -388,8 +399,33 @@ async function syncFromRecord(rec) {
   }
 }
 
-watch(() => [props.visible, props.record], ([visible, rec]) => {
+/**
+ * "去结款"预填流程（2026-08 新增）：品牌方/团队/对账日期/结算月份直接按需求信息填好，
+ * 团队选项要跟品牌方联动查一次（跟用户手动选品牌方时的 onBrandChange 逻辑一致，只是不清空
+ * 已经填好的团队），填完等一个 tick（表单先渲染出"红人团队"选项、canOpenSelector 才会是
+ * true）再自动打开"选择涉及的红人视频项目"弹窗，让操作人在那个界面核对勾选，后续流程
+ * （确认、保存）都跟手动新建完全一样。
+ */
+async function applyPrefillAndOpenSelector(prefill) {
+  form.brandId = prefill.brandId
+  const res = await brandApi.teamOptions(prefill.brandId)
+  brandTeamOptions.value = res.data || []
+  form.teamIds = [prefill.teamId ?? NO_TEAM]
+  form.reconcileDate = prefill.reconcileDate || null
+  form.settlementMonth = prefill.settlementMonth || null
+  form.settlementMonthVal = prefill.settlementMonth || null
+  pendingAutoSelectRequirementNo.value = prefill.autoSelectRequirementNo || null
+  await nextTick()
+  openSelector()
+}
+
+watch(() => [props.visible, props.record, props.prefill], ([visible, rec, prefill]) => {
   if (!visible) return
+  if (!rec && prefill) {
+    syncFromRecord(null)
+    applyPrefillAndOpenSelector(prefill)
+    return
+  }
   syncFromRecord(rec)
 }, { immediate: true })
 

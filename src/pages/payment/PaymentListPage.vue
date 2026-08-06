@@ -119,7 +119,7 @@
       </a-table>
     </div>
 
-    <PaymentFormModal v-model:visible="modalVisible" :record="editingRecord"
+    <PaymentFormModal v-model:visible="modalVisible" :record="editingRecord" :prefill="prefillData"
       :brands="brands" :teams="teams" @saved="loadData" />
 
     <PaymentStatusModal
@@ -146,10 +146,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import dayjs from 'dayjs'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import { paymentApi } from '../../api/index'
+import { paymentApi, requirementApi } from '../../api/index'
 import { useReferenceData } from '../../composables/useReferenceData'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
@@ -162,6 +163,7 @@ import PaymentItemSelectorModal from './PaymentItemSelectorModal.vue'
 
 const authStore = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 const loading   = ref(false)
 const { loadBrands, loadTeams } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -170,6 +172,9 @@ const brands = ref([])
 const teams  = ref([])
 const modalVisible       = ref(false)
 const editingRecord      = ref(null)
+// "红人需求管理"列表页"去结款"按钮跳转过来时（?createFromRequirement=需求id），预填新建
+// 结款记录表单用，见 openCreateFromRequirement()
+const prefillData         = ref(null)
 const statusModalVisible = ref(false)
 const statusModalRecord  = ref(null)
 const receiptModalVisible = ref(false)
@@ -324,8 +329,40 @@ function toggleOnlyMissingReceipt() {
   pagination.current = 1
   loadData()
 }
-function openCreate() { editingRecord.value = null; modalVisible.value = true }
-function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
+function openCreate() { editingRecord.value = null; prefillData.value = null; modalVisible.value = true }
+
+/**
+ * "红人需求管理"列表页"去结款"按钮跳转过来（2026-08 新增）：按需求信息组好预填值，交给
+ * PaymentFormModal 去打开新建表单并自动跳到"选择涉及的红人视频项目"弹窗。
+ *   - 团队：需求自己的 teamId（可能是 null，代表不涉及团队）
+ *   - 对账日期：品牌方是月结才需要，填成今天（跟手动新建时"对账日期后N天内结款"是同一套
+ *     口径，具体勾选到哪些记录跟手动操作完全一致，交给选择弹窗自己的默认勾选规则处理）
+ *   - 结算月份：需求完成时间所在的月份
+ *   - autoSelectRequirementNo：只有"按红人成本阈值分档+需要invoice"（一次结款只对应一个
+ *     需求）的品牌方才传，选择弹窗打开后会自动把这个需求下的记录全部勾上；月结品牌方不传，
+ *     走原本"对账日期落在这个月"的默认勾选规则（本来就横跨多个需求，不该只勾这一个）
+ */
+async function openCreateFromRequirement(requirementId) {
+  try {
+    const res = await requirementApi.getById(requirementId)
+    const req = res.data
+    if (!req) { message.error('需求记录不存在'); return }
+    const brand = brands.value.find(b => b.id === req.brandId)
+    prefillData.value = {
+      brandId: req.brandId,
+      teamId: req.teamId ?? null,
+      reconcileDate: brand?.paymentCycleType === 'MONTH_END' ? dayjs().format('YYYY-MM-DD') : null,
+      settlementMonth: req.completedAt ? dayjs(req.completedAt).format('YYYYMM') : null,
+      autoSelectRequirementNo: brand?.paymentCycleType === 'COST_THRESHOLD'
+        ? req.internalRequirementNo : null
+    }
+    editingRecord.value = null
+    modalVisible.value = true
+  } catch (e) {
+    message.error(e?.response?.data?.message || '加载需求信息失败')
+  }
+}
+function openEdit(r)  { editingRecord.value = r; prefillData.value = null; modalVisible.value = true }
 function openStatusModal(r) { statusModalRecord.value = r; statusModalVisible.value = true }
 function openItemsView(r) {
   itemsViewPaymentId.value = r.id
@@ -351,6 +388,14 @@ onMounted(async () => {
   brands.value = b || []
   teams.value  = t || []
   loadData()
+  // "红人需求管理"列表页"去结款"跳转过来：品牌方列表加载完（prefill 要用品牌方付款周期
+  // 类型判断对账日期/自动勾选规则）之后再处理，处理完把参数从地址栏清掉，避免刷新页面
+  // 或者后续手动点"新建结款记录"时又重新触发一次预填
+  if (route.query.createFromRequirement) {
+    await openCreateFromRequirement(route.query.createFromRequirement)
+    const { createFromRequirement, ...restQuery } = route.query
+    router.replace({ path: route.path, query: restQuery })
+  }
 })
 </script>
 
