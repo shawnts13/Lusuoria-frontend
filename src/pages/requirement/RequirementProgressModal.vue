@@ -33,6 +33,9 @@
         <template v-if="column.key === 'clientUnitPrice'">
           {{ record.clientUnitPrice != null ? fmtNum(record.clientUnitPrice) : '—' }}
         </template>
+        <template v-if="column.key === 'publishDate'">
+          {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
+        </template>
         <template v-if="column.key === 'progress'">
           <a-tag v-if="record.progress" :color="collabProgressColor(record.progress)">{{ record.progressLabel || '—' }}</a-tag>
           <span v-else style="color:#bbb">—</span>
@@ -62,6 +65,7 @@ import { requirementApi } from '../../api/index'
 import { colorForValue } from '../../utils/tagColor'
 import { videoTypeColor, collabProgressColor } from '../../utils/enumColors'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
+import { formatDate } from '../../utils/dateFormat'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -103,6 +107,9 @@ const columns = [
   { title: '需求内容', key: 'demandContent', width: 200 },
   { title: '红人视频制作与发布单价成本（$）', key: 'influencerUnitCostPrice', width: 180 },
   { title: '客户合作单价（$）', key: 'clientUnitPrice', width: 130 },
+  // 2026-08 新增：方便直接在这个详情列表里对照每条记录自己的发布时间是否跟"需求完成时间"
+  // （该需求所有关联记录里最晚的视频发布时间）对得上，不用跳去合作跟踪模块逐条查
+  { title: '视频发布时间', key: 'publishDate', width: 120 },
   { title: '视频项目进度', key: 'progress', width: 160 },
   { title: '操作', key: 'action', width: 90 }
 ]
