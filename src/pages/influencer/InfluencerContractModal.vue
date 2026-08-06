@@ -39,7 +39,10 @@
     </a-form>
     <div class="upload-hint">
       请点击"前往合同上传Google Drive页面"按钮，将合同上传至对应年份的Contracts文件夹里。
-      文件命名规则：年月日-contract-红人社媒完整名字，例如 20260723-contract-kam2kute
+      文件命名规则：年月日-contract-红人社媒完整名字.pdf，例如 20260723-contract-kam2kute.pdf
+      <template v-if="suggestedFileName">
+        <br>本合同建议命名：<span class="suggested-name">{{ suggestedFileName }}</span>
+      </template>
     </div>
   </a-modal>
 </template>
@@ -56,9 +59,27 @@ const props = defineProps({
   contract:     { type: Object, default: null },   // 编辑时传入已有记录，新增时为 null
   // 这个红人关联的、且品牌方是"一年签一次合同"的 (品牌方,团队) 对，供级联选择
   brandTeamPairs: { type: Array, default: () => [] },
-  brands:       { type: Array, default: () => [] }
+  brands:       { type: Array, default: () => [] },
+  // 红人社媒完整名字（2026-08 新增，用来直接算出建议命名，不用用户自己拼——
+  // 跟 RequirementContractModal/RequirementInvoiceModal/PaymentReceiptModal 同一个套路，
+  // 这里之前漏做了，只有一段写死的示例文字，没有真正按当前这个红人算出建议命名）
+  accountName:  { type: String, default: null }
 })
 const emit = defineEmits(['update:visible', 'saved'])
+
+// 建议命名直接算好显示出来，按北京时间取"今天"（系统约定所有时间都按北京时间，浏览器本地
+// 时区不一定是北京时间，不能直接用 new Date() 的本地年月日），跟"上传合同/Invoice/发票"
+// 弹窗同一个套路
+function todayYmdBeijing() {
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date())
+  const map = {}
+  for (const p of parts) map[p.type] = p.value
+  return `${map.year}${map.month}${map.day}`
+}
+const suggestedFileName = computed(() =>
+  props.accountName ? `${todayYmdBeijing()}-contract-${props.accountName}.pdf` : null)
 
 const saving = ref(false)
 const brandId = ref(null)
@@ -158,5 +179,11 @@ async function handleSave() {
   border: 1px solid #ffe58f;
   border-radius: 4px;
   padding: 8px 12px;
+}
+/* 建议命名的文件名直接标红加粗，跟上面说明性的文字拉开视觉优先级，一眼就能复制对照，
+   跟 RequirementContractModal 等其他三个"上传XX"弹窗保持同一套样式 */
+.suggested-name {
+  color: #cf1322;
+  font-weight: 600;
 }
 </style>

@@ -204,6 +204,7 @@
 
     <InfluencerContractModal v-model:visible="contractModalVisible" :influencer-id="props.record?.id"
       :contract="contractModalRecord" :brand-team-pairs="annualBrandTeamPairs" :brands="props.brands"
+      :account-name="form.accountName"
       @saved="loadContracts" />
   </a-modal>
 </template>
