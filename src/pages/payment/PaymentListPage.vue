@@ -331,19 +331,29 @@ function toggleOnlyMissingReceipt() {
 }
 function openCreate() { editingRecord.value = null; prefillData.value = null; modalVisible.value = true }
 
+/** 某个月份（'YYYYMM'）的最后一个工作日（'YYYY-MM-DD'），只有周六算休息日、周日也算工作日——
+ *  跟后端 WorkdayUtil.lastWorkdayOnOrBefore() 同一套约定 */
+function lastWorkdayOfMonth(yyyyMM) {
+  let d = dayjs(`${yyyyMM.slice(0, 4)}-${yyyyMM.slice(4, 6)}-01`).endOf('month')
+  while (d.day() === 6) d = d.subtract(1, 'day') // dayjs.day()：0=周日...6=周六
+  return d.format('YYYY-MM-DD')
+}
+
 /**
  * "红人需求管理"列表页"去结款"按钮跳转过来（2026-08 新增）：按需求信息组好预填值，交给
  * PaymentFormModal 去打开新建表单并自动跳到"选择涉及的红人视频项目"弹窗。
  *   - 团队：需求自己的 teamId（可能是 null，代表不涉及团队）
- *   - 对账日期：品牌方是月结才需要，填成今天
+ *   - 对账日期：品牌方是月结才需要。填成"结算月份（需求完成时间所在月份）的最后一个工作日"，
+ *     不是"今天"（2026-08 bug 修复：之前填的是今天，但选择弹窗"自动勾选"的规则是按"红人视频
+ *     的发布时间是否落在对账日期所在月份"判断的——手动新建结款记录时，管理层填的对账日期
+ *     本来就是跟结算月份对应的月底附近，所以能自动勾上；"去结款"按钮之前直接填今天，
+ *     如果今天不是需求完成月份，对账日期所在月份就跟视频发布月份对不上，自动勾选规则会一条
+ *     都匹配不到，导致弹窗打开后没有像手动新建时那样自动勾好）
  *   - 结算月份：需求完成时间所在的月份
- *   - autoSelectRequirementNo：不管品牌方付款周期类型，一律传这个需求编号，保证点击这个
- *     按钮触发的这条需求自己的记录一定会被勾上（2026-08 bug 修复：月结品牌方之前不传这个，
- *     只靠"对账日期落在这个月"的默认勾选规则——但这里对账日期填的是"今天"，如果这条需求
- *     的视频实际发布月份不是本月（很常见，比如今天才把之前完成的需求处理掉），默认勾选
- *     规则匹配不上任何记录，导致选择弹窗打开后一条都没勾中，跟手动建立结款记录的体验不一致）。
- *     这个自动勾选是"追加"关系，不影响月结品牌方原本"对账日期落在这个月"的默认勾选规则
- *     继续生效——两者取并集，一起决定最终勾选哪些记录
+ *   - autoSelectRequirementNo：只有"按红人成本阈值分档"（一次结款本来就只对应一个需求）的
+ *     品牌方才传，选择弹窗打开后会自动把这个需求下的记录全部勾上；月结品牌方不传，走上面
+ *     修好的"对账日期落在结算月份"默认勾选规则，效果等同手动新建（本来就可能横跨多个需求，
+ *     不该只勾这一个）
  */
 async function openCreateFromRequirement(requirementId) {
   try {
@@ -351,12 +361,16 @@ async function openCreateFromRequirement(requirementId) {
     const req = res.data
     if (!req) { message.error('需求记录不存在'); return }
     const brand = brands.value.find(b => b.id === req.brandId)
+    const settlementMonth = req.completedAt ? dayjs(req.completedAt).format('YYYYMM') : null
     prefillData.value = {
       brandId: req.brandId,
       teamId: req.teamId ?? null,
-      reconcileDate: brand?.paymentCycleType === 'MONTH_END' ? dayjs().format('YYYY-MM-DD') : null,
-      settlementMonth: req.completedAt ? dayjs(req.completedAt).format('YYYYMM') : null,
-      autoSelectRequirementNo: req.internalRequirementNo
+      reconcileDate: brand?.paymentCycleType === 'MONTH_END'
+        ? (settlementMonth ? lastWorkdayOfMonth(settlementMonth) : dayjs().format('YYYY-MM-DD'))
+        : null,
+      settlementMonth,
+      autoSelectRequirementNo: brand?.paymentCycleType === 'COST_THRESHOLD'
+        ? req.internalRequirementNo : null
     }
     editingRecord.value = null
     modalVisible.value = true
