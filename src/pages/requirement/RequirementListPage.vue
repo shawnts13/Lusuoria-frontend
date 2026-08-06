@@ -154,10 +154,10 @@
               </template>
               <template v-if="authStore.canManagePayments">
                 <a-divider v-if="authStore.canWrite" type="vertical" />
-                <a-tooltip :title="isProgress100(record) ? '' : '该需求尚未实施完成，暂时无法结款'">
+                <a-tooltip :title="settlementButtonState(record).tooltip">
                   <span>
-                    <a-button size="small" :disabled="!isProgress100(record)"
-                      :class="{ 'settlement-btn-ready': isProgress100(record) }"
+                    <a-button size="small" :disabled="settlementButtonState(record).disabled"
+                      :class="{ 'settlement-btn-ready': !settlementButtonState(record).disabled }"
                       @click="goToSettlement(record)">去结款</a-button>
                   </span>
                 </a-tooltip>
@@ -383,6 +383,21 @@ function openBatchCreateForRequirement(record) {
 function isProgress100(record) {
   const total = record.totalItemCount ?? 0
   return total > 0 && (record.completedCount ?? 0) >= total
+}
+// "去结款"按钮的禁用状态+悬浮提示（2026-08 修复：之前只判断了需求完成进度，没管"结款状态"，
+// 导致已经"已添加结款记录"/"已付款"的需求也能点"去结款"、重复走一遍新建结款记录流程）。
+// 结款状态非空（已经有结款记录关联）优先于"未实施完成"——两种"点不了"的原因不一样，
+// 分别给不同提示文案，方便管理层一眼看出到底是哪种情况
+function settlementButtonState(record) {
+  if (record.settlementStatus === 'PAID') {
+    return { disabled: true, tooltip: '该需求已付款，无需再次结款' }
+  }
+  if (record.settlementStatus === 'ADDED_TO_PAYMENT') {
+    return { disabled: true, tooltip: '该需求已添加结款记录（待付款），无需再次结款' }
+  }
+  return isProgress100(record)
+    ? { disabled: false, tooltip: '' }
+    : { disabled: true, tooltip: '该需求尚未实施完成，暂时无法结款' }
 }
 // 新开一个标签页跳到"红人结款"模块，自动预填并停在"选择涉及的红人视频项目"弹窗，
 // 跟应用里其他跨模块跳转（比如"合同快到期"提醒的"查看详情"）保持一致的新标签页习惯
