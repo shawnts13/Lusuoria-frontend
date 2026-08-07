@@ -444,7 +444,15 @@ async function load() {
   }
 }
 
-watch(() => props.visible, v => { if (v) load() })
+// immediate: true（2026-08 排查同类bug时补的防御性加固）：这个组件嵌套在 PaymentFormModal
+// 的 <a-modal> 里，外层是 destroy-on-close，"去结款"入口的 applyPrefillAndOpenSelector()
+// 目前靠一个 await nextTick() 保证这个组件先以 visible=false mount、再翻成 true，避开了
+// RequirementLinkPickerModal 那个"首次 mount 时 props 已经是目标值、watch 错过这次变化"的
+// bug（见那个文件的注释）。但这个"先后顺序"是调用方那边维护的，不是这个组件自己保证的——
+// 加上 immediate: true 让这个组件不管调用方有没有留出这个时间差，自己也能兜住首次 mount
+// 就已经是 visible=true 的情况，不用依赖外部时序正确。visible 初始为 false 时这行不会
+// 有任何副作用（load() 只在 v 为真时才调用）。
+watch(() => props.visible, v => { if (v) load() }, { immediate: true })
 
 function close() { emit('update:visible', false) }
 
