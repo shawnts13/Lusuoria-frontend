@@ -35,9 +35,10 @@
             <a-input v-model:value="publishLinks[idx]" placeholder="粘贴视频发布链接" style="flex:1" />
             <a-button danger size="small" @click="removePublishLink(idx)">删除</a-button>
           </div>
-          <a-button type="dashed" size="small" block @click="addPublishLink">+ 添加新链接</a-button>
+          <a-button type="dashed" size="small" block :disabled="!canAddMoreLinks" @click="addPublishLink">+ 添加新链接</a-button>
           <div style="font-size:12px;color:#595959;margin-top:4px">
-            该红人合作跟踪如果涉及多个平台/多条发布链接，可以都加进来
+            <template v-if="canAddMoreLinks">该红人合作跟踪涉及多个平台，可以按平台数量添加多条发布链接</template>
+            <template v-else>该红人合作跟踪只涉及1个平台，只能填1条发布链接</template>
           </div>
         </a-form-item>
         <a-form-item label="视频发布时间" required>
@@ -111,7 +112,19 @@ const saving = ref(false)
 // 用法跟"编辑"表单 CollaborationFormModal 的 publishLinks 数组一致
 const publishLinks = ref([''])
 const publishDateLocal = ref(null)
-function addPublishLink() { publishLinks.value.push('') }
+
+// 2026-08 修复：这条记录的"发布平台"有几个，"添加新链接"就最多能加到几条——只有1个平台的
+// 记录（占绝大多数）直接禁用"添加"按钮，避免误填多条链接却只对应1个平台。平台数≥2的记录
+// 才允许按平台数量逐条添加。record.platform 是换行拼接的多值字符串，跟 record.publishLink
+// 是同一套拼接约定（参见 CollaborationListPage.vue 的 splitMulti）
+const platformCount = computed(() => {
+  const raw = props.record?.platform
+  if (!raw) return 1
+  return raw.split('\n').map(s => s.trim()).filter(Boolean).length || 1
+})
+const canAddMoreLinks = computed(() => publishLinks.value.length < platformCount.value)
+
+function addPublishLink() { if (canAddMoreLinks.value) publishLinks.value.push('') }
 function removePublishLink(idx) {
   publishLinks.value.splice(idx, 1)
   if (publishLinks.value.length === 0) publishLinks.value.push('')
@@ -120,12 +133,17 @@ function splitLinks(str) {
   if (!str) return []
   return str.split('\n').map(s => s.trim()).filter(Boolean)
 }
-// 填了视频发布链接（从"一条都没填"变成"至少一条有内容"）之后，视频发布时间还空着的话
-// 默认带成今天（北京时间），用户可以再改——不覆盖用户已经手动选过的日期
-watch(publishLinks, (val, oldVal) => {
-  const hasContent = val.some(l => l && l.trim())
-  const hadContent = (oldVal || []).some(l => l && l.trim())
-  if (hasContent && !hadContent && !publishDateLocal.value) {
+// 填了视频发布链接后，视频发布时间还空着的话默认带成今天（北京时间），用户可以再改——
+// 不覆盖用户已经手动选过的日期。
+// 2026-08 修复：之前用 watch(publishLinks, (val, oldVal) => ...) 的 deep 监听去比较
+// "从没内容变成有内容"这个瞬间，但 publishLinks[idx] 是原地修改数组元素（v-model 绑定到
+// 数组下标），deep watcher 触发时 val 和 oldVal 其实是同一个数组引用（Vue 3 的既定行为：
+// 深度监听不会在触发前克隆旧值），导致 hadContent 用 oldVal 算出来的结果跟 hasContent
+// 完全一样，"由无到有"这个判断永远不成立，时间就再也不会被自动带入。改成只看"现在有没有
+// 内容 + 时间是不是还空着"，不再依赖不可靠的新旧值比较，效果跟原意图一致
+watch(publishLinks, () => {
+  const hasContent = publishLinks.value.some(l => l && l.trim())
+  if (hasContent && !publishDateLocal.value) {
     publishDateLocal.value = formatDate(new Date())
   }
 }, { deep: true })
