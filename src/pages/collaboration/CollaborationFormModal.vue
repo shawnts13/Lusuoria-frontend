@@ -109,7 +109,12 @@
               <a-input v-model:value="form.publishLinks[idx]" placeholder="前期可留空" style="flex:1" />
               <a-button danger size="small" @click="removePublishLink(idx)">删除</a-button>
             </div>
-            <a-button type="dashed" size="small" block @click="addPublishLink">+ 添加新链接</a-button>
+            <a-button type="dashed" size="small" block :disabled="!canAddMoreLinks" @click="addPublishLink">+ 添加新链接</a-button>
+            <div style="font-size:12px;color:#595959;margin-top:4px">
+              <template v-if="canAddMoreLinks">已选{{ form.platforms.length }}个平台，可以按平台数量添加多条发布链接</template>
+              <template v-else-if="form.platforms.length <= 1">只涉及1个平台，只能填1条发布链接</template>
+              <template v-else>已按平台数量填满，如需更多请先在上方"合作平台"里添加平台</template>
+            </div>
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -505,7 +510,11 @@ function splitLinks(str) {
   if (!str) return []
   return str.split('\n').map(s => s.trim()).filter(Boolean)
 }
-function addPublishLink() { form.publishLinks.push('') }
+// 2026-08 修复：跟"状态流转"弹窗（CollaborationStatusModal.vue）保持一致——"添加新链接"
+// 按"合作平台"选了几个封顶，还没选平台（或只选了1个）时按1条算，避免链接数量跟平台数对不上
+const platformCount = computed(() => Math.max(form.platforms.length, 1))
+const canAddMoreLinks = computed(() => form.publishLinks.length < platformCount.value)
+function addPublishLink() { if (canAddMoreLinks.value) form.publishLinks.push('') }
 function removePublishLink(idx) {
   form.publishLinks.splice(idx, 1)
   if (form.publishLinks.length === 0) form.publishLinks.push('')
