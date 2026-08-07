@@ -111,6 +111,12 @@
           查看未完成的记录
         </a-button>
       </a-tooltip>
+      <a-tooltip title="只看&quot;视频发布链接&quot;还是空的记录，不包括&quot;折损&quot;（折损是终态，不算还没发布）">
+        <a-button class="orange-filter-btn" :class="{ active: filters.onlyUnpublished }"
+          style="margin-left:16px" @click="toggleOnlyUnpublished">
+          查看视频未发布的记录
+        </a-button>
+      </a-tooltip>
     </div>
 
     <!-- 表格 -->
@@ -363,7 +369,10 @@ const filters = reactive({
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined,
   onlyMyResponsibility: false,
   // "查看未完成的记录"：视频项目进度不是"客户已结算"也不是"折损"（这两个是终态，不用再跟进）
-  onlyIncomplete: route.query.onlyIncomplete === 'true'
+  onlyIncomplete: route.query.onlyIncomplete === 'true',
+  // "查看视频未发布的记录"（2026-08 新增）：视频发布链接还是空的，但不包括"折损"（终态，
+  // 不算还没发布）。跟 onlyMyResponsibility/onlyIncomplete 互不影响，可以同时生效
+  onlyUnpublished: false
 })
 
 const allColumns = [
@@ -498,6 +507,7 @@ async function loadData() {
       projectManagerId:   filters.projectManagerId,
       onlyMyResponsibility: filters.onlyMyResponsibility,
       onlyIncomplete:     filters.onlyIncomplete,
+      onlyUnpublished:    filters.onlyUnpublished,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -528,7 +538,7 @@ function resetFilters() {
     videoMonth:undefined, videoMonthVal:undefined, videoDateRange:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined,
-    onlyMyResponsibility: false, onlyIncomplete: false
+    onlyMyResponsibility: false, onlyIncomplete: false, onlyUnpublished: false
   })
   pagination.current = 1
   sortState.field = 'id'; sortState.order = 'descend'
@@ -537,6 +547,12 @@ function resetFilters() {
 
 function toggleOnlyIncomplete() {
   filters.onlyIncomplete = !filters.onlyIncomplete
+  pagination.current = 1
+  loadData()
+}
+
+function toggleOnlyUnpublished() {
+  filters.onlyUnpublished = !filters.onlyUnpublished
   pagination.current = 1
   loadData()
 }
