@@ -3,7 +3,6 @@
 
 export const CATEGORY_LABEL = {
   COLLAB_PAYMENT_DUE: '红人合作跟踪临近结款',
-  BRAND_MONTH_END_PAYMENT_DUE: '品牌方月结临近结款',
   INFLUENCER_PAYMENT_DUE: '红人结款临近付款日',
   PM_EXECUTOR_PROGRESS_STALL: '进度滞留-项目',
   FINANCE_PROGRESS_STALL: '进度滞留-财务',
@@ -17,8 +16,8 @@ export const CATEGORY_LABEL = {
 const URGENCY_COLOR = { OVERDUE: 'red', NEAR: 'orange', UPCOMING: 'green' }
 const URGENCY_LABEL = { OVERDUE: '0天或已超期', NEAR: '1-3天', UPCOMING: '3-7天' }
 // "进度滞留-财务"用的是同一套 ReminderUrgency，但语义是"距离阈值还有几天"，光写"1-3天"/"3-7天"
-// 容易让人搞不清是"已经超了几天"还是"还剩几天"，这里单独换一套更明确的文案；结款相关的两类
-// 提醒（COLLAB_PAYMENT_DUE/BRAND_MONTH_END_PAYMENT_DUE）保持原样不变
+// 容易让人搞不清是"已经超了几天"还是"还剩几天"，这里单独换一套更明确的文案；
+// COLLAB_PAYMENT_DUE 保持原样不变
 const FINANCE_URGENCY_LABEL = { OVERDUE: '0天或已超期', NEAR: '距离超期还剩1-3天', UPCOMING: '距离超期还剩3-7天' }
 // "合同即将到期"也是同一套 ReminderUrgency，但语义是"距离合同到期还有几天"，窗口是0/14/30天
 // （不是原来的0/3/7天），颜色也换成黄/橙/红，单独一套映射，不跟其他类别混用

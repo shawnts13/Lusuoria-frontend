@@ -7,7 +7,7 @@
           <a-tag :color="urgencyColor(r)">{{ urgencyLabel(r) }}</a-tag>
           <span class="card-text" :style="{ color: textColor(r) }">{{ r.title }}</span>
         </div>
-        <a v-if="showDetailButton && r.category !== 'BRAND_MONTH_END_PAYMENT_DUE'" @click="$emit('view-detail', r)">查看详情</a>
+        <a v-if="showDetailButton" @click="$emit('view-detail', r)">查看详情</a>
       </div>
     </div>
     <a-empty v-else description="暂无进度提醒" style="margin:24px 0" />
