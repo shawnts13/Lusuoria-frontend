@@ -43,7 +43,9 @@
             <span>提成比例</span><span>{{ fmtRate(detail.commissionRate) }}</span>
           </div>
           <div v-if="detail.type === 'PROJECT_MANAGER'" class="hint-line">
-            提成金额 = 上表"利润"汇总行 × 提成比例（不扣内部执行成本——那部分是您自己发给执行人员的）
+            提成金额是按每条记录分别计算再加总的（不是"利润汇总行 × 提成比例"一次性算出来的），
+            加上每条金额四舍五入，加总后跟"利润汇总 × 提成比例"的结果会有小额差异，属正常现象
+            （不扣内部执行成本——那部分是您自己发给执行人员的）
           </div>
           <div v-if="detail.type === 'PROJECT_MANAGER' || detail.type === 'EXECUTOR'" class="line">
             <span>{{ detail.type === 'PROJECT_MANAGER' ? '提成金额' : '薪酬合计' }}</span>
