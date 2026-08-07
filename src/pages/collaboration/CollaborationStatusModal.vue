@@ -14,8 +14,7 @@
         <a-select v-model:value="progress" placeholder="选择视频项目进度">
           <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value"
             :disabled="(FINANCE_ONLY_PROGRESS.includes(o.value) && !authStore.canSetFinanceSettlementProgress)
-              || (!authStore.canWrite && !QUALIFYING_PROGRESS.includes(o.value))
-              || isBlockedByMissingPublishInfo(o.value)">
+              || (!authStore.canWrite && !QUALIFYING_PROGRESS.includes(o.value))">
             {{ o.label }}
           </a-select-option>
         </a-select>
@@ -26,10 +25,28 @@
           财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"之间流转
         </div>
       </a-form-item>
-      <div v-if="missingPublishInfo" style="margin-bottom:12px;color:#ff4d4f;font-size:12px">
-        该记录尚未填写{{ missingFieldsLabel }}，无法流转到"已发布（未结算）"/"已加入客户未结算列表"/
-        "客户已结算"这三个阶段（当前进度不受影响），请先通过"编辑"功能填写后再回来流转。
-      </div>
+      <!-- 2026-08 新增：流转到"已发布（未结算）"等三个阶段时，视频发布链接/发布时间直接在这里填，
+           不用再跳去"编辑"表单——所有能操作到这一步的角色（财务除外）都可以自己填，不受编辑表单
+           那边"仅 ADMIN 能改视频发布时间"的限制 -->
+      <template v-if="needsPublishInfo">
+        <a-form-item label="视频发布链接" required>
+          <div v-for="(link, idx) in publishLinks" :key="'sl-' + idx"
+            style="display:flex;gap:8px;margin-bottom:6px">
+            <a-input v-model:value="publishLinks[idx]" placeholder="粘贴视频发布链接" style="flex:1" />
+            <a-button danger size="small" @click="removePublishLink(idx)">删除</a-button>
+          </div>
+          <a-button type="dashed" size="small" block @click="addPublishLink">+ 添加新链接</a-button>
+          <div style="font-size:12px;color:#595959;margin-top:4px">
+            该红人合作跟踪如果涉及多个平台/多条发布链接，可以都加进来
+          </div>
+        </a-form-item>
+        <a-form-item label="视频发布时间" required>
+          <a-date-picker v-model:value="publishDateLocal" style="width:100%" value-format="YYYY-MM-DD" />
+          <div style="font-size:12px;color:#595959;margin-top:2px">
+            填了视频发布链接后默认带成今天，可以改成实际发布日期
+          </div>
+        </a-form-item>
+      </template>
       <div v-if="willAutoSetPayment" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」，不需要在这里手动选
       </div>
@@ -64,6 +81,7 @@ import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
+import { formatDate } from '../../utils/dateFormat'
 
 const { getOptions } = useOptions()
 const authStore = useAuthStore()
@@ -89,6 +107,29 @@ const clientPaymentBatch = ref('')
 const clientOrderId = ref('')
 const saving = ref(false)
 
+// 视频发布链接/发布时间（2026-08 新增，见下面 needsPublishInfo）：链接支持多条，
+// 用法跟"编辑"表单 CollaborationFormModal 的 publishLinks 数组一致
+const publishLinks = ref([''])
+const publishDateLocal = ref(null)
+function addPublishLink() { publishLinks.value.push('') }
+function removePublishLink(idx) {
+  publishLinks.value.splice(idx, 1)
+  if (publishLinks.value.length === 0) publishLinks.value.push('')
+}
+function splitLinks(str) {
+  if (!str) return []
+  return str.split('\n').map(s => s.trim()).filter(Boolean)
+}
+// 填了视频发布链接（从"一条都没填"变成"至少一条有内容"）之后，视频发布时间还空着的话
+// 默认带成今天（北京时间），用户可以再改——不覆盖用户已经手动选过的日期
+watch(publishLinks, (val, oldVal) => {
+  const hasContent = val.some(l => l && l.trim())
+  const hadContent = (oldVal || []).some(l => l && l.trim())
+  if (hasContent && !hadContent && !publishDateLocal.value) {
+    publishDateLocal.value = formatDate(new Date())
+  }
+}, { deep: true })
+
 // 品牌方是否涉及这两个字段（2026-08 新增），跟后端 Brand.requiresClientOrderId()/
 // requiresClientPaymentBatch() 保持一致：null/true 都按"涉及"处理，只有显式 false 才是"不涉及"
 const currentBrand = computed(() => props.brands?.find(b => b.id === props.record?.brandId))
@@ -108,6 +149,8 @@ watch(() => props.visible, v => {
     notes.value = props.record.notes || ''
     clientPaymentBatch.value = props.record.clientPaymentBatch || ''
     clientOrderId.value = props.record.clientOrderId || ''
+    publishLinks.value = props.record.publishLink ? splitLinks(props.record.publishLink) : ['']
+    publishDateLocal.value = props.record.publishDate ? formatDate(props.record.publishDate) : null
     original.progress = props.record.progress || null
     original.paymentProgress = props.record.influencerPaymentProgress || null
   }
@@ -123,21 +166,13 @@ const autoPaymentLabel = computed(() => {
   return brand && brand.requiresInvoice === false ? '待结款（不涉及invoice）' : '待红人发送invoice'
 })
 
-// 2026-07 起：跟后端 updateStatus() 的规则保持一致——视频发布时间/视频发布链接任意一个缺失时，
-// 不允许流转进"已发布（未结算）"/"已加入客户未结算列表"/"客户已结算"这三个阶段（不管是不是
-// 首次进入，哪怕是在这三个阶段之间来回流转），不再像以前那样自动帮填"今天"这个日期——必须
-// 先通过"编辑"功能把这两个字段填好。原样保存当前值（没有真的换成别的进度）不受影响，避免
-// 历史遗留的问题记录被这条校验卡得连状态流转弹窗都打不开
-const missingLink = computed(() => !props.record?.publishLink)
-const missingDate = computed(() => !props.record?.publishDate)
-const missingPublishInfo = computed(() => missingLink.value || missingDate.value)
-const missingFieldsLabel = computed(() => {
-  if (missingLink.value && missingDate.value) return '视频发布时间和视频发布链接'
-  return missingLink.value ? '视频发布链接' : '视频发布时间'
-})
-function isBlockedByMissingPublishInfo(optionValue) {
-  return qualifies(optionValue) && optionValue !== original.progress && missingPublishInfo.value
-}
+// 2026-08 起：跟后端 updateStatus() 的规则保持一致——流转进"已发布（未结算）"/"已加入客户
+// 未结算列表"/"客户已结算"这三个阶段（不管是不是首次进入，哪怕是在这三个阶段之间来回流转）
+// 时，直接在这个弹窗里填视频发布链接/发布时间（见上面的 a-form-item 块），不用再跳去"编辑"
+// 表单；两个字段任意一个缺失时不允许保存，见 handleSave() 里的校验
+const needsPublishInfo = computed(() =>
+  qualifies(progress.value) && progress.value !== original.progress
+)
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
 // 这次要改成不符合条件的另一个状态，就是"倒退"，需要走审核。
@@ -163,6 +198,11 @@ async function handleSave() {
     message.warning('请填写备注')
     return
   }
+  const joinedPublishLinks = publishLinks.value.map(l => l.trim()).filter(Boolean).join('\n')
+  if (needsPublishInfo.value && (!joinedPublishLinks || !publishDateLocal.value)) {
+    message.warning('请先填写视频发布链接和视频发布时间，才能流转到这个状态')
+    return
+  }
   const needsOrderId = (progress.value === 'JOINED_CLIENT_UNSETTLED_LIST' || progress.value === 'SETTLED')
     && requiresClientOrderId.value
   if (needsOrderId && !clientOrderId.value?.trim()) {
@@ -182,7 +222,9 @@ async function handleSave() {
       reason: isRollback.value ? reason.value.trim() : null,
       notes: progress.value === 'DELAYED' ? notes.value.trim() : null,
       clientOrderId: needsOrderId ? clientOrderId.value.trim() : null,
-      clientPaymentBatch: needsPaymentBatch ? clientPaymentBatch.value.trim() : null
+      clientPaymentBatch: needsPaymentBatch ? clientPaymentBatch.value.trim() : null,
+      publishLink: needsPublishInfo.value ? joinedPublishLinks : null,
+      publishDate: needsPublishInfo.value ? publishDateLocal.value : null
     })
     if (res.data?.pendingApproval) {
       message.success('已提交审核，待管理员同意后生效')
