@@ -106,6 +106,16 @@ async function goToStep2() {
 // 这里再次传入 true 时值没有变化，只监听 visible 会导致这个 watch 压根不重新触发，
 // 停留在上一次残留的状态（可能是空列表）。同时监听 presetRequirement，只要这个引用变了
 // （哪怕 visible 一直是 true）也会重新加载，更稳妥。
+//
+// immediate: true（2026-08 修复"第一次总是 No data，得点两次才有值"的bug）：外层
+// <a-modal> 默认懒渲染（AntD forceRender 默认 false），第一次打开之前这个组件根本没
+// mount 过——"红人需求管理"页面点"新建合作跟踪"走的是 openForRequirement() 那条预设
+// 需求的路径，visible/presetRequirement 在这个组件真正 mount 之前就已经被父组件同步
+// 设成了 true/具体需求对象，所以这个组件挂载时 props 已经是"目标值"，不是从别的值变
+// 过来的——不加 immediate 的话，这次首次挂载不会触发这个 watch（只有后续真正的值变化
+// 才会），于是 loadItems()/loadRequirements() 都没被调用，列表停留在初始的空数组，
+// 表现就是"第一次弹出来是 No data"。第二次点击时这个组件已经 mount 过了，
+// visible 的 false→true 才是一次真正的变化，watch 正常触发，所以"第二次就好了"。
 watch(() => [props.visible, props.presetRequirement], ([v]) => {
   if (!v) return
   selectedItem.value = null
@@ -117,7 +127,7 @@ watch(() => [props.visible, props.presetRequirement], ([v]) => {
     selectedRequirement.value = null
     loadRequirements()
   }
-})
+}, { immediate: true })
 
 function close() { emit('update:visible', false) }
 

@@ -261,7 +261,6 @@
       :can-view-financials="authStore.canViewFinancials"
       :can-view-baseline-financials="authStore.canViewBaselineFinancials"
       :can-edit-commission="authStore.canEditCommission"
-      :can-edit-publish-date="authStore.isAdmin"
       :brands="brands"
       :influencers="influencers"
       :employees="employees"
