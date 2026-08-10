@@ -58,6 +58,11 @@
             <div class="line"><span>负责人提成合计（含Bonus）</span><span>{{ fmt(detail.managerCommissionTotal) }}</span></div>
             <div class="line"><span>内部执行人力成本</span><span>{{ fmt(detail.executorPayTotal) }}</span></div>
             <div class="line"><span>内部其他员工成本</span><span>{{ fmt(detail.otherStaffCost) }}</span></div>
+            <div class="hint-line">
+              下方三块明细分别拆解了"负责人提成合计（含Bonus）"、"内部执行人力成本"、
+              "内部其他员工成本"这三个汇总数字的构成，方便核对——由于明细行是分开取整后再加总的，
+              跟汇总数字直接相加相比可能有几分钱的四舍五入误差，属正常现象
+            </div>
           </template>
 
           <div v-if="detail.tierBonusRate != null" class="line">
@@ -114,10 +119,13 @@
         </div>
 
         <!-- 这个项目负责人当月压根没有涉及执行人员的记录时，整段执行人员相关内容都不展示，
-             不能让"执行人员工资预计"这类字眼出现在跟执行人员完全无关的项目负责人工资单里 -->
-        <template v-if="detail.type === 'PROJECT_MANAGER' && detail.executorWageRows && detail.executorWageRows.length">
+             不能让"执行人员工资预计"这类字眼出现在跟执行人员完全无关的项目负责人工资单里。
+             管理层这边（2026-08-10 新增展示）同一份数据的含义是"内部执行人力成本"的构成明细，
+             不是"发给谁多少工资"，标题/底部说明按类型区分开，避免管理层看到"最终净得工资"
+             这种项目负责人视角才有意义的字眼 -->
+        <template v-if="(detail.type === 'PROJECT_MANAGER' || detail.type === 'MANAGEMENT') && detail.executorWageRows && detail.executorWageRows.length">
           <div class="section-title">
-            <span>执行人员薪酬明细</span>
+            <span>{{ detail.type === 'MANAGEMENT' ? '内部执行人力成本明细' : '执行人员薪酬明细' }}</span>
             <a-tag :color="detail.executorWageConfirmed ? 'green' : 'orange'" style="margin-left:8px">
               {{ detail.executorWageConfirmed ? '已确认' : '预计（实时更新）' }}
             </a-tag>
@@ -155,9 +163,49 @@
             </template>
           </a-table>
           <div class="summary-lines">
-            <div class="line"><span>应发给执行人员的工资</span><span>{{ fmt(detail.executorWageTotal) }}</span></div>
-            <div class="line total"><span>最终净得工资</span><span>{{ fmt(detail.finalNetWage) }}</span></div>
+            <div class="line">
+              <span>{{ detail.type === 'MANAGEMENT' ? '内部执行人力成本合计' : '应发给执行人员的工资' }}</span>
+              <span>{{ fmt(detail.executorWageTotal) }}</span>
+            </div>
+            <div v-if="detail.type === 'PROJECT_MANAGER'" class="line total">
+              <span>最终净得工资</span><span>{{ fmt(detail.finalNetWage) }}</span>
+            </div>
           </div>
+        </template>
+
+        <!-- 负责人提成合计（含Bonus）明细：按项目负责人拆分，管理层自己不算在内
+             （2026-08-10 新增，Shawn 反馈只看汇总数字没法核对公式） -->
+        <template v-if="detail.type === 'MANAGEMENT' && detail.commissionBreakdownRows && detail.commissionBreakdownRows.length">
+          <div class="section-title"><span>负责人提成合计（含Bonus）明细</span></div>
+          <a-table :columns="commissionBreakdownColumns" :data-source="detail.commissionBreakdownRows"
+            :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'managerName'">
+                <template v-if="record.isSummaryRow">汇总</template>
+                <a-tag v-else-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+              </template>
+              <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+              <template v-if="column.key === 'amount2'">{{ record.amount2 != null ? fmt(record.amount2) : '—' }}</template>
+              <template v-if="column.key === 'profit'">{{ fmt(record.profit) }}</template>
+            </template>
+          </a-table>
+          <div class="hint-line">Bonus 一列显示"—"代表这个项目负责人这个月还没确认（未确认前阶梯Bonus算不出来），不是没有配置Bonus阶梯</div>
+        </template>
+
+        <!-- 内部其他员工成本明细：按人拆分（财务/IT后勤固定月薪、法务当月工资）
+             （2026-08-10 新增） -->
+        <template v-if="detail.type === 'MANAGEMENT' && detail.otherStaffCostBreakdownRows && detail.otherStaffCostBreakdownRows.length">
+          <div class="section-title"><span>内部其他员工成本明细</span></div>
+          <a-table :columns="otherStaffCostBreakdownColumns" :data-source="detail.otherStaffCostBreakdownRows"
+            :pagination="false" size="small" :row-key="(r, i) => i" :row-class-name="rowClassName">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'staffLabel'">
+                <template v-if="record.isSummaryRow">汇总</template>
+                <a-tag v-else-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+              </template>
+              <template v-if="column.key === 'amount'">{{ fmt(record.amount) }}</template>
+            </template>
+          </a-table>
         </template>
 
         <div class="footer-hint">{{ footerHint }}</div>
@@ -226,6 +274,19 @@ const executorWageColumns = [
   { title: '单价', key: 'unitPrice', width: 100 },
   { title: '薪酬金额', key: 'amount', width: 140 },
   { title: '确认状态', key: 'confirmStatus', width: 90 }
+]
+
+// 管理层"查看详情"专属明细表（2026-08-10 新增）：负责人提成合计（含Bonus）按负责人拆分
+const commissionBreakdownColumns = [
+  { title: '项目负责人', key: 'managerName', width: 160 },
+  { title: '原始提成', key: 'amount', width: 160 },
+  { title: '阶梯Bonus', key: 'amount2', width: 160 },
+  { title: '合计', key: 'profit', width: 160 }
+]
+// 内部其他员工成本按人拆分
+const otherStaffCostBreakdownColumns = [
+  { title: '人员', key: 'staffLabel', width: 240 },
+  { title: '金额', key: 'amount', width: 200 }
 ]
 
 const totalLineLabel = computed(() => {
