@@ -71,7 +71,7 @@
         </div>
 
         <div class="summary-card warning clickable" @click="openDrilldown('commission')">
-          <div class="label">负责人提成合计 <span class="drill-hint">点击查看明细 ›</span></div>
+          <div class="label">负责人提成合计（含Bonus） <span class="drill-hint">点击查看明细 ›</span></div>
           <div class="value">{{ fmt(summary.totalCommissionAmount) }}</div>
         </div>
 
@@ -108,7 +108,7 @@
       </div>
 
       <div v-if="summary.totalCompanyProfit != null" class="formula-box">
-        <div class="formula-title">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计 − 内部其他员工成本 − 奖金</div>
+        <div class="formula-title">公司利润 = 项目毛利 − 内部执行人力成本 − 负责人提成合计（含Bonus） − 内部其他员工成本 − 奖金</div>
         <div class="formula-row">
           <div class="formula-term">
             <div class="formula-label">项目毛利</div>
@@ -121,7 +121,7 @@
           </div>
           <div class="formula-op">−</div>
           <div class="formula-term">
-            <div class="formula-label">负责人提成合计</div>
+            <div class="formula-label">负责人提成合计（含Bonus）</div>
             <div class="formula-value">{{ fmt(summary.totalCommissionAmount) }}</div>
           </div>
           <div class="formula-op">−</div>

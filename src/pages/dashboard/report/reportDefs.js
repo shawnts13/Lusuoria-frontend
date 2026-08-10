@@ -7,7 +7,7 @@ export const KPI_METRICS = [
   { field: 'totalInfluencerCost', label: '红人成本' },
   { field: 'totalGrossProfit', label: '项目毛利' },
   { field: 'totalInternalExecutionCostForProfit', label: '内部执行人力成本（计入利润部分）' },
-  { field: 'totalCommissionAmount', label: '负责人提成合计' },
+  { field: 'totalCommissionAmount', label: '负责人提成合计（含Bonus）' },
   { field: 'totalCompanyProfit', label: '公司利润' }
 ]
 
