@@ -27,9 +27,13 @@
         <a-button @click="loadData">刷新</a-button>
       </div>
 
-      <div class="table-card">
+      <div class="table-card" ref="tableWrapperRef">
+        <div ref="topScrollRef" class="top-scrollbar" @scroll="onTopScroll">
+          <div :style="{ width: scrollWidth + 'px', height: '1px' }"></div>
+        </div>
         <a-table :columns="columns" :data-source="list" :loading="loading"
-          row-key="id" size="middle" :pagination="pagination" @change="onTableChange">
+          row-key="id" size="middle" :pagination="pagination" :scroll="{ x: tableScrollX }"
+          @change="onTableChange">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'category'">
               <a-tag :color="categoryColor(record.category)">{{ categoryLabel(record.category) }}</a-tag>
@@ -76,12 +80,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { pendingApprovalApi } from '../../api/index'
 import { formatDateTime } from '../../utils/dateFormat'
 import { useOptions } from '../../composables/useOptions'
 import { useAuthStore } from '../../store/auth'
+import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import ProgressReminderSection from './ProgressReminderSection.vue'
 import OperationResultNoticeList from './OperationResultNoticeList.vue'
 import MyExecutorCostApprovalList from './MyExecutorCostApprovalList.vue'
@@ -89,6 +94,7 @@ import DbBackupAlertSection from './DbBackupAlertSection.vue'
 
 const authStore = useAuthStore()
 const { getLabel } = useOptions()
+const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 
 const loading = ref(false)
 const list = ref([])
@@ -107,13 +113,18 @@ const columns = [
   { title: '摘要',       dataIndex: 'targetSummary', key: 'targetSummary', width: 200 },
   { title: '内部项目编号', dataIndex: 'targetInternalProjectNo', key: 'targetInternalProjectNo', width: 200 },
   { title: '申请改为',   key: 'requestedChange', width: 220 },
-  { title: '原因',       dataIndex: 'reason', key: 'reason', ellipsis: true },
+  // 2026-08 修复：之前没给这一列设 width，表格没开横向滚动（:scroll）时，浏览器会把没设宽度的
+  // 列挤压到几乎看不见——其他列加起来已经快 1500px，"原因"这个最需要看清楚的字段反而被压没了。
+  // 现在给个固定宽度 + 全表统一开横向滚动（tableScrollX），跟其他列一致，太长的原因文字用
+  // ellipsis 省略号 + 悬浮显示完整内容，而不是被无声裁掉
+  { title: '原因',       dataIndex: 'reason', key: 'reason', width: 260, ellipsis: true },
   { title: '发起人',     dataIndex: 'requestedBy', key: 'requestedBy', width: 100 },
   { title: '发起时间',   dataIndex: 'createdAt', key: 'createdAt', width: 160,
     customRender: ({ text }) => text ? formatDateTime(text) : '—' },
   { title: '查看详情',   key: 'detail', width: 90 },
   { title: '操作',       key: 'action', width: 150 }
 ]
+const tableScrollX = computed(() => columns.reduce((sum, c) => sum + (c.width || 120), 0))
 
 function categoryLabel(c) {
   if (c === 'DELETE_REQUEST') return '删除审核'
@@ -146,6 +157,7 @@ async function loadData() {
     const res = await pendingApprovalApi.list(filters.category, pagination.current - 1, pagination.pageSize)
     list.value = res.data?.content || []
     pagination.total = res.data?.totalElements || 0
+    remeasure()
   } finally { loading.value = false }
 }
 
