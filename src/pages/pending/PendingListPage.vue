@@ -138,7 +138,12 @@ function categoryColor(c) {
   const m = { DELETE_REQUEST: 'red', PROGRESS_ROLLBACK: 'gold', EXECUTOR_COST_MODIFY: 'purple' }
   return m[c] || 'orange'
 }
-function moduleLabel(m) { return m === 'COLLABORATION_TRACKING' ? '红人合作跟踪' : m }
+// 2026-08 新增 INFLUENCER_REQUIREMENT："红人需求管理"的删除也改成走这套审核机制了
+function moduleLabel(m) {
+  if (m === 'COLLABORATION_TRACKING') return '红人合作跟踪'
+  if (m === 'INFLUENCER_REQUIREMENT') return '红人需求管理'
+  return m
+}
 
 function approveConfirmText(record) {
   return record.category === 'PROGRESS_ROLLBACK'
@@ -147,7 +152,10 @@ function approveConfirmText(record) {
 }
 
 function detailLink(record) {
-  // "项目订单"模块已废弃，待处理事项现在只会来自红人合作跟踪
+  // "项目订单"模块已废弃；红人需求管理跳"需求管理"列表页，其余（红人合作跟踪）跳"合作跟踪"列表页
+  if (record.targetModule === 'INFLUENCER_REQUIREMENT') {
+    return `/requirements?internalRequirementNo=${encodeURIComponent(record.targetInternalProjectNo || '')}`
+  }
   return `/collaborations?internalProjectNo=${encodeURIComponent(record.targetInternalProjectNo || '')}`
 }
 

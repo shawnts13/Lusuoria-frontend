@@ -195,7 +195,8 @@ export const requirementApi = {
   list:    (params) => http.get('/api/influencer-requirements', { params }),
   getById: (id)     => http.get(`/api/influencer-requirements/${id}`),
   save:    (data)   => http.post('/api/influencer-requirements', data),
-  delete:  (id)     => http.delete(`/api/influencer-requirements/${id}`),
+  // 2026-08 起删除改成需要管理员审核（不再是直接 DELETE），跟红人合作跟踪的 requestDelete 一致
+  requestDelete: (id, reason) => http.post(`/api/influencer-requirements/${id}/delete-request`, { reason }),
   items:   (id)     => http.get(`/api/influencer-requirements/${id}/items`),
   byInfluencer:    (influencerId) => http.get(`/api/influencer-requirements/by-influencer/${influencerId}`),
   progressDetail:  (id)           => http.get(`/api/influencer-requirements/${id}/progress-detail`),

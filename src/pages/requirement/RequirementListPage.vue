@@ -164,9 +164,8 @@
               </template>
               <template v-if="authStore.canWrite">
                 <a-divider type="vertical" />
-                <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
-                  <a style="color:#ff4d4f">删除</a>
-                </a-popconfirm>
+                <span v-if="record.hasPendingDeleteRequest" style="color:#faad14">审核中</span>
+                <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
               </template>
             </a-space>
             <span v-else style="color:#bbb">只读</span>
@@ -174,6 +173,16 @@
         </template>
       </a-table>
     </div>
+
+    <!-- 删除需要管理员审核（2026-08 起，跟红人合作跟踪保持一致），不再是点一下就直接删 -->
+    <a-modal v-model:open="deleteReasonVisible" title="删除申请" @ok="handleDeleteConfirm" :confirm-loading="deleting">
+      <p style="color:#595959;font-size:13px">删除红人需求记录需要管理员审核，请填写删除原因。</p>
+      <a-form layout="vertical">
+        <a-form-item label="删除原因" required>
+          <a-textarea v-model:value="deleteReason" :rows="3" placeholder="请说明删除原因" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
     <a-modal v-model:open="contentModalVisible" title="完整需求内容" :footer="null" width="640px">
       <div style="white-space:pre-wrap;font-size:13px;line-height:1.6" v-html="highlightContent(contentModalText)"></div>
@@ -246,6 +255,11 @@ const employees   = ref([])
 
 const modalVisible  = ref(false)
 const editingRecord = ref(null)
+
+const deleteReasonVisible = ref(false)
+const deleteReason        = ref('')
+const deleteTarget        = ref(null)
+const deleting            = ref(false)
 
 const contentModalVisible = ref(false)
 const contentModalText    = ref('')
@@ -597,14 +611,19 @@ async function handleRecomputeCompletedAt() {
 
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
-async function handleDelete(id) {
+// 2026-08 起删除改成需要管理员审核（不再直接删），跟红人合作跟踪的删除申请弹窗是同一套写法。
+// 不手动 catch——请求失败时 http.js 的全局响应拦截器已经会弹一次错误 toast，这里再 catch
+// 一次会变成两条重复提示（老版本 handleDelete() 就有这个问题，这次顺手不带过去）
+function openDeleteReason(r) { deleteTarget.value = r; deleteReason.value = ''; deleteReasonVisible.value = true }
+async function handleDeleteConfirm() {
+  if (!deleteReason.value?.trim()) { message.warning('请填写删除原因'); return }
+  deleting.value = true
   try {
-    await requirementApi.delete(id)
-    message.success('删除成功')
+    await requirementApi.requestDelete(deleteTarget.value.id, deleteReason.value.trim())
+    message.success('已提交删除申请，等待管理员审核')
+    deleteReasonVisible.value = false
     loadData()
-  } catch (e) {
-    message.error(e?.response?.data?.message || '删除失败')
-  }
+  } finally { deleting.value = false }
 }
 function handleExport() {
   requirementApi.exportExcel({
