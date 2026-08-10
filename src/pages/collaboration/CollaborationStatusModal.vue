@@ -184,12 +184,20 @@ const autoPaymentLabel = computed(() => {
   return brand && brand.requiresInvoice === false ? '待结款（不涉及invoice）' : '待红人发送invoice'
 })
 
-// 2026-08 起：跟后端 updateStatus() 的规则保持一致——流转进"已发布（未结算）"/"已加入客户
-// 未结算列表"/"客户已结算"这三个阶段（不管是不是首次进入，哪怕是在这三个阶段之间来回流转）
-// 时，直接在这个弹窗里填视频发布链接/发布时间（见上面的 a-form-item 块），不用再跳去"编辑"
-// 表单；两个字段任意一个缺失时不允许保存，见 handleSave() 里的校验
+// 该记录数据库里是否已经有发布链接+发布时间——已经有的话，流转到"已加入客户未结算列表"/
+// "客户已结算"就不用在这里重新问一遍了
+const recordHasPublishInfo = computed(() => !!props.record?.publishLink && !!props.record?.publishDate)
+
+// 2026-08 改：三个阶段（已发布未结算/已加入客户未结算列表/客户已结算）各自只问各自新增的信息，
+// 不再像以前那样每次流转都把前面阶段的字段重新问一遍（"需要填的信息一直在增加"的冗余问题）。
+// 视频发布链接/发布时间只在流转到"已发布（未结算）"——三个阶段里第一个要求"视频已发布"的
+// 节点——时在这里填，直接更新到这条记录上，不用再跳去"编辑"表单；后两个阶段不重复问。
+// 唯一的兜底：理论上允许跳过"已发布（未结算）"直接流转到后两个阶段（不常见），这种情况下
+// 记录确实还没有这两个字段，不补填的话会撞到后端"缺发布链接/时间"的校验却没地方填，
+// 所以数据缺失时仍然在这里出现——不违反"减少冗余"的初衷，只在真的缺数据时才出现
 const needsPublishInfo = computed(() =>
   qualifies(progress.value) && progress.value !== original.progress
+  && (progress.value === 'PUBLISHED_UNSETTLED' || !recordHasPublishInfo.value)
 )
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
