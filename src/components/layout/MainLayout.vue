@@ -34,12 +34,14 @@
           </a-menu-item>
         </template>
 
-        <!-- 审计员隐藏红人管理 -->
-        <template v-if="!authStore.isAuditor">
-          <a-menu-item key="/influencers">
-            <template #icon><TeamOutlined /></template>0. 红人管理
-          </a-menu-item>
-        </template>
+        <!-- 2026-08 修复：原来 AUDITOR 整体隐藏红人管理，是当初 AUDITOR 只对应"财务"时的假设——
+             现在法务账号也配的是 AUDITOR（见"账号管理"角色标签"财务/法务"），法务需要进红人管理
+             查看/核对红人的"已签署合同"信息，不能被这条限制挡在外面。红人管理的写操作
+             （新建/编辑/删除）本来就已经按 authStore.canWrite（仅 ADMIN/STAFF）单独收着，
+             AUDITOR 进来也只能只读查看，不需要再单独隐藏整个菜单项 -->
+        <a-menu-item key="/influencers">
+          <template #icon><TeamOutlined /></template>0. 红人管理
+        </a-menu-item>
         <a-menu-item key="/requirements">
           <template #icon><FileTextOutlined /></template>1. 红人需求管理
         </a-menu-item>
