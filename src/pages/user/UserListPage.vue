@@ -28,7 +28,8 @@
     </div>
 
     <div class="table-card">
-      <a-table :columns="columns" :data-source="list" :loading="loading" row-key="id" size="middle">
+      <a-table :columns="columns" :data-source="list" :loading="loading" row-key="id" size="middle"
+        :pagination="tablePagination">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'role'">
             <a-tag :color="roleColor(record.role)">{{ record.roleLabel }}</a-tag>
@@ -171,6 +172,14 @@ const columns = [
 
 function roleColor(role) {
   return { ADMIN:'red', STAFF:'blue', AUDITOR:'orange', GUEST:'default' }[role] || 'default'
+}
+
+// 分页设置：跟"员工管理"保持一致，允许切换每页展示条数
+const tablePagination = {
+  pageSize: 20,
+  showSizeChanger: true,
+  pageSizeOptions: ['20', '50', '100'],
+  showTotal: t => `共 ${t} 条`
 }
 
 // 一个员工只能绑定一个账号：可选列表排除已经被其他账号占用的员工；
