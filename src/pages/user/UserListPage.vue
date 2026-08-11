@@ -91,7 +91,7 @@
               可写操作，看不到收入/利润/提成
             </a-select-option>
             <a-select-option value="AUDITOR">
-              <a-tag color="orange" style="margin-right:6px">财务</a-tag>
+              <a-tag color="orange" style="margin-right:6px">财务/法务</a-tag>
               所有字段可见（含财务），仅只读 + 导出
             </a-select-option>
             <a-select-option value="GUEST">
@@ -108,7 +108,7 @@
               <div>
                 <div>🔴 <b>管理员</b>：所有字段可见，可写，可审核，可管理账号，可修改提成比例</div>
                 <div>🔵 <b>普通员工</b>：可新建/编辑项目，<b>不可见</b>收入/利润/提成字段</div>
-                <div>🟠 <b>财务</b>：所有字段可见（含财务），仅只读 + 导出</div>
+                <div>🟠 <b>财务/法务</b>：所有字段可见（含财务），仅只读 + 导出</div>
                 <div>⚪ <b>访客</b>：只读，<b>不可见</b>收入/利润/提成字段</div>
               </div>
             </template>
