@@ -12,7 +12,7 @@
              不是所有"其余人"都能看到，能看到的话排在工资单/待处理之后）。工资单本身不对
              访客开放，管理层看全体+确认，其余角色只看自己那份 -->
         <template v-if="authStore.isManagement">
-          <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
+          <a-menu-item v-if="authStore.canAccessDashboard" key="/dashboard">
             <template #icon><DashboardOutlined /></template>数据看板
           </a-menu-item>
           <a-menu-item v-if="!authStore.isGuest" key="/payslips">
@@ -29,7 +29,7 @@
           <a-menu-item v-if="authStore.canAccessPending" key="/pending">
             <template #icon><ExclamationCircleOutlined /></template>待处理
           </a-menu-item>
-          <a-menu-item v-if="authStore.isAdmin || authStore.isAuditor" key="/dashboard">
+          <a-menu-item v-if="authStore.canAccessDashboard" key="/dashboard">
             <template #icon><DashboardOutlined /></template>数据看板
           </a-menu-item>
         </template>

@@ -16,7 +16,7 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('./pages/dashboard/DashboardPage.vue'),
-        meta: { financialOnly: true }       // 仅 ADMIN / AUDITOR
+        meta: { financialOnly: true }       // ADMIN / AUDITOR，法务账号除外（见 beforeEach 守卫）
       },
       {
         path: 'dashboard/annual-report',
@@ -121,8 +121,9 @@ router.beforeEach((to, from, next) => {
     next('/collaborations')
     return
   }
-  // 数据看板：仅 ADMIN / AUDITOR
-  if (to.meta.financialOnly && role !== 'ADMIN' && role !== 'AUDITOR') {
+  // 数据看板：ADMIN / AUDITOR，但法务账号（员工角色="法务"）单独排除——跟数据看板展示的
+  // 利润/提成这类经营数据不相关，不应该因为 AUDITOR 这个只读权限档位就顺带看到
+  if (to.meta.financialOnly && !(role === 'ADMIN' || (role === 'AUDITOR' && employeeRole !== '法务'))) {
     next('/collaborations')
     return
   }

@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.176.0'
-export const APP_VERSION_TIME = '2026-08-11 11:44'
+export const APP_VERSION = '1.177.0'
+export const APP_VERSION_TIME = '2026-08-11 11:49'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -62,6 +62,10 @@ export const useAuthStore = defineStore('auth', {
     canApprove:        (state) => state.role === 'ADMIN',
     canManageUsers:    (state) => state.role === 'ADMIN',
     canViewFinancials: (state) => state.role === 'ADMIN' || state.role === 'AUDITOR',
+    // "数据看板"页面：原来是 ADMIN/AUDITOR 都能看，2026-08 起法务账号（员工角色="法务"，
+    // SysUser 角色也是 AUDITOR）单独排除掉——数据看板展示的是利润/提成这类经营数据，
+    // 法务的职责跟这个不相关，不应该顺带因为 AUDITOR 这个只读权限档位就看到
+    canAccessDashboard: (state) => state.role === 'ADMIN' || (state.role === 'AUDITOR' && state.employeeRole !== '法务'),
     // "基础"财务字段（红人成本/客户合作价格/已到账金额等）：除 GUEST 外都能看，
     // 比 canViewFinancials 宽松——那个仍然只有 ADMIN/AUDITOR 能看利润/提成这类真正敏感的字段
     canViewBaselineFinancials: (state) => state.role !== 'GUEST',
