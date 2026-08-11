@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.174.0'
-export const APP_VERSION_TIME = '2026-08-11 11:19'
+export const APP_VERSION = '1.175.0'
+export const APP_VERSION_TIME = '2026-08-11 11:30'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -100,7 +100,13 @@ export const useAuthStore = defineStore('auth', {
     canAccessExecutorPayRateManagement: (state) => state.employeeRole === '项目负责人',
     // "工资单"模块的管理视角（看全体员工、设置奖金、确认）：ADMIN 或员工角色="管理层"，
     // 跟"员工管理"页面的访问权限判定（canAccessEmployeeManagement）保持一致
-    canManagePayslips: (state) => state.role === 'ADMIN' || state.employeeRole === '管理层'
+    canManagePayslips: (state) => state.role === 'ADMIN' || state.employeeRole === '管理层',
+    // "红人管理"里"已签署合同"区块的维护权限（2026-08 新增）：canWrite（ADMIN/STAFF）本来就能
+    // 编辑整条红人记录，额外放开给员工角色="法务"的账号（哪怕 SysUser 角色是只读的 AUDITOR）——
+    // 但只给合同这一块，不代表能编辑红人的其他字段（成本/联系方式等），见
+    // InfluencerFormModal.vue 的 contractOnlyMode
+    canManageInfluencerContracts: (state) =>
+      state.role === 'ADMIN' || state.role === 'STAFF' || state.employeeRole === '法务'
   },
 
   actions: {

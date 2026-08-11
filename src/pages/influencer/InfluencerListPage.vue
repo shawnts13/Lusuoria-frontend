@@ -208,6 +208,8 @@
                 <a style="color:#ff4d4f">删除</a>
               </a-popconfirm>
             </a-space>
+            <!-- 法务：没有整条红人记录的编辑权，只能进去维护"已签署合同"，没有删除入口 -->
+            <a v-else-if="authStore.canManageInfluencerContracts" @click="openEdit(record)">维护合同</a>
             <span v-else style="color:#bbb">只读</span>
           </template>
 

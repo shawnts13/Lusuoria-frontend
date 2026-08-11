@@ -1,7 +1,15 @@
 <template>
-  <a-modal :open="visible" :title="record ? '编辑红人' : '新建红人'"
+  <a-modal :open="visible"
+    :title="contractOnlyMode ? '红人详情（仅可维护已签署合同）' : (record ? '编辑红人' : '新建红人')"
     width="960px" :destroy-on-close="true" :confirm-loading="saving"
-    @ok="handleSave" @cancel="emit('update:visible', false)">
+    @cancel="emit('update:visible', false)">
+    <template #footer>
+      <a-button v-if="contractOnlyMode" @click="emit('update:visible', false)">关闭</a-button>
+      <template v-else>
+        <a-button @click="emit('update:visible', false)">取消</a-button>
+        <a-button type="primary" :loading="saving" @click="handleSave">保存</a-button>
+      </template>
+    </template>
     <a-form ref="formRef" :model="form" :label-col="{ span: 8 }" :wrapper-col="{ span: 14 }" size="middle">
       <a-row :gutter="24">
         <!-- 左列 -->
@@ -10,7 +18,7 @@
 
           <a-form-item label="红人类型" name="influencerType"
             :rules="[{ required: true, message: '请选择红人类型' }]">
-            <a-select v-model:value="form.influencerType">
+            <a-select v-model:value="form.influencerType" :disabled="contractOnlyMode">
               <a-select-option v-for="o in getOptions('influencer_type')" :key="o.value" :value="o.value">
                 {{ o.label }}
               </a-select-option>
@@ -19,7 +27,7 @@
 
           <a-form-item label="红人社媒完整名字" name="accountName"
             :rules="[{ required: true, message: '请填写红人社媒完整名字' }]">
-            <a-input v-model:value="form.accountName" />
+            <a-input v-model:value="form.accountName" :disabled="contractOnlyMode" />
           </a-form-item>
 
           <a-form-item label="品牌方-团队" required :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
@@ -27,6 +35,7 @@
               style="display:flex;gap:8px;margin-bottom:8px">
               <a-tooltip :title="brandNameById(pair.brandId)">
                 <a-select v-model:value="pair.brandId" placeholder="品牌方" style="flex:1;min-width:0" allow-clear show-search
+                  :disabled="contractOnlyMode"
                   :filter-option="(input, opt) => opt.label.includes(input)"
                   @change="onBrandChangeInPair(pair)">
                   <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
@@ -37,14 +46,14 @@
                      导致比如选了"TEMU海外"（没配团队）还是能看到、选中"TEMU中国"的团队——
                      团队本来就归属唯一品牌方（InfluencerTeam.brandId），必须按 pair.brandId 过滤 -->
                 <a-select v-model:value="pair.teamId" placeholder="团队（可不选）" style="flex:1;min-width:0" allow-clear show-search
-                  :disabled="!pair.brandId"
+                  :disabled="contractOnlyMode || !pair.brandId"
                   :filter-option="(input, opt) => opt.label.includes(input)">
                   <a-select-option v-for="t in teamsForBrand(pair.brandId)" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
                 </a-select>
               </a-tooltip>
-              <a-button danger @click="form.brandTeamPairs.splice(idx, 1)">删除</a-button>
+              <a-button v-if="!contractOnlyMode" danger @click="form.brandTeamPairs.splice(idx, 1)">删除</a-button>
             </div>
-            <a-button type="dashed" block @click="form.brandTeamPairs.push({ brandId: null, teamId: null })">
+            <a-button v-if="!contractOnlyMode" type="dashed" block @click="form.brandTeamPairs.push({ brandId: null, teamId: null })">
               + 添加品牌方-团队关联
             </a-button>
             <div style="font-size:12px;color:#595959;margin-top:4px">
@@ -57,7 +66,7 @@
 
           <a-form-item label="服务国家/市场">
             <a-select v-model:value="form.countryMarkets" mode="multiple" show-search allow-clear
-              placeholder="可多选"
+              placeholder="可多选" :disabled="contractOnlyMode"
               :filter-option="(input, opt) => opt.value.includes(input)">
               <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">
                 {{ o.label }}
@@ -66,7 +75,7 @@
           </a-form-item>
 
           <a-form-item label="平台">
-            <a-select v-model:value="form.platforms" mode="multiple" allow-clear
+            <a-select v-model:value="form.platforms" mode="multiple" allow-clear :disabled="contractOnlyMode"
               placeholder="可多选，或填写主页链接后自动识别">
               <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">
                 {{ o.label }}
@@ -75,7 +84,7 @@
           </a-form-item>
 
           <a-form-item label="所属领域">
-            <a-select v-model:value="form.domains" mode="multiple" allow-clear>
+            <a-select v-model:value="form.domains" mode="multiple" allow-clear :disabled="contractOnlyMode">
               <a-select-option v-for="d in domains" :key="d.name" :value="d.name">
                 {{ d.name }}
               </a-select-option>
@@ -87,13 +96,13 @@
           </a-form-item>
 
           <a-form-item label="粉丝量">
-            <a-input-number v-model:value="form.followerCount" style="width:100%"
+            <a-input-number v-model:value="form.followerCount" style="width:100%" :disabled="contractOnlyMode"
               :min="0" :formatter="v => v ? Number(v).toLocaleString() : ''"
               :parser="v => v.replace(/,/g, '')" />
           </a-form-item>
 
           <a-form-item label="建联情况">
-            <a-select v-model:value="form.contactStatus" allow-clear>
+            <a-select v-model:value="form.contactStatus" allow-clear :disabled="contractOnlyMode">
               <a-select-option v-for="o in getOptions('contact_status')" :key="o.value" :value="o.value">
                 {{ o.label }}
               </a-select-option>
@@ -101,7 +110,7 @@
           </a-form-item>
 
           <a-form-item label="跟进人">
-            <a-select v-model:value="form.followerPerson" allow-clear show-search
+            <a-select v-model:value="form.followerPerson" allow-clear show-search :disabled="contractOnlyMode"
               :filter-option="(input, opt) => opt.value.includes(input)">
               <a-select-option v-for="emp in employees" :key="emp.id" :value="emp.name">
                 {{ emp.name }}
@@ -115,19 +124,19 @@
           <a-divider orientation="left" style="font-size:13px">联系方式</a-divider>
 
           <a-form-item label="红人邮箱">
-            <a-input v-model:value="form.email" />
+            <a-input v-model:value="form.email" :disabled="contractOnlyMode" />
           </a-form-item>
           <a-form-item label="红人电话">
-            <a-input v-model:value="form.contacts.phone" placeholder="+1 234 567 8900" />
+            <a-input v-model:value="form.contacts.phone" placeholder="+1 234 567 8900" :disabled="contractOnlyMode" />
           </a-form-item>
           <a-form-item label="红人WhatsApp">
-            <a-input v-model:value="form.contacts.whatsapp" placeholder="+1 234 567 8900" />
+            <a-input v-model:value="form.contacts.whatsapp" placeholder="+1 234 567 8900" :disabled="contractOnlyMode" />
           </a-form-item>
           <a-form-item label="红人Line">
-            <a-input v-model:value="form.contacts.line" placeholder="Line ID" />
+            <a-input v-model:value="form.contacts.line" placeholder="Line ID" :disabled="contractOnlyMode" />
           </a-form-item>
           <a-form-item label="红人Telegram">
-            <a-input v-model:value="form.contacts.telegram" placeholder="@telegram_xxx" />
+            <a-input v-model:value="form.contacts.telegram" placeholder="@telegram_xxx" :disabled="contractOnlyMode" />
           </a-form-item>
 
           <a-divider orientation="left" style="font-size:13px">链接 & 合同</a-divider>
@@ -135,10 +144,10 @@
           <a-form-item label="主页链接">
             <div v-for="(link, idx) in form.links" :key="'link-' + idx"
               style="display:flex;gap:8px;margin-bottom:6px">
-              <a-input v-model:value="form.links[idx]" placeholder="https://..." style="flex:1" />
-              <a-button danger size="small" @click="form.links.splice(idx, 1)">删除</a-button>
+              <a-input v-model:value="form.links[idx]" placeholder="https://..." style="flex:1" :disabled="contractOnlyMode" />
+              <a-button v-if="!contractOnlyMode" danger size="small" @click="form.links.splice(idx, 1)">删除</a-button>
             </div>
-            <a-button type="dashed" size="small" @click="form.links.push('')">+ 添加链接</a-button>
+            <a-button v-if="!contractOnlyMode" type="dashed" size="small" @click="form.links.push('')">+ 添加链接</a-button>
           </a-form-item>
 
           <a-form-item label="已签署合同" :label-col="{ span: 24 }" :wrapper-col="{ span: 24 }">
@@ -178,17 +187,17 @@
           <template v-if="canViewFinancials">
             <a-divider orientation="left" style="font-size:13px">财务信息</a-divider>
             <a-form-item label="红人视频制作与发布成本（美金）" :label-col="{ span: 12 }">
-              <a-input v-model:value="form.influencerCost" placeholder="金额或备注" />
+              <a-input v-model:value="form.influencerCost" placeholder="金额或备注" :disabled="contractOnlyMode" />
               <div v-if="isRemark(form.influencerCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
             </a-form-item>
             <a-form-item label="视频投流成本（美金）">
-              <a-input v-model:value="form.adSpendCost" placeholder="金额或备注" />
+              <a-input v-model:value="form.adSpendCost" placeholder="金额或备注" :disabled="contractOnlyMode" />
               <div v-if="isRemark(form.adSpendCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
             </a-form-item>
             <a-form-item label="视频版权成本（美金）">
-              <a-input v-model:value="form.copyrightCost" placeholder="金额或备注" />
+              <a-input v-model:value="form.copyrightCost" placeholder="金额或备注" :disabled="contractOnlyMode" />
               <div v-if="isRemark(form.copyrightCost)"
                 style="font-size:12px;color:#c00000;margin-top:2px">备注信息，将以红色展示</div>
             </a-form-item>
@@ -196,7 +205,7 @@
 
           <a-divider orientation="left" style="font-size:13px">其他</a-divider>
           <a-form-item label="备注">
-            <a-textarea v-model:value="form.notes" :rows="3" />
+            <a-textarea v-model:value="form.notes" :rows="3" :disabled="contractOnlyMode" />
           </a-form-item>
         </a-col>
       </a-row>
@@ -237,6 +246,10 @@ const newDomainName    = ref('')
 const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
 const { loadEmployees } = useReferenceData()
+
+// 法务：没有整条红人记录的编辑权，只能维护"已签署合同"区块，其余字段全部只读展示
+// （canManageInfluencerContracts 包含 canWrite 的人，所以要排除掉那部分，只剩"法务专属"这一档）
+const contractOnlyMode = computed(() => !authStore.canWrite && authStore.canManageInfluencerContracts)
 
 // 已签署合同（一个红人可以有多条，按品牌方+团队各自维护有效期区间，仅"一年签一次合同"的
 // 品牌方才需要在这里维护——"一次需求签一次合同"的品牌方合同挂在具体需求上，见红人需求管理）
@@ -444,6 +457,10 @@ function isRemark(value) {
 }
 
 async function handleSave() {
+  // 防御性兜底：contractOnlyMode 下 footer 已经不渲染"保存"按钮，理论上不会走到这里，
+  // 万一被别的路径误触发也直接拦下——后端整条红人记录的保存接口本来就只放行 ADMIN/STAFF，
+  // 法务调用了也只会拿到一个看不懂的403
+  if (contractOnlyMode.value) return
   if (saving.value) return   // 防止表单校验期间（还没到 saving=true）被连续点击导致重复提交
   try { await formRef.value.validate() } catch { return }
   // "品牌方-团队"不是简单的单值字段，没法直接挂在 a-form-item 的 :rules 上校验，这里手动查
