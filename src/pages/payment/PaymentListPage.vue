@@ -258,18 +258,14 @@ const receiptModalTeamName = computed(() => {
   return realTeamId != null ? getTeamName(realTeamId) : ''
 })
 
-// "上传发票"功能（2026-08 新增）：这条结款记录整体是否涉及公对公发票——teamIds 范围内任意一个
-// 团队（含"不选团队"落回品牌方默认值）解析为 true 就算涉及，跟后端 InfluencerPaymentService.
-// resolveInvolvesCorporateInvoice() 保持一致（受 validateInvoiceTeamExclusivity 约束，正常
-// 情况下命中的话这个范围只会有这一项）
+// "上传发票"功能：这条结款记录是否涉及公对公发票——2026-08 起改成直接读后端落库的快照字段
+// （InfluencerPayment.involvesCorporateInvoice，创建那一刻按当时的品牌方/团队配置算好、此后
+// 永久不变），不再现场按"当前"团队/品牌方配置现算。原来现算的写法有个问题：管理层事后调整
+// 某个团队的"是否涉及公对公发票"配置，会连带影响所有历史记录（包括已经"已付款"的），这条按钮
+// 的可用状态、"—"还是"未上传"的展示都会跟着变，容易造成"按钮能点但点了报错"这种前后端判断
+// 对不上的情况——用快照后，创建时是什么状态就永远是什么状态，后台配置改动只影响以后新建的记录
 function involvesCorporateInvoice(record) {
-  const brand = brands.value.find(b => b.id === record.brandId)
-  const ids = record.teamIds && record.teamIds.length ? record.teamIds : [null]
-  return ids.some(teamId => {
-    const team = teamId != null ? teams.value.find(t => t.id === teamId) : null
-    if (team && team.involvesCorporateInvoice != null) return team.involvesCorporateInvoice === true
-    return brand?.defaultInvolvesCorporateInvoice === true
-  })
+  return record.involvesCorporateInvoice === true
 }
 function receiptButtonTooltip(record) {
   return involvesCorporateInvoice(record) ? '' : '该品牌方-红人团队不涉及公对公发票，无需上传'
