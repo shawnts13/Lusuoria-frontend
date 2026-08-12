@@ -28,7 +28,7 @@
           <template #icon><LinkOutlined /></template>存量记录关联需求
         </a-button>
         <a-popconfirm v-if="authStore.canRecomputeOwnExecutorCosts"
-          title="按费率梯度重新计算执行成本？项目负责人只会计算自己名下的记录，执行人员只会计算自己执行的记录，管理层会计算全部——已确认工资的月份不会被覆盖，算完会同步刷新对应的利润字段。"
+          title="按费率梯度重新计算执行成本？项目负责人只会计算自己名下的记录，执行人员只会计算自己执行的记录，管理层会计算全部——已确认工资的月份不会被覆盖。"
           @confirm="handleRecomputeExecutorCosts">
           <a-button :loading="recomputingExecutorCost">批量计算执行成本</a-button>
         </a-popconfirm>
