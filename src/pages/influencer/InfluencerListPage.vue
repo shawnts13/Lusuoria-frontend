@@ -73,8 +73,12 @@
       <a-input-number v-model:value="filters.followerMax" placeholder="粉丝量上限"
         style="width:120px" :min="0" :formatter="fmtNum" :parser="v => v.replace(/,/g,'')"
         @change="loadData" />
-      <a-input-search v-model:value="filters.keyword" placeholder="搜索红人社媒完整名字"
-        style="width:200px" @search="loadData" allow-clear />
+      <a-select v-model:value="filters.keyword" placeholder="红人社媒完整名字" style="width:200px"
+        allow-clear show-search
+        :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
+        @change="loadData">
+        <a-select-option v-for="inf in influencerNames" :key="inf.id" :value="inf.accountName">{{ inf.accountName }}</a-select-option>
+      </a-select>
       <a-button @click="resetFilters">重置</a-button>
     </div>
 
@@ -246,6 +250,7 @@ import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, History
 import { influencerApi, brandApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { colorForValue } from '../../utils/tagColor'
 import { formatDate } from '../../utils/dateFormat'
@@ -256,6 +261,7 @@ const authStore = useAuthStore()
 const router    = useRouter()
 const route     = useRoute()
 const { getOptions, getLabel } = useOptions()
+const { loadInfluencersSimple } = useReferenceData()
 
 const loading   = ref(false)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -263,6 +269,10 @@ const tableData = ref([])
 const brands    = ref([])
 const domains   = ref([])
 const teams     = ref([])
+// "红人社媒完整名字"筛选下拉框的可选值来源（2026-08 新增）：系统里全量红人的
+// id+accountName，不受当前这页只有20条分页数据的限制——跟"新建红人"表单选红人的方式
+// 保持一致，从缓存拿最新数据，支持打字过滤
+const influencerNames = ref([])
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const projectCounts       = ref({})  // key=influencerId，value={activeCount, completedCount}
@@ -453,10 +463,13 @@ function isRemark(value) {
 }
 
 onMounted(async () => {
-  const [b, d, t] = await Promise.all([brandApi.list(), domainApi.list(), influencerTeamApi.list()])
+  const [b, d, t, names] = await Promise.all([
+    brandApi.list(), domainApi.list(), influencerTeamApi.list(), loadInfluencersSimple()
+  ])
   brands.value  = b.data || []
   domains.value = d.data || []
   teams.value   = t.data || []
+  influencerNames.value = names || []
   loadData()
 
   // "红人需求管理"的"跳转红人库上传"按钮/"该红人已有XXXX年的合同"提示点击后带 editInfluencerId

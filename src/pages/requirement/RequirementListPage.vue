@@ -26,8 +26,12 @@
         show-search :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())" @change="loadData">
         <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
       </a-select>
-      <a-input-search v-model:value="filters.accountName" placeholder="搜索红人社媒完整名字"
-        style="width:200px" @search="loadData" allow-clear />
+      <a-select v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:200px"
+        allow-clear show-search
+        :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
+        @change="loadData">
+        <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.accountName">{{ inf.accountName }}</a-select-option>
+      </a-select>
       <a-date-picker v-model:value="filters.requirementMonth" picker="month"
         format="YYYYMM" value-format="YYYYMM" placeholder="需求月份" style="width:150px"
         allow-clear @change="loadData" />

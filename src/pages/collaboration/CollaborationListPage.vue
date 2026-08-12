@@ -60,8 +60,12 @@
         @change="loadData">
         <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
-      <a-input v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:160px"
-        allow-clear @press-enter="loadData" />
+      <a-select v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:160px"
+        allow-clear show-search
+        :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
+        @change="loadData">
+        <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.accountName">{{ inf.accountName }}</a-select-option>
+      </a-select>
       <a-select v-model:value="filters.platform" placeholder="合作平台"
         style="width:120px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
