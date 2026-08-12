@@ -129,6 +129,12 @@
           查看视频未发布的记录
         </a-button>
       </a-tooltip>
+      <a-tooltip title="只看&quot;内部需求编号&quot;为空的记录，即还没关联到红人需求管理里任何需求的记录">
+        <a-button class="orange-filter-btn" :class="{ active: filters.onlyMissingRequirementNo }"
+          style="margin-left:16px" @click="toggleOnlyMissingRequirementNo">
+          查看未绑定需求编号的记录
+        </a-button>
+      </a-tooltip>
     </div>
 
     <!-- 表格 -->
@@ -391,7 +397,10 @@ const filters = reactive({
   onlyIncomplete: route.query.onlyIncomplete === 'true',
   // "查看视频未发布的记录"（2026-08 新增）：视频发布链接还是空的，但不包括"折损"（终态，
   // 不算还没发布）。跟 onlyMyResponsibility/onlyIncomplete 互不影响，可以同时生效
-  onlyUnpublished: false
+  onlyUnpublished: false,
+  // "查看未绑定需求编号的记录"（2026-08 新增）：内部需求编号为空，即还没关联到红人需求
+  // 管理里任何需求的记录。跟上面几个筛选互不影响，可以同时生效
+  onlyMissingRequirementNo: false
 })
 
 const allColumns = [
@@ -527,6 +536,7 @@ async function loadData() {
       onlyMyResponsibility: filters.onlyMyResponsibility,
       onlyIncomplete:     filters.onlyIncomplete,
       onlyUnpublished:    filters.onlyUnpublished,
+      onlyMissingRequirementNo: filters.onlyMissingRequirementNo,
       sortBy:  sortState.field,
       sortDir: sortState.order === 'descend' ? 'desc' : 'asc',
       page: pagination.current - 1,
@@ -557,7 +567,8 @@ function resetFilters() {
     videoMonth:undefined, videoMonthVal:undefined, videoDateRange:undefined, internalProjectNo:undefined,
     internalRequirementNo:undefined,
     clientOrderId:undefined, clientPaymentBatch:undefined, projectManagerId:undefined,
-    onlyMyResponsibility: false, onlyIncomplete: false, onlyUnpublished: false
+    onlyMyResponsibility: false, onlyIncomplete: false, onlyUnpublished: false,
+    onlyMissingRequirementNo: false
   })
   pagination.current = 1
   sortState.field = 'id'; sortState.order = 'descend'
@@ -572,6 +583,12 @@ function toggleOnlyIncomplete() {
 
 function toggleOnlyUnpublished() {
   filters.onlyUnpublished = !filters.onlyUnpublished
+  pagination.current = 1
+  loadData()
+}
+
+function toggleOnlyMissingRequirementNo() {
+  filters.onlyMissingRequirementNo = !filters.onlyMissingRequirementNo
   pagination.current = 1
   loadData()
 }
