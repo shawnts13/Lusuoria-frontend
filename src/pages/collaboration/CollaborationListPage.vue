@@ -575,20 +575,33 @@ function resetFilters() {
   loadData()
 }
 
+// "查看由我负责的记录"/"查看未完成的记录"/"查看视频未发布的记录"/"查看未绑定需求编号的记录"
+// 这4个开关按钮互斥（2026-08 新增，Shawn 要求跟"红人需求管理"那4个开关按钮保持一致的交互）：
+// 选中其中一个会自动取消其余三个。后端这几个筛选条件本身各自独立、AND 叠加并不冲突，
+// 这里纯粹是前端交互层面的约束，不是后端限制
 function toggleOnlyIncomplete() {
   filters.onlyIncomplete = !filters.onlyIncomplete
+  if (filters.onlyIncomplete) {
+    filters.onlyMyResponsibility = false; filters.onlyUnpublished = false; filters.onlyMissingRequirementNo = false
+  }
   pagination.current = 1
   loadData()
 }
 
 function toggleOnlyUnpublished() {
   filters.onlyUnpublished = !filters.onlyUnpublished
+  if (filters.onlyUnpublished) {
+    filters.onlyMyResponsibility = false; filters.onlyIncomplete = false; filters.onlyMissingRequirementNo = false
+  }
   pagination.current = 1
   loadData()
 }
 
 function toggleOnlyMissingRequirementNo() {
   filters.onlyMissingRequirementNo = !filters.onlyMissingRequirementNo
+  if (filters.onlyMissingRequirementNo) {
+    filters.onlyMyResponsibility = false; filters.onlyIncomplete = false; filters.onlyUnpublished = false
+  }
   pagination.current = 1
   loadData()
 }
@@ -608,6 +621,9 @@ const myResponsibilityTooltip = computed(() => {
 })
 function toggleMyResponsibility() {
   filters.onlyMyResponsibility = !filters.onlyMyResponsibility
+  if (filters.onlyMyResponsibility) {
+    filters.onlyIncomplete = false; filters.onlyUnpublished = false; filters.onlyMissingRequirementNo = false
+  }
   pagination.current = 1
   loadData()
 }
