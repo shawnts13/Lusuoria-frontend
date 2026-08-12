@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.177.0'
-export const APP_VERSION_TIME = '2026-08-11 11:49'
+export const APP_VERSION = '1.178.0'
+export const APP_VERSION_TIME = '2026-08-12 17:28'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -110,7 +110,12 @@ export const useAuthStore = defineStore('auth', {
     // 但只给合同这一块，不代表能编辑红人的其他字段（成本/联系方式等），见
     // InfluencerFormModal.vue 的 contractOnlyMode
     canManageInfluencerContracts: (state) =>
-      state.role === 'ADMIN' || state.role === 'STAFF' || state.employeeRole === '法务'
+      state.role === 'ADMIN' || state.role === 'STAFF' || state.employeeRole === '法务',
+    // "红人合作跟踪"里"批量计算执行成本"按钮（2026-08 新增）：项目负责人/执行人员/管理层
+    // 三种员工角色可见，跟后端 recomputeExecutorCostsScoped() 允许的范围一致——管理层等同于
+    // "特殊的项目负责人"（看全部），项目负责人/执行人员各自只能算自己名下/自己执行的那部分，
+    // 具体范围判断在后端做，这里只负责按钮的显隐
+    canRecomputeOwnExecutorCosts: (state) => ['项目负责人', '执行人员', '管理层'].includes(state.employeeRole)
   },
 
   actions: {

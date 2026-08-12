@@ -22,11 +22,16 @@
         </template>
       </a-space>
     </div>
-    <div v-if="authStore.canWrite || authStore.isAdmin" style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <div v-if="authStore.canWrite || authStore.isAdmin || authStore.canRecomputeOwnExecutorCosts" style="display:flex;justify-content:flex-end;margin-bottom:16px">
       <a-space>
         <a-button v-if="authStore.canWrite" @click="legacyLinkModalVisible = true">
           <template #icon><LinkOutlined /></template>存量记录关联需求
         </a-button>
+        <a-popconfirm v-if="authStore.canRecomputeOwnExecutorCosts"
+          title="按费率梯度重新计算执行成本？项目负责人只会计算自己名下的记录，执行人员只会计算自己执行的记录，管理层会计算全部——已确认工资的月份不会被覆盖，算完会同步刷新对应的利润字段。"
+          @confirm="handleRecomputeExecutorCosts">
+          <a-button :loading="recomputingExecutorCost">批量计算执行成本</a-button>
+        </a-popconfirm>
         <a-popconfirm v-if="authStore.isAdmin"
           title="重新计算所有记录的项目毛利/可分配利润/提成/公司利润？用于数据库里的原始金额被绕过系统直接改动后的善后，正常使用不需要点这个。"
           @confirm="handleRecomputeProfits">
@@ -340,6 +345,7 @@ const deleteReason        = ref('')
 const deleteTarget        = ref(null)
 const deleting            = ref(false)
 const recomputing         = ref(false)
+const recomputingExecutorCost = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -628,6 +634,21 @@ async function handleRecomputeProfits() {
     })
     loadData()
   } finally { recomputing.value = false }
+}
+
+async function handleRecomputeExecutorCosts() {
+  recomputingExecutorCost.value = true
+  try {
+    const res = await collaborationApi.recomputeExecutorCosts()
+    // 结果摘要可能有好几行（跳过了哪些费率梯度组合、汇率异常提示等），用 Modal 展示、保留换行，
+    // 跟"重新计算利润"的展示方式保持一致
+    Modal.info({
+      title: '批量计算执行成本完成',
+      width: 560,
+      content: h('div', { style: 'white-space:pre-line;line-height:1.7' }, res.data || '计算完成')
+    })
+    loadData()
+  } finally { recomputingExecutorCost.value = false }
 }
 async function handleImport(file) {
   const fd = new FormData(); fd.append('file', file)

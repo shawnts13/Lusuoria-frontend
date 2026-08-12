@@ -162,6 +162,9 @@ export const collaborationApi = {
   setExecutorCost:     (id, payload) => http.patch(`/api/collaboration-trackings/${id}/executor-cost`, payload),
   unlinkRequirement:   (id) => http.patch(`/api/collaboration-trackings/${id}/unlink-requirement`),
   recomputeProfits: () => http.post('/api/collaboration-trackings/recompute-profits'),
+  // "批量计算执行成本"（2026-08 新增）：仅项目负责人/执行人员/管理层可见，范围由后端按
+  // 当前登录员工角色限定（管理层不限，项目负责人只处理自己名下的，执行人员只处理自己执行的）
+  recomputeExecutorCosts: () => http.post('/api/collaboration-trackings/recompute-executor-costs'),
 
   // 红人管理"合作中项目/已完结项目"下钻弹窗用（2026-07 新增）：category 传 'ACTIVE' 或 'COMPLETED'。
   // filters 可选（2026-07 新增）：platform/videoType/progress/influencerPaymentProgress/
