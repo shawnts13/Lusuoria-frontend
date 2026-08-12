@@ -14,13 +14,13 @@
       <template v-if="category === 'ACTIVE'">
         <a-select v-model:value="filters.brandId" placeholder="品牌方"
           style="width:150px" allow-clear show-search
-          :filter-option="(input, opt) => opt.label.includes(input)"
+          :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
           @change="applyFilters">
           <a-select-option v-for="b in brandFilterOptions" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.teamId" placeholder="红人团队"
           style="width:150px" allow-clear show-search
-          :filter-option="(input, opt) => opt.label.includes(input)"
+          :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
           @change="applyFilters">
           <a-select-option v-for="t in teamFilterOptions" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
         </a-select>
@@ -45,13 +45,13 @@
           @change="v => { filters.videoMonth = v; applyFilters() }" />
         <a-select v-model:value="filters.brandId" placeholder="品牌方"
           style="width:150px" allow-clear show-search
-          :filter-option="(input, opt) => opt.label.includes(input)"
+          :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
           @change="applyFilters">
           <a-select-option v-for="b in brandFilterOptions" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
         </a-select>
         <a-select v-model:value="filters.teamId" placeholder="红人团队"
           style="width:150px" allow-clear show-search
-          :filter-option="(input, opt) => opt.label.includes(input)"
+          :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
           @change="applyFilters">
           <a-select-option v-for="t in teamFilterOptions" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
         </a-select>
@@ -66,7 +66,7 @@
       </template>
       <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
         style="width:130px" allow-clear show-search
-        :filter-option="(input, opt) => opt.label.includes(input)"
+        :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
         @change="applyFilters">
         <a-select-option v-for="pm in projectManagerFilterOptions" :key="pm.id" :value="pm.id" :label="pm.name">{{ pm.name }}</a-select-option>
       </a-select>

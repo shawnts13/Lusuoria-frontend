@@ -19,11 +19,11 @@
 
     <div class="filter-bar">
       <a-select v-model:value="filters.brandId" placeholder="品牌方" style="width:150px" allow-clear
-        show-search :filter-option="(input, opt) => opt.label.includes(input)" @change="loadData">
+        show-search :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())" @change="loadData">
         <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
       </a-select>
       <a-select v-model:value="filters.teamId" placeholder="红人团队" style="width:150px" allow-clear
-        show-search :filter-option="(input, opt) => opt.label.includes(input)" @change="loadData">
+        show-search :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())" @change="loadData">
         <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
       </a-select>
       <a-input-search v-model:value="filters.accountName" placeholder="搜索红人社媒完整名字"

@@ -36,7 +36,7 @@
               <a-tooltip :title="brandNameById(pair.brandId)">
                 <a-select v-model:value="pair.brandId" placeholder="品牌方" style="flex:1;min-width:0" allow-clear show-search
                   :disabled="contractOnlyMode"
-                  :filter-option="(input, opt) => opt.label.includes(input)"
+                  :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
                   @change="onBrandChangeInPair(pair)">
                   <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
                 </a-select>
@@ -47,7 +47,7 @@
                      团队本来就归属唯一品牌方（InfluencerTeam.brandId），必须按 pair.brandId 过滤 -->
                 <a-select v-model:value="pair.teamId" placeholder="团队（可不选）" style="flex:1;min-width:0" allow-clear show-search
                   :disabled="contractOnlyMode || !pair.brandId"
-                  :filter-option="(input, opt) => opt.label.includes(input)">
+                  :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())">
                   <a-select-option v-for="t in teamsForBrand(pair.brandId)" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
                 </a-select>
               </a-tooltip>
@@ -67,7 +67,7 @@
           <a-form-item label="服务国家/市场">
             <a-select v-model:value="form.countryMarkets" mode="multiple" show-search allow-clear
               placeholder="可多选" :disabled="contractOnlyMode"
-              :filter-option="(input, opt) => opt.value.includes(input)">
+              :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())">
               <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">
                 {{ o.label }}
               </a-select-option>
@@ -111,7 +111,7 @@
 
           <a-form-item label="跟进人">
             <a-select v-model:value="form.followerPerson" allow-clear show-search :disabled="contractOnlyMode"
-              :filter-option="(input, opt) => opt.value.includes(input)">
+              :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())">
               <a-select-option v-for="emp in followerCandidates" :key="emp.id" :value="emp.name">
                 {{ emp.name }}
               </a-select-option>

@@ -38,7 +38,7 @@
             <a-col :span="12">
               <a-form-item label="品牌方">
                 <a-select v-model:value="pane.brandId" allow-clear show-search
-                  :filter-option="(input, opt) => opt.label.includes(input)"
+                  :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
                   :disabled="!pane.influencerId || availableBrands(pane).length <= 1" placeholder="选择品牌方"
                   @change="() => { pane.teamId = null }">
                   <a-select-option v-for="b in availableBrands(pane)" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
@@ -51,7 +51,7 @@
             <a-col :span="12" v-if="pane.brandId">
               <a-form-item label="红人团队">
                 <a-select v-model:value="pane.teamId" allow-clear show-search
-                  :filter-option="(input, opt) => opt.label.includes(input)"
+                  :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
                   :disabled="availableTeams(pane).length <= 1"
                   :placeholder="availableTeams(pane).length === 0 ? '该品牌方下没有配团队' : '选择团队'">
                   <a-select-option v-for="t in availableTeams(pane)" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不涉及团队）'">
@@ -149,7 +149,7 @@
             <a-col :span="12">
               <a-form-item label="项目负责人">
                 <a-select v-model:value="pane.projectManagerId" allow-clear show-search
-                  :filter-option="(input, opt) => opt.label.includes(input)" placeholder="选择负责人">
+                  :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())" placeholder="选择负责人">
                   <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
                 </a-select>
               </a-form-item>
@@ -157,7 +157,7 @@
             <a-col :span="12">
               <a-form-item label="内部执行人员（可选）">
                 <a-select v-model:value="pane.executorId" allow-clear show-search
-                  :filter-option="(input, opt) => opt.label.includes(input)" placeholder="选择执行人员">
+                  :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())" placeholder="选择执行人员">
                   <a-select-option v-for="e in executorCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
                 </a-select>
               </a-form-item>

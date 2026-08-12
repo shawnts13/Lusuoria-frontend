@@ -44,19 +44,19 @@
     <div class="filter-bar">
       <a-select v-model:value="filters.brandId" placeholder="品牌方"
         style="width:150px" allow-clear show-search
-        :filter-option="(input, opt) => opt.label.includes(input)"
+        :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
         @change="loadData">
         <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
       </a-select>
       <a-select v-model:value="filters.teamId" placeholder="红人团队"
         style="width:150px" allow-clear show-search
-        :filter-option="(input, opt) => opt.label.includes(input)"
+        :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
         @change="loadData">
         <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
       </a-select>
       <a-select v-model:value="filters.countryMarket" placeholder="服务国家/市场"
         style="width:150px" allow-clear show-search
-        :filter-option="(input, opt) => opt.value.includes(input)"
+        :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
         @change="loadData">
         <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
@@ -98,7 +98,7 @@
         allow-clear @press-enter="loadData" />
       <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
         style="width:130px" allow-clear show-search
-        :filter-option="(input, opt) => opt.label.includes(input)"
+        :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
         @change="loadData">
         <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
       </a-select>

@@ -11,7 +11,7 @@
         <a-form-item label="内部执行人员" v-if="!record?.executorId">
           <a-select v-model:value="selectedExecutorId" allow-clear show-search
             :disabled="notApplicable"
-            :filter-option="(input, opt) => opt.label.includes(input)"
+            :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
             placeholder="选择内部执行人员">
             <a-select-option v-for="e in executorCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
           </a-select>

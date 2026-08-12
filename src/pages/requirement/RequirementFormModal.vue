@@ -39,7 +39,7 @@
         <a-col :span="12">
           <a-form-item label="品牌方">
             <a-select v-model:value="form.brandId" allow-clear show-search
-              :filter-option="(input, opt) => opt.label.includes(input)"
+              :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
               :disabled="availableBrands.length <= 1"
               placeholder="选择品牌方" @change="onBrandChange">
               <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
@@ -52,7 +52,7 @@
         <a-col :span="12" v-if="form.brandId">
           <a-form-item label="红人团队">
             <a-select v-model:value="form.teamId" allow-clear show-search
-              :filter-option="(input, opt) => opt.label.includes(input)"
+              :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
               :disabled="availableTeams.length <= 1"
               :placeholder="availableTeams.length === 0 ? '该品牌方下没有配团队' : '选择团队'">
               <a-select-option v-for="t in availableTeams" :key="t.teamId ?? 'none'" :value="t.teamId" :label="t.teamName || '（不涉及团队）'">
