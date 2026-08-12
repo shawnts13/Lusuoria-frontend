@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.187.0'
-export const APP_VERSION_TIME = '2026-08-12 21:46'
+export const APP_VERSION = '1.188.0'
+export const APP_VERSION_TIME = '2026-08-12 22:09'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -89,10 +89,12 @@ export const useAuthStore = defineStore('auth', {
     // "导入历史"删除记录按钮：只有"管理层"能看到并操作，供清理误操作/测试产生的脏历史记录用
     canDeleteImportBatch: (state) => state.employeeRole === '管理层',
     // "红人合作跟踪"里，视频项目进度流转到"已加入客户未结算列表"/"客户已结算"这两个财务专属
-    // 终态：跟后端 ProjectFieldVisibility 的 FULL 层级判定保持一致——ADMIN，或员工角色是
-    // "财务"/"管理层"的 STAFF 账号；其余角色（项目负责人/执行人员/基础权限）只能流转到
-    // "已发布（未结算）"和"折损"这两个终态
-    canSetFinanceSettlementProgress: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole),
+    // 终态：跟后端 EmployeeRoleUtil.canSetSettlementProgressExtraRole() 保持一致——ADMIN，
+    // 或员工角色是"财务"/"管理层"的 STAFF 账号；2026-08 起放宽到"项目负责人"/"执行人员"/
+    // "IT后勤"也能操作（Shawn 反馈）；其余角色（基础权限）只能流转到"已发布（未结算）"和
+    // "折损"这两个终态
+    canSetFinanceSettlementProgress: (state) => state.role === 'ADMIN'
+      || ['财务', '管理层', '项目负责人', '执行人员', 'IT后勤'].includes(state.employeeRole),
     // 新建"红人合作跟踪"时，项目负责人默认填成自己的资格：员工角色是"项目负责人"或"管理层"，
     // 且账号确实关联了员工（没关联员工的账号，比如纯 ADMIN 账号，不会被当成某个具体员工）
     canDefaultAsProjectManager: (state) =>

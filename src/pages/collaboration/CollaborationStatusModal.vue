@@ -64,6 +64,12 @@
         </p>
         <a-textarea v-model:value="notes" :rows="3" placeholder="请填写备注" />
       </a-form-item>
+      <!-- 2026-08 新增：流转到前期制作流程这8个状态时，客户方的项目订单可选填写（拿到后填写，
+           不强制），跟下面"已加入客户未结算列表"/"客户已结算"那个必填的是同一个字段，两者按
+           progress 互斥展示，共用同一个 clientOrderId ref，切换进度不会丢失已经填的内容 -->
+      <a-form-item label="客户方的项目订单" v-if="isEarlyStageClientOrderIdProgress(progress)">
+        <a-input v-model:value="clientOrderId" placeholder="拿到后填写" />
+      </a-form-item>
       <a-form-item label="客户方的项目订单"
         v-if="(progress === 'JOINED_CLIENT_UNSETTLED_LIST' || progress === 'SETTLED') && requiresClientOrderId" required>
         <a-input v-model:value="clientOrderId" placeholder="请填写客户方的项目订单" />
@@ -87,8 +93,18 @@ import { formatDate } from '../../utils/dateFormat'
 const { getOptions } = useOptions()
 const authStore = useAuthStore()
 
-// 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
+// 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层/
+// 项目负责人/执行人员/IT后勤设置
 const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+
+// 跟后端 CollaborationTrackingService.EARLY_STAGE_CLIENT_ORDER_ID_PROGRESSES 保持一致：
+// 前期制作流程这8个状态（待客户出brief~已发布未结算），流转时"客户方的项目订单"可选填写
+// （2026-08 新增，Shawn 要求：拿到订单号就顺手登记，不用等到"已加入客户未结算列表"才能填）
+const EARLY_STAGE_CLIENT_ORDER_ID_PROGRESS = [
+  'PENDING_CLIENT_BRIEF', 'CONTRACT_SENT', 'INFLUENCER_ORDERED', 'SHOOTING_GUIDE_SENT',
+  'PENDING_DRAFT', 'PENDING_REVISION', 'PENDING_PUBLISH', 'PUBLISHED_UNSETTLED'
+]
+function isEarlyStageClientOrderIdProgress(v) { return !!v && EARLY_STAGE_CLIENT_ORDER_ID_PROGRESS.includes(v) }
 
 const props = defineProps({
   visible: Boolean,
@@ -235,6 +251,8 @@ async function handleSave() {
     message.warning('该品牌方涉及"客户方的项目订单"，请先填写')
     return
   }
+  // 前期制作流程这8个状态：客户方的项目订单可选填写，不强制、有值才提交
+  const submitsEarlyStageOrderId = isEarlyStageClientOrderIdProgress(progress.value)
   const needsPaymentBatch = progress.value === 'SETTLED' && authStore.canSetFinanceSettlementProgress
     && requiresClientPaymentBatch.value
   if (needsPaymentBatch && !clientPaymentBatch.value?.trim()) {
@@ -247,7 +265,7 @@ async function handleSave() {
       progress: progress.value,
       reason: isRollback.value ? reason.value.trim() : null,
       notes: progress.value === 'DELAYED' ? notes.value.trim() : null,
-      clientOrderId: needsOrderId ? clientOrderId.value.trim() : null,
+      clientOrderId: (needsOrderId || submitsEarlyStageOrderId) ? clientOrderId.value.trim() : null,
       clientPaymentBatch: needsPaymentBatch ? clientPaymentBatch.value.trim() : null,
       publishLink: needsPublishInfo.value ? joinedPublishLinks : null,
       publishDate: needsPublishInfo.value ? publishDateLocal.value : null
