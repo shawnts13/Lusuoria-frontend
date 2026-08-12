@@ -48,6 +48,24 @@
           </div>
         </a-form-item>
       </template>
+      <!-- 2026-08 新增：视频项目进度已经是"已发布（未结算）"、这次流转又原样选回"已发布
+           （未结算）"（进度没变），单纯回显已有的视频发布链接/发布时间供核对，不算需要重新
+           填写——纯展示，不是输入框，也不参与保存校验（后端 progress 没变化时本来就不会
+           重新写这两个字段，展示成可编辑的输入框反而容易让人误以为改了就能生效） -->
+      <template v-if="viewingUnchangedPublishedUnsettled">
+        <a-form-item label="视频发布链接">
+          <div v-if="record?.publishLink">
+            <div v-for="(link, idx) in splitLinks(record.publishLink)" :key="'vl-' + idx"
+              style="margin-bottom:4px">
+              <a :href="link" target="_blank" rel="noopener" style="word-break:break-all">{{ link }}</a>
+            </div>
+          </div>
+          <span v-else style="color:#bbb">—</span>
+        </a-form-item>
+        <a-form-item label="视频发布时间">
+          <span style="color:#262626">{{ record?.publishDate ? formatDate(record.publishDate) : '—' }}</span>
+        </a-form-item>
+      </template>
       <div v-if="willAutoSetPayment" style="margin-bottom:12px;color:#1677ff;font-size:12px">
         首次进入"已发布（未结算）"，系统会自动判定红人结款进度为「{{ autoPaymentLabel }}」，不需要在这里手动选
       </div>
@@ -64,10 +82,15 @@
         </p>
         <a-textarea v-model:value="notes" :rows="3" placeholder="请填写备注" />
       </a-form-item>
-      <!-- 2026-08 新增：流转到前期制作流程这8个状态时，客户方的项目订单可选填写（拿到后填写，
-           不强制），跟下面"已加入客户未结算列表"/"客户已结算"那个必填的是同一个字段，两者按
-           progress 互斥展示，共用同一个 clientOrderId ref，切换进度不会丢失已经填的内容 -->
-      <a-form-item label="客户方的项目订单" v-if="isEarlyStageClientOrderIdProgress(progress)">
+      <!-- 2026-08 新增，同日改：流转到前期制作流程这8个状态时，客户方的项目订单可选填写
+           （拿到后填写，不强制）——但只在这条记录本来就还没有这个字段时才展示这个输入框；
+           记录已经有值的话不重复展示（不是"回显"，是"不显示"，避免这几个早期状态的流转弹窗
+           总是多出一个已经填过的字段）。判断依据是 record 这个 prop 本身（弹窗打开期间稳定
+           不变），不能用 clientOrderId 这个正在编辑的 ref——否则用户刚打字第一个字符，
+           这个 ref 从空变成非空，输入框会跟着消失。跟下面"已加入客户未结算列表"/"客户已结算"
+           那个必填的是同一个字段，两者按 progress 互斥展示，共用同一个 clientOrderId ref -->
+      <a-form-item label="客户方的项目订单"
+        v-if="isEarlyStageClientOrderIdProgress(progress) && !record?.clientOrderId">
         <a-input v-model:value="clientOrderId" placeholder="拿到后填写" />
       </a-form-item>
       <a-form-item label="客户方的项目订单"
@@ -214,6 +237,12 @@ const recordHasPublishInfo = computed(() => !!props.record?.publishLink && !!pro
 const needsPublishInfo = computed(() =>
   qualifies(progress.value) && progress.value !== original.progress
   && (progress.value === 'PUBLISHED_UNSETTLED' || !recordHasPublishInfo.value)
+)
+
+// 2026-08 新增：进度已经是"已发布（未结算）"，这次流转又原样选回同一个状态（没有变化）——
+// 单纯回显视频发布链接/发布时间供核对，见上面模板注释
+const viewingUnchangedPublishedUnsettled = computed(() =>
+  progress.value === 'PUBLISHED_UNSETTLED' && original.progress === 'PUBLISHED_UNSETTLED'
 )
 
 // 倒退判定：数据库原值里红人结款进度已有值 + 原视频项目进度符合条件 +
