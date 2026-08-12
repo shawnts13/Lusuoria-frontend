@@ -88,9 +88,11 @@
            总是多出一个已经填过的字段）。判断依据是 record 这个 prop 本身（弹窗打开期间稳定
            不变），不能用 clientOrderId 这个正在编辑的 ref——否则用户刚打字第一个字符，
            这个 ref 从空变成非空，输入框会跟着消失。跟下面"已加入客户未结算列表"/"客户已结算"
-           那个必填的是同一个字段，两者按 progress 互斥展示，共用同一个 clientOrderId ref -->
+           那个必填的是同一个字段，两者按 progress 互斥展示，共用同一个 clientOrderId ref。
+           2026-08 修复：漏了 requiresClientOrderId 判断，导致品牌方不涉及这个字段时这个
+           可选输入框也照样弹出来，跟下面必填版本的判断条件不一致——这里补上，两处保持一致 -->
       <a-form-item label="客户方的项目订单"
-        v-if="isEarlyStageClientOrderIdProgress(progress) && !record?.clientOrderId">
+        v-if="isEarlyStageClientOrderIdProgress(progress) && !record?.clientOrderId && requiresClientOrderId">
         <a-input v-model:value="clientOrderId" placeholder="拿到后填写" />
       </a-form-item>
       <a-form-item label="客户方的项目订单"
@@ -280,8 +282,10 @@ async function handleSave() {
     message.warning('该品牌方涉及"客户方的项目订单"，请先填写')
     return
   }
-  // 前期制作流程这8个状态：客户方的项目订单可选填写，不强制、有值才提交
-  const submitsEarlyStageOrderId = isEarlyStageClientOrderIdProgress(progress.value)
+  // 前期制作流程这8个状态：客户方的项目订单可选填写，不强制、有值才提交——跟上面 v-if 的
+  // 展示条件保持一致，品牌方不涉及这个字段时不提交（字段也不会渲染，clientOrderId 恒为空，
+  // 这里加上判断只是让代码意图跟展示条件对得上，不是修复实际问题）
+  const submitsEarlyStageOrderId = isEarlyStageClientOrderIdProgress(progress.value) && requiresClientOrderId.value
   const needsPaymentBatch = progress.value === 'SETTLED' && authStore.canSetFinanceSettlementProgress
     && requiresClientPaymentBatch.value
   if (needsPaymentBatch && !clientPaymentBatch.value?.trim()) {

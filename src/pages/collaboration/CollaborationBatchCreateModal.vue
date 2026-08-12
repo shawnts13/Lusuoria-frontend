@@ -133,12 +133,12 @@
           </a-form-item>
 
           <a-row :gutter="16">
-            <a-col :span="12">
+            <a-col :span="12" v-if="requiresClientOrderId(pane)">
               <a-form-item label="客户方的项目订单">
                 <a-input v-model:value="pane.clientOrderId" placeholder="拿到后填写" />
               </a-form-item>
             </a-col>
-            <a-col :span="12">
+            <a-col :span="12" v-if="requiresClientPaymentBatch(pane)">
               <a-form-item label="客户方付款批次">
                 <a-input v-model:value="pane.clientPaymentBatch" />
               </a-form-item>
@@ -244,6 +244,17 @@ function availableBrands(pane) {
   const opts = props.brands.filter(b => brandIds.includes(b.id))
   if (opts.length === 1 && pane.brandId == null) pane.brandId = opts[0].id
   return opts
+}
+// 2026-08 修复：这两个字段之前不管品牌方涉不涉及都无条件展示，跟"状态流转"/"编辑"表单里同一对
+// 字段的展示条件不一致——批量新建按视频项目分标签页，每页可以选不同品牌方，所以判断要按 pane
+// 各自的 brandId 算，不能像单条编辑表单那样用一个全局 computed
+function requiresClientOrderId(pane) {
+  const brand = props.brands.find(b => b.id === pane.brandId)
+  return brand?.involvesClientOrderId !== false
+}
+function requiresClientPaymentBatch(pane) {
+  const brand = props.brands.find(b => b.id === pane.brandId)
+  return brand?.involvesClientPaymentBatch !== false
 }
 function availableTeams(pane) {
   if (!pane.influencerId || !pane.brandId) return []

@@ -159,12 +159,16 @@
             </a-select>
           </a-form-item>
         </a-col>
-        <a-col :span="12">
+        <!-- 2026-08 修复：这两个字段之前不管品牌方涉不涉及都无条件展示，跟"状态流转"弹窗里
+             同一对字段的展示条件（requiresClientOrderId/requiresClientPaymentBatch）不一致，
+             导致不涉及这两项的品牌方（比如目前的绝大多数品牌方）编辑表单里也平白多出两个用不上
+             的输入框。补上跟状态流转弹窗一样的判断条件 -->
+        <a-col :span="12" v-if="requiresClientOrderId">
           <a-form-item label="客户方的项目订单">
             <a-input v-model:value="form.clientOrderId" placeholder="拿到后填写" />
           </a-form-item>
         </a-col>
-        <a-col :span="12">
+        <a-col :span="12" v-if="requiresClientPaymentBatch">
           <a-form-item label="客户方付款批次">
             <a-input v-model:value="form.clientPaymentBatch" />
           </a-form-item>
