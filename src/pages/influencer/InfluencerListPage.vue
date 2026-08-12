@@ -250,7 +250,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { influencerApi, brandApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
+import { influencerApi, domainApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useReferenceData } from '../../composables/useReferenceData'
@@ -264,7 +264,7 @@ const authStore = useAuthStore()
 const router    = useRouter()
 const route     = useRoute()
 const { getOptions, getLabel } = useOptions()
-const { loadInfluencersSimple, invalidateInfluencers } = useReferenceData()
+const { loadBrands, loadTeams, loadInfluencersSimple, invalidateInfluencers } = useReferenceData()
 
 const loading   = ref(false)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -480,12 +480,18 @@ function isRemark(value) {
 }
 
 onMounted(async () => {
+  // 2026-08-13 性能修复：品牌方/团队之前各自调 brandApi.list()/influencerTeamApi.list()
+  // 现查，没走 useReferenceData() 那份 60 秒内存缓存——"红人合作跟踪"/"红人需求管理"/
+  // "红人结款"等模块都已经在用这份缓存，切换模块时如果缓存还热就是内存直取，几乎瞬间；
+  // 这个页面之前是唯一一个每次进来都现查的，是"切到红人管理比切到其他模块慢"的一部分
+  // 原因（另一部分是 GET /api/domains 背后 DomainSyncService.sync() 本身偏重，见该
+  // 方法注释）。改成跟其他模块一样走 loadBrands()/loadTeams()。
   const [b, d, t, names] = await Promise.all([
-    brandApi.list(), domainApi.list(), influencerTeamApi.list(), loadInfluencersSimple()
+    loadBrands(), domainApi.list(), loadTeams(), loadInfluencersSimple()
   ])
-  brands.value  = b.data || []
+  brands.value  = b || []
   domains.value = d.data || []
-  teams.value   = t.data || []
+  teams.value   = t || []
   influencerNames.value = names || []
   loadData()
 
