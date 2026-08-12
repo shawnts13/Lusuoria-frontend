@@ -78,6 +78,10 @@
         :options="accountNameOptions"
         :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
         @select="loadData" @clear="loadData" @keyup.enter="loadData" />
+      <!-- 输入建议框的回车键会先把输入框内容"自动补全"成高亮的那条建议再触发搜索——
+           想直接按自己手输的原始文字搜（不想被补全成建议里的某个红人）时，点这个按钮，
+           不会触发补全，就用输入框里当前的原始文字去查 -->
+      <a-button @click="loadData"><template #icon><SearchOutlined /></template></a-button>
       <a-button @click="resetFilters">重置</a-button>
     </div>
 
@@ -245,7 +249,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { influencerApi, brandApi, domainApi, influencerTeamApi, influencerContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'

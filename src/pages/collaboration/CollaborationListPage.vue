@@ -65,6 +65,10 @@
         :options="accountNameOptions"
         :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
         @select="loadData" @clear="loadData" @keyup.enter="loadData" />
+      <!-- 输入建议框的回车键会先把输入框内容"自动补全"成高亮的那条建议再触发搜索——
+           想直接按自己手输的原始文字搜（不想被补全成建议里的某个红人）时，点这个按钮，
+           不会触发补全，就用输入框里当前的原始文字去查 -->
+      <a-button @click="loadData"><template #icon><SearchOutlined /></template></a-button>
       <a-select v-model:value="filters.platform" placeholder="合作平台"
         style="width:120px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
@@ -303,7 +307,7 @@
 import { ref, reactive, computed, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, LinkOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, LinkOutlined, SearchOutlined } from '@ant-design/icons-vue'
 import { collaborationApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
