@@ -245,7 +245,7 @@ const employees        = ref([])
 const newDomainName    = ref('')
 const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
-const { loadEmployees } = useReferenceData()
+const { loadEmployees, invalidateInfluencers } = useReferenceData()
 
 // 跟进人只能从"项目负责人"、"管理层"（管理层是特殊的项目负责人，跟红人合作跟踪里
 // "项目负责人"字段的候选人范围口径一致，见 CollaborationTrackingExcelHandler/
@@ -499,6 +499,10 @@ async function handleSave() {
       notes:          form.notes
     })
     message.success(form.id ? '更新成功' : '创建成功')
+    // 红人合作跟踪/红人需求管理筛选栏"红人社媒完整名字"下拉框读的是同一份60秒缓存
+    // （useReferenceData 的 loadInfluencersSimple），不清掉的话刚新建/改名的红人在那两个
+    // 模块（以及本页自己下次打开这个下拉框时）短时间内搜不到，见 invalidateInfluencers 注释
+    invalidateInfluencers()
     emit('update:visible', false)
     emit('saved')
   } finally { saving.value = false }

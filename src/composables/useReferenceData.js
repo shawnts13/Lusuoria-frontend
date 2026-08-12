@@ -14,7 +14,7 @@ const CACHE_TTL_MS = 60 * 1000 // 60秒
 function makeCachedLoader(fetcher) {
     let data = null
     let time = 0
-    return async function load() {
+    async function load() {
         const now = Date.now()
         if (data && now - time < CACHE_TTL_MS) return data
         const res = await fetcher()
@@ -22,24 +22,36 @@ function makeCachedLoader(fetcher) {
         time = now
         return data
     }
+    // 2026-08 新增：60秒 TTL 本来是"很快自愈"，但"新建红人后马上在同一个页面/紧接着切到
+    // 别的模块搜刚建的红人"这种场景等不了 60 秒——在红人管理新建/编辑/删除红人后主动调用，
+    // 强制下一次 load() 绕过缓存直接打后端，红人合作跟踪/红人需求管理/红人管理三个模块的
+    // "红人社媒完整名字"下拉框共用同一份缓存，这里清一次三边都能刷新到
+    function invalidate() { data = null; time = 0 }
+    return { load, invalidate }
 }
 
-const loadBrandsCached      = makeCachedLoader(() => brandApi.list())
-const loadTeamsCached       = makeCachedLoader(() => influencerTeamApi.list())
-const loadInfluencersCached = makeCachedLoader(() => influencerApi.simple())
-const loadEmployeesCached   = makeCachedLoader(() => employeeApi.list())
+const brandsLoader      = makeCachedLoader(() => brandApi.list())
+const teamsLoader       = makeCachedLoader(() => influencerTeamApi.list())
+const influencersLoader = makeCachedLoader(() => influencerApi.simple())
+const employeesLoader   = makeCachedLoader(() => employeeApi.list())
 
 /**
  * 纯下拉/筛选用途的引用数据，带 60 秒内存缓存。用法：
  *   const { loadBrands, loadTeams, loadInfluencersSimple, loadEmployees } = useReferenceData()
  *   const [b, t] = await Promise.all([loadBrands(), loadTeams()])
  *   brands.value = b; teams.value = t
+ *
+ * invalidateInfluencers()：红人管理新建/编辑/删除红人后调用，强制清掉红人简单列表的缓存
+ * （不止影响红人管理自己，红人合作跟踪/红人需求管理的"红人社媒完整名字"筛选下拉框也是
+ * 读的这份缓存）。品牌方/团队/员工列表目前还没遇到同类"编辑后别的模块看不到"的反馈，
+ * 暂时没加对应的 invalidate，真遇到了照这个模式加就行。
  */
 export function useReferenceData() {
     return {
-        loadBrands: loadBrandsCached,
-        loadTeams: loadTeamsCached,
-        loadInfluencersSimple: loadInfluencersCached,
-        loadEmployees: loadEmployeesCached
+        loadBrands: brandsLoader.load,
+        loadTeams: teamsLoader.load,
+        loadInfluencersSimple: influencersLoader.load,
+        loadEmployees: employeesLoader.load,
+        invalidateInfluencers: influencersLoader.invalidate
     }
 }

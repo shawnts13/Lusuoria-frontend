@@ -228,7 +228,7 @@
       :brands="brands"
       :domains="domains"
       :teams="teams"
-      @saved="loadData"
+      @saved="onInfluencerSaved"
       @domain-added="loadDomains"
     />
 
@@ -261,7 +261,7 @@ const authStore = useAuthStore()
 const router    = useRouter()
 const route     = useRoute()
 const { getOptions, getLabel } = useOptions()
-const { loadInfluencersSimple } = useReferenceData()
+const { loadInfluencersSimple, invalidateInfluencers } = useReferenceData()
 
 const loading   = ref(false)
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -415,8 +415,18 @@ async function loadDomains() {
 
 function openCreate() { editingRecord.value = null; modalVisible.value = true }
 function openEdit(r)  { editingRecord.value = r;    modalVisible.value = true }
+// InfluencerFormModal 保存成功后已经调用过 invalidateInfluencers() 清掉了共享缓存
+// （红人合作跟踪/红人需求管理的"红人社媒完整名字"下拉框读的是同一份），这里额外把
+// 本页自己已经加载进内存的 influencerNames 重新拉一次，不然要等下次进这个页面才会刷新
+async function onInfluencerSaved() {
+  loadData()
+  influencerNames.value = await loadInfluencersSimple()
+}
 async function handleDelete(id) {
-  await influencerApi.delete(id); message.success('删除成功'); loadData(); loadDomains()
+  await influencerApi.delete(id); message.success('删除成功')
+  invalidateInfluencers()
+  loadData(); loadDomains()
+  influencerNames.value = await loadInfluencersSimple()
 }
 function handleExport() { influencerApi.exportExcel(filters.influencerType) }
 async function handleImport(file) {
