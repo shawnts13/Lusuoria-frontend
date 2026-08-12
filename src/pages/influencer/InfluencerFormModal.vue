@@ -247,10 +247,12 @@ const authStore        = useAuthStore()
 const { getOptions }   = useOptions()
 const { loadEmployees } = useReferenceData()
 
-// 跟进人只能从"项目负责人"和"执行人员"这两个角色里选——法务、IT后勤、财务、管理层等
-// 不负责跟进红人，不应该出现在这个下拉框里（对应 Employee.role 的取值，见后端
-// OptionConfigController 的 employee_role 选项配置）
-const FOLLOWER_ROLES = ['项目负责人', '执行人员']
+// 跟进人只能从"项目负责人"、"管理层"（管理层是特殊的项目负责人，跟红人合作跟踪里
+// "项目负责人"字段的候选人范围口径一致，见 CollaborationTrackingExcelHandler/
+// CollaborationFormModal 的 projectManagerCandidates）和"执行人员"这三个角色里选——
+// 法务、IT后勤、财务不负责跟进红人，不应该出现在这个下拉框里（对应 Employee.role 的
+// 取值，见后端 OptionConfigController 的 employee_role 选项配置）
+const FOLLOWER_ROLES = ['项目负责人', '管理层', '执行人员']
 const followerCandidates = computed(() => employees.value.filter(emp => FOLLOWER_ROLES.includes(emp.role)))
 
 // 法务：没有整条红人记录的编辑权，只能维护"已签署合同"区块，其余字段全部只读展示
