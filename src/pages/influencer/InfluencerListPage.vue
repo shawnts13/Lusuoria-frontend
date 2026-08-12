@@ -73,12 +73,11 @@
       <a-input-number v-model:value="filters.followerMax" placeholder="粉丝量上限"
         style="width:120px" :min="0" :formatter="fmtNum" :parser="v => v.replace(/,/g,'')"
         @change="loadData" />
-      <a-select v-model:value="filters.keyword" placeholder="红人社媒完整名字" style="width:200px"
-        allow-clear show-search
+      <a-auto-complete v-model:value="filters.keyword" placeholder="红人社媒完整名字（可输入搜索）"
+        style="width:220px" allow-clear
+        :options="accountNameOptions"
         :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
-        @change="loadData">
-        <a-select-option v-for="inf in influencerNames" :key="inf.id" :value="inf.accountName">{{ inf.accountName }}</a-select-option>
-      </a-select>
+        @select="loadData" @clear="loadData" @keyup.enter="loadData" />
       <a-button @click="resetFilters">重置</a-button>
     </div>
 
@@ -273,6 +272,10 @@ const teams     = ref([])
 // id+accountName，不受当前这页只有20条分页数据的限制——跟"新建红人"表单选红人的方式
 // 保持一致，从缓存拿最新数据，支持打字过滤
 const influencerNames = ref([])
+// 筛选框用 a-auto-complete（既能从上面这份缓存选，也允许直接手输任意文本去搜）：
+// 缓存刷新有延迟，纯 a-select 只能选列表里已经加载到的值，手输的关键字反而搜不出来
+const accountNameOptions = computed(() =>
+  [...new Set(influencerNames.value.map(inf => inf.accountName))].map(name => ({ value: name })))
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const projectCounts       = ref({})  // key=influencerId，value={activeCount, completedCount}

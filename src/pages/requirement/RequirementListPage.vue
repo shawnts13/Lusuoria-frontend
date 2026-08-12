@@ -26,12 +26,11 @@
         show-search :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())" @change="loadData">
         <a-select-option v-for="t in teams" :key="t.id" :value="t.id" :label="t.name">{{ t.name }}</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:200px"
-        allow-clear show-search
+      <a-auto-complete v-model:value="filters.accountName" placeholder="红人社媒完整名字（可输入搜索）"
+        style="width:220px" allow-clear
+        :options="accountNameOptions"
         :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
-        @change="loadData">
-        <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.accountName">{{ inf.accountName }}</a-select-option>
-      </a-select>
+        @select="loadData" @clear="loadData" @keyup.enter="loadData" />
       <a-date-picker v-model:value="filters.requirementMonth" picker="month"
         format="YYYYMM" value-format="YYYYMM" placeholder="需求月份" style="width:150px"
         allow-clear @change="loadData" />
@@ -255,6 +254,11 @@ const tableData   = ref([])
 const brands      = ref([])
 const teams       = ref([])
 const influencers = ref([])
+// "红人社媒完整名字"筛选用 a-auto-complete（2026-08 起从 a-select 改过来），道理跟
+// CollaborationListPage.vue 的 accountNameOptions 一样：既能从缓存选、也能直接手输
+// 搜索，不受缓存刷新延迟限制
+const accountNameOptions = computed(() =>
+  [...new Set(influencers.value.map(inf => inf.accountName))].map(name => ({ value: name })))
 const employees   = ref([])
 
 const modalVisible  = ref(false)

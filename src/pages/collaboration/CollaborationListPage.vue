@@ -60,12 +60,11 @@
         @change="loadData">
         <a-select-option v-for="o in getOptions('country')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.accountName" placeholder="红人社媒完整名字" style="width:160px"
-        allow-clear show-search
+      <a-auto-complete v-model:value="filters.accountName" placeholder="红人社媒完整名字（可输入搜索）"
+        style="width:200px" allow-clear
+        :options="accountNameOptions"
         :filter-option="(input, opt) => opt.value.toLowerCase().includes(input.trim().toLowerCase())"
-        @change="loadData">
-        <a-select-option v-for="inf in influencers" :key="inf.id" :value="inf.accountName">{{ inf.accountName }}</a-select-option>
-      </a-select>
+        @select="loadData" @clear="loadData" @keyup.enter="loadData" />
       <a-select v-model:value="filters.platform" placeholder="合作平台"
         style="width:120px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
@@ -333,6 +332,12 @@ const brands      = ref([])
 const teams       = ref([])
 const influencers = ref([])
 const employees   = ref([])
+// "红人社媒完整名字"筛选用 a-auto-complete（2026-08 起从 a-select 改过来）：既可以从
+// 缓存里选已有红人，也允许直接手输任意文本去搜——缓存刷新有延迟（哪怕已经在新建/编辑
+// 红人后主动 invalidate 了，另一个人刚建的红人本地缓存还没来得及打一次接口）时，纯 a-select
+// 只能选列表里有的值，手输的关键字反而搜不出来，退化成一个体验更差的搜索框
+const accountNameOptions = computed(() =>
+  [...new Set(influencers.value.map(inf => inf.accountName))].map(name => ({ value: name })))
 // 负责人筛选只能选"项目负责人"或"管理层"角色的员工（跟表单里的规则一致）
 const projectManagerCandidates = computed(() =>
   employees.value.filter(e => e.role === '项目负责人' || e.role === '管理层'))
