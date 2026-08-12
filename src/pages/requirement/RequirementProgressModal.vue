@@ -33,6 +33,9 @@
         <template v-if="column.key === 'clientUnitPrice'">
           {{ record.clientUnitPrice != null ? fmtNum(record.clientUnitPrice) : '—' }}
         </template>
+        <template v-if="column.key === 'createdAt'">
+          {{ record.createdAt ? formatDateTime(record.createdAt) : '—' }}
+        </template>
         <template v-if="column.key === 'publishDate'">
           {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
         </template>
@@ -65,7 +68,7 @@ import { requirementApi } from '../../api/index'
 import { colorForValue } from '../../utils/tagColor'
 import { videoTypeColor, collabProgressColor } from '../../utils/enumColors'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
-import { formatDate } from '../../utils/dateFormat'
+import { formatDate, formatDateTime } from '../../utils/dateFormat'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -107,6 +110,9 @@ const columns = [
   { title: '需求内容', key: 'demandContent', width: 200 },
   { title: '红人视频制作与发布单价成本（$）', key: 'influencerUnitCostPrice', width: 180 },
   { title: '客户合作单价（$）', key: 'clientUnitPrice', width: 130 },
+  // 2026-08 新增：创建时间取的是这条红人合作跟踪记录自己的创建时间，摆在"视频发布时间"
+  // 前面，方便对照"这条记录是什么时候建的"跟"什么时候实际发布"之间隔了多久
+  { title: '创建时间', key: 'createdAt', width: 150 },
   // 2026-08 新增：方便直接在这个详情列表里对照每条记录自己的发布时间是否跟"需求完成时间"
   // （该需求所有关联记录里最晚的视频发布时间）对得上，不用跳去合作跟踪模块逐条查
   { title: '视频发布时间', key: 'publishDate', width: 120 },
@@ -138,9 +144,11 @@ watch(() => props.visible, v => { if (v) load() })
 
 function close() { emit('update:visible', false) }
 
-// "红人合作跟踪"列表页支持按内部项目编号精确筛选定位，直接带过去
+// "红人合作跟踪"列表页支持按内部项目编号精确筛选定位，直接带过去——2026-08 改成新开标签页
+// （跟应用里其他跨模块跳转，比如"合同快到期"提醒的"查看详情"、"去结款"，保持一致的新标签页
+// 习惯），不打断这个详情弹窗本身正在看的内容
 function goToTracking(record) {
-  router.push({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } })
+  window.open(router.resolve({ path: '/collaborations', query: { internalProjectNo: record.internalProjectNo } }).href, '_blank')
 }
 </script>
 

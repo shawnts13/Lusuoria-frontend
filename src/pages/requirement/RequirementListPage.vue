@@ -527,8 +527,10 @@ function openContractModal(record) {
   contractModalRequirement.value = record
   contractModalVisible.value = true
 }
+// 2026-08 改成新开标签页（跟应用里其他跨模块跳转，比如"去结款"、"需求完成进度详情"的
+// "查看详情"，保持一致的新标签页习惯），不打断当前正在看的需求列表/筛选状态
 function goToInfluencerContract(record) {
-  router.push({ path: '/influencers', query: { editInfluencerId: record.influencerId } })
+  window.open(router.resolve({ path: '/influencers', query: { editInfluencerId: record.influencerId } }).href, '_blank')
 }
 
 async function loadData() {
