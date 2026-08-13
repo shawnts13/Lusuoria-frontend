@@ -393,7 +393,13 @@ function openRequirementItemsView(r, requirementNo) {
 async function handleDelete(id) {
   await paymentApi.delete(id); message.success('删除成功'); loadData()
 }
-function handleExport() { paymentApi.exportExcel(filters.settlementMonth) }
+// 2026-08 修复：之前只传结算月份，其余筛选条件（品牌方/团队/内部需求编号/付款状态/结款单号/
+// "查看未上传发票的记录"）导出时全部被忽略，改成把当前全部筛选条件一起传给后端
+// （settlementMonthVal 是日期选择器绑定的辅助值，不是真正传给后端的筛选参数，排除掉）
+function handleExport() {
+  const { settlementMonthVal, ...rest } = filters
+  paymentApi.exportExcel(rest)
+}
 
 onMounted(async () => {
   const [b, t] = await Promise.all([loadBrands(), loadTeams()])

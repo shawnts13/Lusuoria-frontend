@@ -405,7 +405,9 @@ async function handleDelete(id) {
   loadData(); loadDomains()
   influencerNames.value = await loadInfluencersSimple()
 }
-function handleExport() { influencerApi.exportExcel(filters.influencerType) }
+// 2026-08 修复：之前只传 influencerType，其余筛选条件（平台/国家市场/领域/品牌方/团队/
+// 粉丝量区间/关键词）导出时全部被忽略，改成把当前全部筛选条件一起传给后端
+function handleExport() { influencerApi.exportExcel({ ...filters }) }
 async function handleImport(file) {
   const fd = new FormData(); fd.append('file', file)
   try {

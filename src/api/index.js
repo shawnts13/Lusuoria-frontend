@@ -80,8 +80,14 @@ export const influencerApi = {
   // 批量查询红人的"合作中项目"/"已完结项目"数量（返回 {activeCount, completedCount}）
   projectCounts: (influencerIds) => http.post('/api/influencers/project-counts', influencerIds),
 
-  exportExcel:      (type) => downloadWithAuth(
-    `${BASE}/api/influencers/export/excel${type ? '?influencerType=' + type : ''}`, '红人.xlsx'),
+  // 2026-08 修复：之前只传 influencerType 一个筛选条件，改成跟其它模块（红人合作跟踪/
+  // 红人需求管理）一样，把当前列表页全部筛选条件带上，导出结果才会跟列表页当前看到的一致
+  exportExcel: (params) => {
+    const qs = new URLSearchParams(
+      Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    ).toString()
+    return downloadWithAuth(`${BASE}/api/influencers/export/excel${qs ? '?' + qs : ''}`, '红人.xlsx')
+  },
   downloadTemplate: ()     => downloadWithAuth(`${BASE}/api/influencers/import/template`, '红人导入模板.xlsx'),
   importExcel:      (form) => http.post('/api/influencers/import/excel', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
@@ -143,9 +149,16 @@ export const paymentApi = {
   // 2026-08 新增："上传发票"（公对公发票），跟"红人需求管理"的Invoice是同一套机制，命名规则用 receipt
   uploadReceiptLink: (id, receiptLink) => http.post(`/api/influencer-payments/${id}/receipt-link`, { receiptLink }),
 
-  exportExcel: (settlementMonth) => downloadWithAuth(
-    `${BASE}/api/influencer-payments/export/excel${settlementMonth ? '?settlementMonth=' + settlementMonth : ''}`,
-    `红人结款_${settlementMonth || 'all'}.xlsx`)
+  // 2026-08 修复：之前只传 settlementMonth 一个筛选条件，改成把当前列表页全部筛选条件
+  // （品牌方/团队/内部需求编号/付款状态/结款单号/"查看未上传发票的记录"）一起带上
+  exportExcel: (params) => {
+    const qs = new URLSearchParams(
+      Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    ).toString()
+    return downloadWithAuth(
+      `${BASE}/api/influencer-payments/export/excel${qs ? '?' + qs : ''}`,
+      `红人结款_${params?.settlementMonth || 'all'}.xlsx`)
+  }
 }
 
 // ===== Collaboration Trackings =====

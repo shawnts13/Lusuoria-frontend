@@ -654,13 +654,19 @@ async function handleDeleteConfirm() {
   } finally { deleting.value = false }
 }
 function handleExport() {
+  // 2026-08 修复：之前漏传了4个"查看XX的需求"快捷筛选开关，导致点了快捷筛选按钮之后再导出，
+  // 导出的还是忽略这个筛选条件的数据（后端 exportExcel 现在也认这几个参数了）
   requirementApi.exportExcel({
     brandId: filters.brandId,
     teamId: filters.teamId,
     accountName: filters.accountName,
     requirementMonth: filters.requirementMonth,
     completedMonth: filters.completedMonth,
-    internalRequirementNo: filters.internalRequirementNo
+    internalRequirementNo: filters.internalRequirementNo,
+    onlyIncomplete: filters.onlyIncomplete,
+    onlyMissingInvoice: filters.onlyMissingInvoice,
+    onlyMissingContract: filters.onlyMissingContract,
+    onlyUnsettled: filters.onlyUnsettled
   })
 }
 function viewContent(record) {
