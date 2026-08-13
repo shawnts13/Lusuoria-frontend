@@ -52,7 +52,8 @@ const routes = [
         path: 'brands',
         name: 'Brands',
         component: () => import('./pages/brand/BrandListPage.vue'),
-        // 严格按员工角色判断，只有"管理层"能访问，见 store/auth.js canAccessBrands
+        // 2026-08 起对全部6个员工角色开放查看，写操作严格限管理层，见 store/auth.js
+        // canAccessBrands（能否进页面）/ canManageBrands（能否新建/编辑/删除品牌方/团队）
         meta: { brandAccess: true }
       },
       { path: 'influencers', name: 'Influencers', component: () => import('./pages/influencer/InfluencerListPage.vue') },
@@ -107,6 +108,10 @@ const router = createRouter({
   routes
 })
 
+// 全部6个 Employee.role 取值，跟后端 Employee.role 字段注释、EmployeeRoleUtil 保持一致——
+// "品牌方/团队管理"路由守卫用，只挡完全没有关联员工角色的账号
+const ALL_EMPLOYEE_ROLES = ['项目负责人', '执行人员', '管理层', '财务', '法务', 'IT后勤']
+
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const role  = localStorage.getItem('role')
@@ -143,8 +148,10 @@ router.beforeEach((to, from, next) => {
     next('/collaborations')
     return
   }
-  // 品牌方管理：严格按员工角色，只有"管理层"
-  if (to.meta.brandAccess && employeeRole !== '管理层') {
+  // 品牌方/团队管理：2026-08 起从"仅管理层"放宽给全部6个员工角色都能进（非管理层角色进去
+  // 是只读+"上传合同"这一小块可操作，具体按钮级别的权限在页面内部判断，见 store/auth.js
+  // canAccessBrands），这里路由层只挡"完全没有关联员工角色"的账号（比如纯 GUEST 系统账号）
+  if (to.meta.brandAccess && !ALL_EMPLOYEE_ROLES.includes(employeeRole)) {
     next('/collaborations')
     return
   }

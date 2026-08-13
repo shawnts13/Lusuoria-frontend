@@ -126,8 +126,8 @@
           <template v-if="column.key === 'contractLink'">
             <a v-if="contractCellState(record).mode === 'link'"
               :href="contractCellState(record).href" target="_blank" style="font-size:12px">查看合同</a>
-            <a v-else-if="contractCellState(record).mode === 'gotoInfluencer'"
-              @click="goToInfluencerContract(record)"
+            <a v-else-if="contractCellState(record).mode === 'gotoTeamContract'"
+              @click="goToTeamContract(record)"
               style="font-size:12px;color:#595959;cursor:pointer">{{ contractCellState(record).text }}</a>
             <span v-else style="color:#bbb">—</span>
           </template>
@@ -154,7 +154,7 @@
                 <a-tooltip :title="contractButtonState(record).tooltip">
                   <span>
                     <a-button size="small" :disabled="contractButtonState(record).disabled"
-                      :class="{ 'contract-btn-goto': contractButtonState(record).mode === 'gotoInfluencer' }"
+                      :class="{ 'contract-btn-goto': contractButtonState(record).mode === 'gotoTeamContract' }"
                       @click="handleContractButtonClick(record)">{{ contractButtonState(record).label }}</a-button>
                   </span>
                 </a-tooltip>
@@ -233,7 +233,7 @@ import { ref, reactive, computed, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { requirementApi, influencerContractApi } from '../../api/index'
+import { requirementApi, teamContractApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { useReferenceData } from '../../composables/useReferenceData'
@@ -291,10 +291,13 @@ const contractModalRequirement = ref(null)
 const batchCreateModalVisible = ref(false)
 const batchCreateModalRef = ref(null)
 
-// 红人合同数据（按红人id批量拉取，key=influencerId，value=该红人名下的合同列表，每条含
-// brandId/teamId/startDate/endDate/contractLink），供"合同链接"列/按钮判断品牌方
-// "一年签一次合同"时，该需求的品牌方/团队/需求月份是否命中"红人管理"里维护的某条合同
-const influencerContractsByInfluencerId = ref({})
+// 团队级合同数据（2026-08 起团队下所有红人共用同一份合同，不再按红人各自维护）：
+// teamContractsByTeamId 按团队id批量拉取（key=teamId），teamContractsByBrandIdNoTeam 按
+// 品牌方id批量拉取"该品牌方没有团队层"的那部分（key=brandId），每条含
+// brandId/teamId/startDate/endDate/contractLink，供"合同链接"列/按钮判断品牌方"一年签一次
+// 合同"时，该需求的品牌方/团队/需求月份是否命中"品牌方/红人团队管理"里维护的某条合同
+const teamContractsByTeamId = ref({})
+const teamContractsByBrandIdNoTeam = ref({})
 
 const sortState = reactive({ field: 'id', order: 'descend' })
 const pagination = reactive({
@@ -463,74 +466,85 @@ function monthOverlapsContractRange(yyyymm, startDate, endDate) {
   const end = new Date(endDate)
   return monthStart <= end && start <= monthEnd
 }
-// 按这条需求的 (品牌方,团队,需求月份) 去匹配红人管理里维护的、这个品牌方这个团队下
-// "需求月份落在有效期内"的那条合同（品牌方"一年签一次合同"场景）
-function matchedInfluencerContract(record) {
-  const contracts = influencerContractsByInfluencerId.value[record.influencerId] || []
+// 按这条需求的 (品牌方,团队,需求月份) 去匹配"品牌方/红人团队管理"里维护的、这个品牌方这个
+// 团队下"需求月份落在有效期内"的那条团队级合同（品牌方"一年签一次合同"场景，2026-08 起
+// 团队下所有红人共用同一份合同，不再按红人各自维护）
+function matchedTeamContract(record) {
+  const contracts = record.teamId
+    ? (teamContractsByTeamId.value[record.teamId] || [])
+    : (teamContractsByBrandIdNoTeam.value[record.brandId] || [])
   return contracts.find(c =>
     c.brandId === record.brandId &&
     (c.teamId ?? null) === (record.teamId ?? null) &&
     monthOverlapsContractRange(record.requirementMonth, c.startDate, c.endDate)
   ) || null
 }
-async function loadInfluencerContracts() {
-  const ids = [...new Set(tableData.value.map(r => r.influencerId).filter(Boolean))]
-  if (!ids.length) { influencerContractsByInfluencerId.value = {}; return }
-  const res = await influencerContractApi.byInfluencerIds(ids)
-  influencerContractsByInfluencerId.value = res.data || {}
+async function loadTeamContracts() {
+  const teamIds = [...new Set(tableData.value.map(r => r.teamId).filter(Boolean))]
+  const brandIdsNoTeam = [...new Set(tableData.value.filter(r => !r.teamId).map(r => r.brandId).filter(Boolean))]
+  const [byTeam, byBrandNoTeam] = await Promise.all([
+    teamIds.length ? teamContractApi.byTeamIds(teamIds) : Promise.resolve({ data: {} }),
+    brandIdsNoTeam.length ? teamContractApi.byBrandIdsNoTeam(brandIdsNoTeam) : Promise.resolve({ data: {} })
+  ])
+  teamContractsByTeamId.value = byTeam.data || {}
+  teamContractsByBrandIdNoTeam.value = byBrandNoTeam.data || {}
 }
 
 // "合同链接"列的展示状态：品牌方"每次需求签一次合同"时看需求自己的 contractLink；
-// "一年签一次合同"时按需求自己的品牌方/团队/需求月份去匹配红人管理里对应的合同，
-// 匹配上就直接展示真实链接，没匹配上则展示可点击的引导文案（点击效果等同操作列的
-// "上传合同"按钮跳转红人管理）
+// "一年签一次合同"时按需求自己的品牌方/团队/需求月份去匹配"品牌方/红人团队管理"里对应的
+// 团队级合同，匹配上就直接展示真实链接，没匹配上则展示可点击的引导文案（点击效果等同操作列的
+// "上传合同"按钮跳转团队管理）
 function contractCellState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
   if (!isAnnual) {
     return record.contractLink ? { mode: 'link', href: record.contractLink } : { mode: 'none' }
   }
-  const matched = matchedInfluencerContract(record)
+  const matched = matchedTeamContract(record)
   if (matched) return { mode: 'link', href: matched.contractLink }
-  return { mode: 'gotoInfluencer', text: '该品牌方是一年签一次合同，请在红人管理处上传' }
+  return { mode: 'gotoTeamContract', text: '该品牌方是一年签一次合同，请在"品牌方/红人团队管理"处上传' }
 }
 
 // "上传合同"操作按钮的三态：每次需求签一次合同 -> 始终可点的"上传合同"；一年签一次合同且
 // 该品牌方该团队下已有一条"需求月份落在有效期内"的合同 -> 置灰的"上传合同"（文案统一，
 // 不再按年份报文案，跟第一种状态保持一致的按钮宽度，避免表格排版参差不齐）；一年签一次合同
 // 且没匹配上任何合同 -> 同样是"上传合同"，但保留 contract-btn-goto 的不起眼配色跟真正能
-// 直接上传的那种区分开，点击后跳转红人管理
+// 直接上传的那种区分开，点击后跳转团队管理
 function contractButtonState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
   if (!isAnnual) {
     return { disabled: false, mode: 'upload', label: '上传合同', tooltip: null }
   }
-  const matched = matchedInfluencerContract(record)
+  const matched = matchedTeamContract(record)
   if (matched) {
     return {
       disabled: true, mode: 'matched', label: '上传合同',
-      tooltip: '该红人已存在还在有效期内的合同，若合同上传有误，请在红人管理模块更新合同链接。'
+      tooltip: '该品牌方/团队已存在还在有效期内的合同，若合同上传有误，请在"品牌方/红人团队管理"更新合同链接。'
     }
   }
   return {
-    disabled: false, mode: 'gotoInfluencer', label: '上传合同',
-    tooltip: '该品牌方是一年签一次合同，请在红人管理处上传'
+    disabled: false, mode: 'gotoTeamContract', label: '上传合同',
+    tooltip: '该品牌方是一年签一次合同，请在"品牌方/红人团队管理"处上传'
   }
 }
 function handleContractButtonClick(record) {
   const state = contractButtonState(record)
   if (state.mode === 'upload') openContractModal(record)
-  else if (state.mode === 'gotoInfluencer') goToInfluencerContract(record)
+  else if (state.mode === 'gotoTeamContract') goToTeamContract(record)
 }
 function openContractModal(record) {
   contractModalRequirement.value = record
   contractModalVisible.value = true
 }
 // 2026-08 改成新开标签页（跟应用里其他跨模块跳转，比如"去结款"、"需求完成进度详情"的
-// "查看详情"，保持一致的新标签页习惯），不打断当前正在看的需求列表/筛选状态
-function goToInfluencerContract(record) {
-  window.open(router.resolve({ path: '/influencers', query: { editInfluencerId: record.influencerId } }).href, '_blank')
+// "查看详情"，保持一致的新标签页习惯），不打断当前正在看的需求列表/筛选状态。跳转到
+// "品牌方/红人团队管理"，按品牌方+团队自动定位并展开对应的团队合同列表（见 BrandListPage.vue
+// 对 openBrandId/openTeamId 的处理），不再是某个具体红人
+function goToTeamContract(record) {
+  const query = { openBrandId: record.brandId }
+  if (record.teamId) query.openTeamId = record.teamId
+  window.open(router.resolve({ path: '/brands', query }).href, '_blank')
 }
 
 async function loadData() {
@@ -554,7 +568,7 @@ async function loadData() {
     })
     tableData.value  = res.data.content || []
     pagination.total = res.data.totalElements || 0
-    await loadInfluencerContracts()
+    await loadTeamContracts()
   } finally {
     loading.value = false
     remeasure()

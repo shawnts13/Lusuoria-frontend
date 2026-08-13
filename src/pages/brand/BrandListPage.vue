@@ -6,11 +6,13 @@
         <a-button @click="brandApi.exportExcel()">
           <template #icon><ExportOutlined /></template>Excel 导出
         </a-button>
-        <template v-if="authStore.canAccessBrands">
-          <a-button type="primary" @click="openCreate">
-            <template #icon><PlusOutlined /></template>新建品牌方
-          </a-button>
-        </template>
+        <a-tooltip :title="authStore.canManageBrands ? null : '只有管理层有权限操作'">
+          <span>
+            <a-button type="primary" :disabled="!authStore.canManageBrands" @click="openCreate">
+              <template #icon><PlusOutlined /></template>新建品牌方
+            </a-button>
+          </span>
+        </a-tooltip>
       </a-space>
     </div>
 
@@ -57,14 +59,24 @@
           </template>
           <template v-if="column.key === 'action'">
             <a-space>
-              <a @click="openTeamManage(record)">管理团队</a>
-              <template v-if="authStore.canAccessBrands">
+              <a @click="openTeamManage(record)">{{ authStore.canManageBrands ? '管理团队' : '查看团队' }}</a>
+              <template v-if="authStore.canManageBrands">
                 <a-divider type="vertical" />
                 <a @click="openEdit(record)">编辑</a>
                 <a-divider type="vertical" />
                 <a-popconfirm title="确认删除？" @confirm="handleDelete(record.id)">
                   <a style="color:#ff4d4f">删除</a>
                 </a-popconfirm>
+              </template>
+              <template v-else>
+                <a-divider type="vertical" />
+                <a-tooltip title="只有管理层有权限操作">
+                  <span style="color:#bbb;cursor:not-allowed">编辑</span>
+                </a-tooltip>
+                <a-divider type="vertical" />
+                <a-tooltip title="只有管理层有权限操作">
+                  <span style="color:#bbb;cursor:not-allowed">删除</span>
+                </a-tooltip>
               </template>
             </a-space>
           </template>
@@ -171,12 +183,14 @@
     </a-modal>
 
     <!-- 团队管理 -->
-    <TeamManageModal v-model:visible="teamManageVisible" :brand="teamManageBrand" />
+    <TeamManageModal v-model:visible="teamManageVisible" :brand="teamManageBrand"
+      :auto-open-team-id="autoOpenTeamId" :auto-open-no-team="autoOpenNoTeam" />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { brandApi } from '../../api/index'
@@ -184,6 +198,7 @@ import { useAuthStore } from '../../store/auth'
 import { colorForValue } from '../../utils/tagColor'
 import TeamManageModal from './TeamManageModal.vue'
 
+const route     = useRoute()
 const authStore = useAuthStore()
 const loading   = ref(false)
 const list      = ref([])
@@ -193,6 +208,10 @@ const saving             = ref(false)
 const formRef            = ref()
 const teamManageVisible  = ref(false)
 const teamManageBrand    = ref(null)
+// 深链自动打开某个品牌方/团队的合同列表（供"红人需求管理"的"上传合同"按钮、"待处理"合同
+// 到期提醒的"查看详情"跳转过来时用），见下面 onMounted 里对 openBrandId/openTeamId 的处理
+const autoOpenTeamId = ref(undefined)
+const autoOpenNoTeam = ref(false)
 
 function openTeamManage(record) {
   teamManageBrand.value = record
@@ -293,7 +312,24 @@ async function handleSave() {
   } finally { saving.value = false }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadData()
+
+  // "红人需求管理"的"上传合同"按钮、"待处理"合同即将到期提醒的"查看详情"跳转过来时带
+  // openBrandId(+openTeamId)，自动定位并打开这个品牌方的"管理团队"弹窗、再自动展开对应
+  // 团队的合同列表（openTeamId 缺省表示该品牌方没有团队层，走"无团队合同"分支，见
+  // TeamManageModal.vue 的 autoOpenNoTeam）
+  const openBrandId = route.query.openBrandId
+  if (openBrandId) {
+    const brand = list.value.find(b => String(b.id) === String(openBrandId))
+    if (brand) {
+      const openTeamId = route.query.openTeamId
+      autoOpenNoTeam.value = !openTeamId
+      autoOpenTeamId.value = openTeamId || undefined
+      openTeamManage(brand)
+    }
+  }
+})
 </script>
 
 <style scoped>

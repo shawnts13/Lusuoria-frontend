@@ -194,19 +194,6 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
-          <template v-if="column.key === 'contractLink'">
-            <template v-if="influencerContracts[record.id]?.length">
-              <div v-for="c in influencerContracts[record.id]" :key="c.id" class="contract-mini-card">
-                <a-tag :color="colorForValue(brandNameById(c.brandId))">{{ brandNameById(c.brandId) }}</a-tag>
-                <a-tag v-if="c.teamId" :color="colorForValue(teamNameById(c.teamId))">{{ teamNameById(c.teamId) }}</a-tag>
-                <span v-else class="contract-no-team">不涉及团队</span>
-                <div class="contract-mini-range">{{ formatDate(c.startDate) }} 至 {{ formatDate(c.endDate) }}</div>
-                <a :href="c.contractLink" target="_blank">查看合同</a>
-              </div>
-            </template>
-            <span v-else style="color:#bbb">—</span>
-          </template>
-
           <template v-if="column.key === 'action'">
             <a-space v-if="authStore.canWrite">
               <a @click="openEdit(record)">编辑</a>
@@ -215,8 +202,6 @@
                 <a style="color:#ff4d4f">删除</a>
               </a-popconfirm>
             </a-space>
-            <!-- 法务：没有整条红人记录的编辑权，只能进去维护"已签署合同"，没有删除入口 -->
-            <a v-else-if="authStore.canManageInfluencerContracts" @click="openEdit(record)">维护合同</a>
             <span v-else style="color:#bbb">只读</span>
           </template>
 
@@ -250,13 +235,12 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined, ExportOutlined, DownloadOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons-vue'
-import { influencerApi, domainApi, influencerContractApi } from '../../api/index'
+import { influencerApi, domainApi } from '../../api/index'
 import { useAuthStore } from '../../store/auth'
 import { useOptions } from '../../composables/useOptions'
 import { useReferenceData } from '../../composables/useReferenceData'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { colorForValue } from '../../utils/tagColor'
-import { formatDate } from '../../utils/dateFormat'
 import InfluencerFormModal from './InfluencerFormModal.vue'
 import InfluencerCollaborationModal from './InfluencerCollaborationModal.vue'
 
@@ -283,7 +267,6 @@ const accountNameOptions = computed(() =>
 const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const projectCounts       = ref({})  // key=influencerId，value={activeCount, completedCount}
-const influencerContracts = ref({})  // 已签署合同，key=influencerId，value=该红人全部合同记录数组
 
 const collabModalVisible       = ref(false)
 const collabModalInfluencerId  = ref(null)
@@ -329,7 +312,6 @@ const allColumns = [
   { title: '视频版权成本（$）',           key: 'copyrightCost',  width: 140, sensitive: true },
   { title: '红人邮箱',      dataIndex: 'email',     key: 'email',         width: 160, sorter: true },
   { title: '联系方式',      key: 'contacts',        width: 150 },
-  { title: '已签署合同',    key: 'contractLink',    width: 280 },
   { title: '操作',          key: 'action',          width: 120, fixed: 'right' }
 ]
 
@@ -348,14 +330,6 @@ function contactTypeLabel(type) {
   const m = { phone:'电话', whatsapp:'WhatsApp', line:'Line', telegram:'Telegram' }
   return m[type] || type
 }
-// "已签署合同"列：跟编辑弹窗里的展示保持一致，需要按 id 解出品牌方/团队名字
-function brandNameById(id) {
-  return brands.value.find(b => b.id === id)?.name || '未知品牌'
-}
-function teamNameById(id) {
-  return teams.value.find(t => t.id === id)?.name || ''
-}
-
 async function loadData() {
   loading.value = true
   try {
@@ -382,11 +356,7 @@ async function loadData() {
         const countRes = await influencerApi.projectCounts(ids)
         projectCounts.value = countRes.data || {}
       } catch { projectCounts.value = {} }
-      try {
-        const contractRes = await influencerContractApi.byInfluencerIds(ids)
-        influencerContracts.value = contractRes.data || {}
-      } catch { influencerContracts.value = {} }
-    } else { projectCounts.value = {}; influencerContracts.value = {} }
+    } else { projectCounts.value = {} }
   } finally {
     loading.value = false
     remeasure()  // 数据变化后表格宽度可能变化，重新同步顶部滚动条
@@ -506,25 +476,3 @@ onMounted(async () => {
   }
 })
 </script>
-
-<style scoped>
-.contract-mini-card {
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-.contract-mini-card:last-child {
-  margin-bottom: 0;
-}
-.contract-no-team {
-  color: #999;
-  margin-left: 2px;
-}
-.contract-mini-range {
-  color: #595959;
-  font-weight: 500;
-  margin: 4px 0;
-}
-</style>

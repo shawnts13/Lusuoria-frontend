@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.194.0'
-export const APP_VERSION_TIME = '2026-08-13 10:49'
+export const APP_VERSION = '1.195.0'
+export const APP_VERSION_TIME = '2026-08-13 13:41'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -84,8 +84,14 @@ export const useAuthStore = defineStore('auth', {
     canManagePayments: (state) => state.employeeRole === '管理层',
     // "上传发票"（公对公发票，2026-08 新增）：管理层/财务都能做，跟 canManagePayments（仅管理层）不同
     canUploadPaymentReceipt: (state) => ['管理层', '财务'].includes(state.employeeRole),
-    // "品牌方管理"页面：严格按员工角色判断，只有"管理层"能访问（2026-07 起）
-    canAccessBrands: (state) => state.employeeRole === '管理层',
+    // "品牌方/团队管理"页面能不能进：2026-08 起从"仅管理层"放宽给全部6个员工角色（项目负责人/
+    // 执行人员/管理层/财务/法务/IT后勤）都能进去查看，跟路由守卫（router.js ALL_EMPLOYEE_ROLES）
+    // 保持一致；MainLayout 菜单项的显隐也用这个。品牌方/团队本身的新建/编辑/删除这几个写操作
+    // 用更严格的 canManageBrands（仅管理层）
+    canAccessBrands: (state) =>
+      ['项目负责人', '执行人员', '管理层', '财务', '法务', 'IT后勤'].includes(state.employeeRole),
+    // 品牌方/团队本身的新建/编辑/删除：严格按员工角色判断，只有"管理层"能操作（2026-07 起）
+    canManageBrands: (state) => state.employeeRole === '管理层',
     // "导入历史"删除记录按钮：只有"管理层"能看到并操作，供清理误操作/测试产生的脏历史记录用
     canDeleteImportBatch: (state) => state.employeeRole === '管理层',
     // "红人合作跟踪"里，视频项目进度流转到"已加入客户未结算列表"/"客户已结算"这两个财务专属
@@ -107,12 +113,12 @@ export const useAuthStore = defineStore('auth', {
     // "工资单"模块的管理视角（看全体员工、设置奖金、确认）：ADMIN 或员工角色="管理层"，
     // 跟"员工管理"页面的访问权限判定（canAccessEmployeeManagement）保持一致
     canManagePayslips: (state) => state.role === 'ADMIN' || state.employeeRole === '管理层',
-    // "红人管理"里"已签署合同"区块的维护权限（2026-08 新增）：canWrite（ADMIN/STAFF）本来就能
-    // 编辑整条红人记录，额外放开给员工角色="法务"的账号（哪怕 SysUser 角色是只读的 AUDITOR）——
-    // 但只给合同这一块，不代表能编辑红人的其他字段（成本/联系方式等），见
-    // InfluencerFormModal.vue 的 contractOnlyMode
-    canManageInfluencerContracts: (state) =>
-      state.role === 'ADMIN' || state.role === 'STAFF' || state.employeeRole === '法务',
+    // "品牌方/红人团队管理"-"管理团队"里"上传合同"（团队级合同，2026-08 新增，替代原来挂在
+    // 红人身上的"已签署合同"）的维护权限：纯按 Employee.role 判断，项目负责人/执行人员/法务/
+    // 管理层/IT后勤这5个角色能上传/编辑/删除，不含财务（财务管钱不管合同文件），
+    // 跟后端 EmployeeRoleUtil.canManageTeamContracts() 保持一致
+    canManageTeamContracts: (state) =>
+      ['项目负责人', '执行人员', '法务', '管理层', 'IT后勤'].includes(state.employeeRole),
     // "红人合作跟踪"里"批量计算执行成本"按钮（2026-08 新增）：项目负责人/执行人员/管理层
     // 三种员工角色可见，跟后端 recomputeExecutorCostsScoped() 允许的范围一致——管理层等同于
     // "特殊的项目负责人"（看全部），项目负责人/执行人员各自只能算自己名下/自己执行的那部分，

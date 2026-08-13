@@ -9,7 +9,10 @@
     <div class="filter-bar">
       <a-select v-model:value="brandTeamFilter" placeholder="品牌方-红人团队" allow-clear
         style="width:240px" :options="brandTeamOptions" />
-      <a-select v-model:value="accountNameFilter" placeholder="红人社媒完整名字" allow-clear show-search
+      <!-- 合同即将到期：2026-08 起按(品牌方,团队)整体展示，明细行不再对应具体红人，
+           这个筛选框对这一类没有意义，隐藏掉 -->
+      <a-select v-if="category !== 'CONTRACT_EXPIRING_SOON'" v-model:value="accountNameFilter"
+        placeholder="红人社媒完整名字" allow-clear show-search
         style="width:200px" :options="accountNameOptions" />
       <a-select v-if="category === 'COLLAB_PAYMENT_DUE'" v-model:value="paymentProgressFilter"
         placeholder="红人结款进度" allow-clear style="width:200px" :options="paymentProgressOptions" />
@@ -339,13 +342,12 @@ const CONTRACT_OVERDUE_COLUMNS = [
   { title: '操作',          key: 'action',                    width: 170 }
 ]
 
-// 合同即将到期：按 (红人,品牌方,团队) 这个组合整体展示（不是单条视频），阈值可在"进度提醒
-// 阈值维护"里改（EXPIRY_WINDOW_DAYS，跑批当时的实际值直接存在 cycleDays 里），只针对
-// "一年签一次合同"的场景
+// 合同即将到期：按 (品牌方,团队) 这个组合整体展示（2026-08 起团队下所有红人共用同一份合同，
+// 不再按红人展示），阈值可在"进度提醒阈值维护"里改（EXPIRY_WINDOW_DAYS，跑批当时的实际值
+// 直接存在 cycleDays 里），只针对"一年签一次合同"的场景
 const CONTRACT_EXPIRING_COLUMNS = [
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
   { title: '红人团队',      key: 'teamName',            width: 160 },
-  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
   { title: '到期时间判断依据', dataIndex: 'demandContent',    key: 'demandContent',       width: 200,
     customRender: ({ text }) => text || '—' },
   { title: '当前合同到期时间', dataIndex: 'deadlineDate',      key: 'deadlineDate',        width: 130,
@@ -478,8 +480,13 @@ function close() { emit('update:visible', false) }
 function goToDetail(record) {
   let route
   if (props.category === 'CONTRACT_EXPIRING_SOON') {
-    // requirementId 这一类借用来存红人 id（见后端 runContractExpiringSoon 的注释）
-    route = { path: '/influencers', query: { editInfluencerId: record.requirementId } }
+    // 2026-08 起团队级合同不再挂在具体红人身上，requirementId/internalRequirementNo 这两个
+    // 字段借用来存 teamId（该品牌方没有团队层时为空）/brandId（见后端 runContractExpiringSoon
+    // 的注释），跳到"品牌方/红人团队管理"自动定位并展开对应的团队合同列表——internalRequirementNo
+    // 这里非空，必须在下面"有值就跳需求管理"这条通用分支之前单独排除
+    const query = { openBrandId: record.internalRequirementNo }
+    if (record.requirementId) query.openTeamId = record.requirementId
+    route = { path: '/brands', query }
   } else if (props.category === 'INFLUENCER_PAYMENT_DUE' || props.category === 'INFLUENCER_PAYMENT_RECEIPT_OVERDUE') {
     // internalRequirementNo 这一类借用来存结款单号（见后端 runInfluencerPaymentDue/
     // runInfluencerPaymentReceiptOverdue 的注释），必须在下面"有值就跳需求管理"这条通用分支

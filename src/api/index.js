@@ -89,17 +89,20 @@ export const influencerApi = {
   })
 }
 
-// ===== 红人已签署合同（2026-07 新增，"红人管理"编辑弹窗"已签署合同"区块） =====
-export const influencerContractApi = {
-  byInfluencer:    (influencerId) => http.get(`/api/influencer-contracts/by-influencer/${influencerId}`),
-  // 批量按红人id取合同，返回 { influencerId: { year: contractLink } }，供"红人需求管理"列表交叉核对。
+// ===== 品牌方/团队级已签署合同（2026-08 新增，"品牌方/红人团队管理"-"管理团队"里"上传合同"，
+// 替代原来挂在红人身上的 influencerContractApi——团队下所有红人共用同一份合同，不再各自维护） =====
+export const teamContractApi = {
+  byTeam:        (teamId)  => http.get(`/api/team-contracts/by-team/${teamId}`),
+  byBrandNoTeam: (brandId) => http.get(`/api/team-contracts/by-brand-no-team/${brandId}`),
+  // 批量按团队id/品牌方id（无团队场景）取合同，供"红人需求管理"列表交叉核对。
   // ids 要 join 成逗号分隔字符串再传——axios 默认把数组序列化成 ids[]=1&ids[]=2，
   // Spring 的 @RequestParam List<Long> ids 认不出这种带方括号的参数名，会直接报 500
-  byInfluencerIds: (ids) => http.get('/api/influencer-contracts/by-influencer-ids', { params: { ids: ids.join(',') } }),
-  create: (data)     => http.post('/api/influencer-contracts', data),
-  update: (id, data) => http.put(`/api/influencer-contracts/${id}`, data),
+  byTeamIds:        (ids) => http.get('/api/team-contracts/by-team-ids', { params: { ids: ids.join(',') } }),
+  byBrandIdsNoTeam: (ids) => http.get('/api/team-contracts/by-brand-ids-no-team', { params: { ids: ids.join(',') } }),
+  create: (data)     => http.post('/api/team-contracts', data),
+  update: (id, data) => http.put(`/api/team-contracts/${id}`, data),
   // 硬删除（不是软删除），数据库行直接删掉，方便手动清理很久以前的历史合同
-  delete: (id) => http.delete(`/api/influencer-contracts/${id}`)
+  delete: (id) => http.delete(`/api/team-contracts/${id}`)
 }
 
 // ===== Employees =====

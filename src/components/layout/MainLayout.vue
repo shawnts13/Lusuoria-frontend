@@ -35,10 +35,11 @@
         </template>
 
         <!-- 2026-08 修复：原来 AUDITOR 整体隐藏红人管理，是当初 AUDITOR 只对应"财务"时的假设——
-             现在法务账号也配的是 AUDITOR（见"账号管理"角色标签"财务/法务"），法务需要进红人管理
-             查看/核对红人的"已签署合同"信息，不能被这条限制挡在外面。红人管理的写操作
-             （新建/编辑/删除）本来就已经按 authStore.canWrite（仅 ADMIN/STAFF）单独收着，
-             AUDITOR 进来也只能只读查看，不需要再单独隐藏整个菜单项 -->
+             现在法务账号也配的是 AUDITOR（见"账号管理"角色标签"财务/法务"），不能被这条限制挡
+             在外面。红人管理的写操作（新建/编辑/删除）本来就已经按 authStore.canWrite（仅
+             ADMIN/STAFF）单独收着，AUDITOR 进来也只能只读查看，不需要再单独隐藏整个菜单项
+             （"已签署合同"2026-08 起已经从红人管理整体移到"品牌方/红人团队管理"，不再是
+             法务进这个模块的理由，但只读浏览红人数据本身仍然有意义，保留） -->
         <a-menu-item key="/influencers">
           <template #icon><TeamOutlined /></template>0. 红人管理
         </a-menu-item>
@@ -55,7 +56,8 @@
 
         <a-menu-divider />
 
-        <!-- 品牌方/红人团队管理：严格按员工角色，只有"管理层"可见（2026-07 起） -->
+        <!-- 品牌方/红人团队管理：2026-08 起对全部6个员工角色开放查看（写操作仍严格限管理层，
+             见 store/auth.js canAccessBrands / canManageBrands） -->
         <a-menu-item v-if="authStore.canAccessBrands" key="/brands">
           <template #icon><ShopOutlined /></template>品牌方/红人团队管理
         </a-menu-item>
