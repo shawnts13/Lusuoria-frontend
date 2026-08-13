@@ -112,9 +112,11 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'publishLink'">
-            <a v-if="record.publishLink" :href="record.publishLink" target="_blank" style="word-break:break-all">
-              {{ record.publishLink }}
-            </a>
+            <template v-if="record.publishLink">
+              <div v-for="(link, idx) in splitLinks(record.publishLink)" :key="idx" style="margin-bottom:2px">
+                <a :href="link" target="_blank" rel="noopener" style="font-size:12px;word-break:break-all">{{ link }}</a>
+              </div>
+            </template>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'publishDate'">
@@ -297,6 +299,12 @@ const tableScrollX = columns.reduce((sum, c) => sum + (c.width || 120), 0)
 function splitMulti(str) {
   if (!str) return []
   return str.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
+}
+// 发布链接只能按换行拆分，不能按逗号——链接本身（query string）里经常带逗号，按逗号拆会拆坏，
+// 跟 CollaborationFormModal.vue/CollaborationStatusModal.vue 的 splitLinks() 是同一套约定
+function splitLinks(str) {
+  if (!str) return []
+  return str.split('\n').map(s => s.trim()).filter(Boolean)
 }
 function fmtNum(v) {
   if (v == null) return '—'
