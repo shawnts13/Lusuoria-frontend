@@ -120,7 +120,7 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'notes'">
-            <span v-if="record.notes" style="color:#ff4d4f">{{ record.notes }}</span>
+            <span v-if="record.notes" style="color:#ff4d4f" :title="record.notes">{{ record.notes }}</span>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'invoiceLink'">

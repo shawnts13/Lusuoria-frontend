@@ -102,7 +102,7 @@
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'demandContent'">
-            <span v-if="record.demandContent" style="color:#262626">{{ record.demandContent }}</span>
+            <span v-if="record.demandContent" style="color:#262626" :title="record.demandContent">{{ record.demandContent }}</span>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'videoType'">
