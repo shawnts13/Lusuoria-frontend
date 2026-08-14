@@ -100,7 +100,7 @@
             <a-form-item label="兜底默认合同到期日期">
               <a-date-picker v-model:value="teamForm.defaultContractEndDate" value-format="YYYY-MM-DD" style="width:100%" />
               <div class="hint-box">
-                如果这个团队下的红人本人还没有单独关联合同，系统会按这个合同到期日期判断合同是否快到期。
+                如果这个团队还没有上传过任何团队合同，系统会按这个合同到期日期判断合同是否快到期。
               </div>
             </a-form-item>
           </template>
