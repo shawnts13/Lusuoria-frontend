@@ -97,16 +97,16 @@
           <template v-if="column.key === 'totalClientPrice'">{{ fmtNum(record.totalClientPrice) }}</template>
           <template v-if="column.key === 'totalInfluencerCost'">{{ fmtNum(record.totalInfluencerCost) }}</template>
           <template v-if="column.key === 'progress'">
-            <div style="display:flex;flex-direction:column;gap:2px;width:190px">
+            <div style="display:flex;flex-direction:column;gap:2px;width:150px">
               <a-progress :percent="progressPercent(record)" :stroke-color="progressColor(record)"
                 :show-info="false" size="small" />
-              <div style="font-size:12px;white-space:nowrap">
+              <div style="font-size:12px;white-space:nowrap;display:flex;justify-content:space-between">
                 <a @click="viewProgress(record)">{{ record.completedCount ?? 0 }}/{{ record.totalItemCount ?? 0 }}</a>
                 <!-- 已实施：这个需求下实际关联了多少笔红人合作跟踪记录（establishedCount，不看进度
                      状态、含折损，跟"完成进度"分子 completedCount 不是一回事——完成进度只数已发布/
                      已结算/折损这几个终态，已实施数的是"名额有没有被占上"，两者可能不同步，比如
                      条目名额已经全部建立了跟踪记录但还没有一条走到终态时，会显示 0/3 (已实施: 3)） -->
-                <span style="color:#595959"> (已实施: {{ record.establishedCount ?? 0 }})</span>
+                <span style="color:#595959">(已实施: {{ record.establishedCount ?? 0 }})</span>
               </div>
             </div>
           </template>
@@ -349,7 +349,7 @@ const columns = [
   { title: '需求条目总数', dataIndex: 'totalItemCount', key: 'totalItemCount', width: 120, sorter: true },
   { title: '客户合作总价格（$）', key: 'totalClientPrice', width: 160, sorter: true },
   { title: '红人视频制作与发布总成本（$）', key: 'totalInfluencerCost', width: 200, sorter: true },
-  { title: '需求完成进度', key: 'progress', width: 220 },
+  { title: '需求完成进度', key: 'progress', width: 180 },
   { title: '需求完成时间', key: 'completedAt', width: 150 },
   { title: '结款状态', key: 'settlementStatus', width: 130 },
   { title: '备注', dataIndex: 'notes', key: 'notes', width: 160, ellipsis: true },
