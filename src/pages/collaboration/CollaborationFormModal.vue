@@ -403,7 +403,13 @@ const preview = reactive({
 })
 
 const rules = {
-  influencerId: [{ required: true, message: '请选择红人社媒完整名字', trigger: 'change' }]
+  influencerId: [{ required: true, message: '请选择红人社媒完整名字', trigger: 'change' }],
+  // 2026-08-15 补上：以前这里没有必填校验，只靠"红人只有1个品牌方选项时自动带入"的 watch
+  // 兜底——如果红人有0个或多个选项、或者自动带入没来得及触发用户就点了保存，品牌方字段会
+  // 带着空值提交，后端以前也没有拦这个（doSave() 悄悄存成 null），导致个别记录品牌方/红人
+  // 团队都空、内部项目编号里品牌方那一段被拼成字面量"null"。后端现在已经强制校验非空，这里
+  // 加上前端校验只是让这种情况提前在表单里拦下来，不用等提交到后端才报错
+  brandId: [{ required: true, message: '请选择品牌方', trigger: 'change' }]
 }
 
 // 服务国家/市场选项：来自选中红人在红人库里维护的服务国家/市场（可能多个，换行分隔）。
