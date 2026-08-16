@@ -370,9 +370,15 @@ export const pendingApprovalApi = {
 export const progressReminderApi = {
   list:         ()   => http.get('/api/progress-reminders'),
   details:      (id) => http.get(`/api/progress-reminders/${id}/details`),
-  recompute:    ()   => http.post('/api/progress-reminders/recompute'),
-  // "项目流转后更新提示内容"（2026-07 新增）：只重算进度滞留/Invoice逾期这3类
-  recomputeProjectFlow: () => http.post('/api/progress-reminders/recompute-project-flow'),
+  // 这两个"重算"按钮会在一次请求里扫描红人合作跟踪/需求等好几张表算好几类提醒，数据量越大
+  // 越慢，全局 30 秒超时（见 http.js）不够用——2026-08-16 起单独给足 2 分钟，避免明明后端
+  // 还在正常跑批、只是比较慢，前端却提前弹"网络连接失败"（ProgressReminderService 那边的
+  // N+1/重复全表扫描已经修过一轮，但这类"重算全部"操作本身耗时会随数据量增长，超时时间也
+  // 该比普通接口宽松，不能只靠优化查询兜底）
+  recompute:    ()   => http.post('/api/progress-reminders/recompute', null, { timeout: 120000 }),
+  // "项目流转后更新提示内容"：重算进度滞留-项目/进度滞留-财务/Invoice逾期/合同上传逾期/
+  // 合同即将到期/删除审核待处理/进度倒退审核待处理/执行成本修改审核待处理这8类
+  recomputeProjectFlow: () => http.post('/api/progress-reminders/recompute-project-flow', null, { timeout: 120000 }),
   popupCheck:   ()   => http.get('/api/progress-reminders/popup-check'),
   popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss'),
   // "标记已处理"（2026-07 新增，仅进度滞留/Invoice逾期这3类支持）
