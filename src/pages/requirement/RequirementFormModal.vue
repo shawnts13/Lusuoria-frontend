@@ -264,10 +264,35 @@ function openItemModal(record) {
   itemModalVisible.value = true
 }
 
+// 判断两组 (合作平台数组, 单价) 是否代表"同一个条目的 key"——跟后端 validateNoDuplicateItemKeys()
+// 保持一致的判定口径（平台按字典序排序后比较，价格允许 null/undefined 互相视为相等，数字用
+// 小容差比较避免浮点误差），用来在提交前就提示用户合并而不是等后端报错才发现
+function samePlatformSet(a, b) {
+  const sa = [...(a || [])].sort()
+  const sb = [...(b || [])].sort()
+  return sa.length === sb.length && sa.every((v, idx) => v === sb[idx])
+}
+function samePrice(a, b) {
+  const na = a === null || a === undefined || a === '' ? null : Number(a)
+  const nb = b === null || b === undefined || b === '' ? null : Number(b)
+  if (na === null || nb === null) return na === nb
+  return Math.abs(na - nb) < 0.005
+}
+
 function confirmAddItem() {
   if (!itemDraft.videoType) { message.warning('请选择项目视频类型'); return }
   if (!itemDraft.platform || itemDraft.platform.length === 0) { message.warning('请选择合作平台'); return }
   if (!itemDraft.videoCount || itemDraft.videoCount <= 0) { message.warning('请填写项目视频数目'); return }
+  const duplicate = form.items.find(i =>
+    i.tempId !== editingTempId.value &&
+    i.videoType === itemDraft.videoType &&
+    samePlatformSet(i.platform, itemDraft.platform) &&
+    samePrice(i.influencerUnitCostPrice, itemDraft.influencerUnitCostPrice) &&
+    samePrice(i.clientUnitPrice, itemDraft.clientUnitPrice))
+  if (duplicate) {
+    message.warning('已存在项目视频类型/合作平台/红人成本单价/客户单价完全相同的条目，请把视频数目合并到该条目里，不要新建重复条目')
+    return
+  }
   if (editingTempId.value) {
     const item = form.items.find(i => i.tempId === editingTempId.value)
     if (item.fulfilledCount > 0 && itemDraft.videoCount < item.fulfilledCount) {
