@@ -9,8 +9,19 @@ export const CATEGORY_LABEL = {
   REQUIREMENT_INVOICE_OVERDUE: 'Invoice逾期',
   REQUIREMENT_CONTRACT_OVERDUE: '合同上传逾期',
   CONTRACT_EXPIRING_SOON: '合同即将到期',
-  INFLUENCER_PAYMENT_RECEIPT_OVERDUE: '红人结款上传发票逾期'
+  INFLUENCER_PAYMENT_RECEIPT_OVERDUE: '红人结款上传发票逾期',
+  DELETE_REQUEST_PENDING: '删除审核待处理',
+  PROGRESS_ROLLBACK_PENDING: '进度倒退审核待处理',
+  EXECUTOR_COST_MODIFY_PENDING: '执行成本修改审核待处理'
 }
+
+// 2026-08-16 新增：这3类审核待处理提醒不分档（只要存在未处理事项就提醒，不按天数升级），
+// 后端固定填 urgency=OVERDUE 只是为了满足 NOT NULL 列，不代表真的"0天或已超期"，这里单独换一套
+// 文案/颜色，不跟其他类别的"临近结款"语义混用；具体操作走"待处理"页面下方已有的审批表格/
+// "待我审核"入口，不提供"查看详情"（见 ProgressReminderCardList.vue 的 NO_DETAIL_CATEGORIES）
+export const NO_DETAIL_CATEGORIES = ['DELETE_REQUEST_PENDING', 'PROGRESS_ROLLBACK_PENDING', 'EXECUTOR_COST_MODIFY_PENDING']
+const PENDING_APPROVAL_URGENCY_LABEL = { OVERDUE: '待处理' }
+const PENDING_APPROVAL_URGENCY_COLOR = { OVERDUE: 'red' }
 
 // 跟后端 ReminderUrgency 保持一致：0天或已超期=红，1-3天=橙，3-7天=绿（"临近提醒"方向，倒数天数）
 const URGENCY_COLOR = { OVERDUE: 'red', NEAR: 'orange', UPCOMING: 'green' }
@@ -32,12 +43,14 @@ export function isOverdueStyle(r) { return r.overdueUrgency != null }
 export function urgencyColor(r) {
   if (isOverdueStyle(r)) return OVERDUE_COLOR[r.overdueUrgency] || 'default'
   if (r.category === 'CONTRACT_EXPIRING_SOON') return CONTRACT_EXPIRY_URGENCY_COLOR[r.urgency] || 'default'
+  if (NO_DETAIL_CATEGORIES.includes(r.category)) return PENDING_APPROVAL_URGENCY_COLOR[r.urgency] || 'default'
   return URGENCY_COLOR[r.urgency] || 'default'
 }
 
 export function urgencyLabel(r) {
   if (isOverdueStyle(r)) return OVERDUE_LABEL[r.overdueUrgency] || r.overdueUrgency
   if (r.category === 'CONTRACT_EXPIRING_SOON') return CONTRACT_EXPIRY_URGENCY_LABEL[r.urgency] || r.urgency
+  if (NO_DETAIL_CATEGORIES.includes(r.category)) return PENDING_APPROVAL_URGENCY_LABEL[r.urgency] || r.urgency
   const labels = r.category === 'FINANCE_PROGRESS_STALL' ? FINANCE_URGENCY_LABEL : URGENCY_LABEL
   return labels[r.urgency] || r.urgency
 }
@@ -48,5 +61,6 @@ export function categoryLabel(c) { return CATEGORY_LABEL[c] || c }
 export function categoryTagColor(c) {
   return ['PM_EXECUTOR_PROGRESS_STALL', 'FINANCE_PROGRESS_STALL', 'REQUIREMENT_INVOICE_OVERDUE',
     'REQUIREMENT_CONTRACT_OVERDUE', 'CONTRACT_EXPIRING_SOON',
-    'INFLUENCER_PAYMENT_RECEIPT_OVERDUE'].includes(c) ? 'purple' : 'blue'
+    'INFLUENCER_PAYMENT_RECEIPT_OVERDUE', 'DELETE_REQUEST_PENDING', 'PROGRESS_ROLLBACK_PENDING',
+    'EXECUTOR_COST_MODIFY_PENDING'].includes(c) ? 'purple' : 'blue'
 }

@@ -7,7 +7,9 @@
           <a-tag :color="urgencyColor(r)">{{ urgencyLabel(r) }}</a-tag>
           <span class="card-text" :style="{ color: textColor(r) }">{{ r.title }}</span>
         </div>
-        <a v-if="showDetailButton" @click="$emit('view-detail', r)">查看详情</a>
+        <!-- 删除审核/进度倒退审核/执行成本修改审核这3类没有明细快照，具体处理走"待处理"页面
+             已有的审批表格/"待我审核"入口，不提供只读的"查看详情"弹窗（见 NO_DETAIL_CATEGORIES） -->
+        <a v-if="showDetailButton && !NO_DETAIL_CATEGORIES.includes(r.category)" @click="$emit('view-detail', r)">查看详情</a>
       </div>
     </div>
     <a-empty v-else description="暂无进度提醒" style="margin:24px 0" />
@@ -15,7 +17,7 @@
 </template>
 
 <script setup>
-import { urgencyColor, urgencyLabel, categoryLabel, categoryTagColor } from '../../utils/reminderLabels'
+import { urgencyColor, urgencyLabel, categoryLabel, categoryTagColor, NO_DETAIL_CATEGORIES } from '../../utils/reminderLabels'
 
 defineProps({
   reminders: { type: Array, default: () => [] },
