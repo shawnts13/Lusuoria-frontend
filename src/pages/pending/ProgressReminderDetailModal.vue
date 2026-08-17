@@ -52,6 +52,13 @@
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
+          <!-- 内部项目编号/内部需求编号是标识符，不是分类字段，这个表格里其它地方（内部需求
+               编号/内部项目编号单值列）也都是纯文本展示，不是彩色标签——这两列延续同样的
+               展示方式，只是多值换行列出；用深色文字保证可读，不用浅灰 -->
+          <template v-if="column.key === 'involvedProjectNos' || column.key === 'involvedRequirementNos'">
+            <div v-if="record[column.key]" style="white-space:pre-line;color:#262626">{{ record[column.key] }}</div>
+            <span v-else style="color:#bbb">—</span>
+          </template>
           <template v-if="column.key === 'action'">
             <a @click="goToDetail(record)">查看详情</a>
             <template v-if="canAcknowledge">
@@ -360,7 +367,14 @@ const CONTRACT_EXPIRING_COLUMNS = [
 ]
 
 // 红人结款临近付款日：按"结款记录"整体展示（一条结款可能跨多条红人合作跟踪记录），
-// 字段复用见后端 ProgressReminderDetail 各字段注释里 INFLUENCER_PAYMENT_DUE 的说明
+// 字段复用见后端 ProgressReminderDetail 各字段注释里 INFLUENCER_PAYMENT_DUE 的说明。
+// 2026-08-17 新增"查看涉及的红人视频项目"/"涉及的内部需求编号"两列（放在"结算月份"后面）：
+// 一条结款记录可能勾选了多条视频/分属多个需求，换行分隔的多值字符串按一行一个纯文本展示
+// （见下面 bodyCell 的 involvedProjectNos/involvedRequirementNos 分支）——内部项目编号/内部
+// 需求编号是标识符不是分类字段，这个表格里其它地方的单值版本也是纯文本，不用彩色标签，这里
+// 延续同样的展示方式。宽度按"品牌-团队-月份-账号-序号"这类编号的实际长度（30-40字符左右）
+// 留够放下完整一条不换行，不设行数/高度上限——结款记录关联的视频数一般是个位数到十几条，
+// 没必要为极端情况牺牲正常情况下的可读性
 const INFLUENCER_PAYMENT_DUE_COLUMNS = [
   { title: '结款单号',      dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 190,
     customRender: ({ text }) => text || '—' },
@@ -368,6 +382,8 @@ const INFLUENCER_PAYMENT_DUE_COLUMNS = [
   { title: '红人团队',      key: 'teamName',            width: 160 },
   { title: '结算月份',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160,
     customRender: ({ text }) => text || '—' },
+  { title: '查看涉及的红人视频项目', key: 'involvedProjectNos', width: 260 },
+  { title: '涉及的内部需求编号', key: 'involvedRequirementNos', width: 260 },
   { title: '合作数量',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
     customRender: ({ text }) => text != null ? text : '—' },
   { title: '应付金额（$）', dataIndex: 'influencerCost',      key: 'influencerCost',      width: 150,
