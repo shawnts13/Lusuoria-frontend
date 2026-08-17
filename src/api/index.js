@@ -25,8 +25,7 @@ export const systemApi = {
 
 // ===== Auth =====
 export const authApi = {
-  login:     (data) => http.post('/api/auth/login', data),
-  initAdmin: ()     => http.post('/api/auth/init-admin')
+  login: (data) => http.post('/api/auth/login', data)
 }
 
 // ===== Users =====
