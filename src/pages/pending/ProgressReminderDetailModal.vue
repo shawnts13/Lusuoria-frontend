@@ -52,11 +52,14 @@
             </template>
             <span v-else style="color:#bbb">—</span>
           </template>
-          <!-- 内部项目编号/内部需求编号是标识符，不是分类字段，这个表格里其它地方（内部需求
-               编号/内部项目编号单值列）也都是纯文本展示，不是彩色标签——这两列延续同样的
-               展示方式，只是多值换行列出；用深色文字保证可读，不用浅灰 -->
-          <template v-if="column.key === 'involvedProjectNos' || column.key === 'involvedRequirementNos'">
-            <div v-if="record[column.key]" style="white-space:pre-line;color:#262626">{{ record[column.key] }}</div>
+          <!-- 跟"红人结款"列表页同款交互：不直接铺开一长串项目编号，点链接弹只读弹窗看明细 -->
+          <template v-if="column.key === 'viewInvolvedProjects'">
+            <a @click="openItemsView(record)">查看涉及的红人视频项目</a>
+          </template>
+          <!-- 内部需求编号是标识符，不是分类字段，这个表格里其它地方的单值列也是纯文本展示，
+               不是彩色标签——这里延续同样的展示方式，只是多值换行列出；用深色文字保证可读 -->
+          <template v-if="column.key === 'involvedRequirementNos'">
+            <div v-if="record.involvedRequirementNos" style="white-space:pre-line;color:#262626">{{ record.involvedRequirementNos }}</div>
             <span v-else style="color:#bbb">—</span>
           </template>
           <template v-if="column.key === 'action'">
@@ -92,12 +95,18 @@
       </a-table>
     </div>
   </a-modal>
+
+  <!-- "查看涉及的红人视频项目"链接专用（仅 INFLUENCER_PAYMENT_DUE），复用"红人结款"列表页
+       同一个只读明细弹窗，见 openItemsView() -->
+  <PaymentItemSelectorModal v-model:visible="itemsViewVisible" mode="view"
+    :existing-payment-id="itemsViewPaymentId" :brand-name="itemsViewBrandName" />
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import PaymentItemSelectorModal from '../payment/PaymentItemSelectorModal.vue'
 import { progressReminderApi } from '../../api/index'
 import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
@@ -141,6 +150,18 @@ const list = ref([])
 const brandTeamFilter = ref(undefined)
 const accountNameFilter = ref(undefined)
 const paymentProgressFilter = ref(undefined)
+
+// "查看涉及的红人视频项目"链接专用状态（仅 INFLUENCER_PAYMENT_DUE 这一类会用到）
+const itemsViewVisible = ref(false)
+const itemsViewPaymentId = ref(null)
+const itemsViewBrandName = ref(null)
+// requirementId 这个字段 INFLUENCER_PAYMENT_DUE 复用存的正是这条结款记录自己的 id
+// （见后端 ProgressReminderDetail.requirementId 注释），直接当 existingPaymentId 传给弹窗
+function openItemsView(record) {
+  itemsViewPaymentId.value = record.requirementId
+  itemsViewBrandName.value = record.brandName
+  itemsViewVisible.value = true
+}
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
 // 2026-07 新增：明细行之前是不分页的，一次性把某个类别/严重度下命中的全部记录都渲染出来，
 // 数量一多（比如某个项目负责人手下滞留了几百笔）页面会很长、体验差。分页只影响这里的展示，
@@ -369,12 +390,17 @@ const CONTRACT_EXPIRING_COLUMNS = [
 // 红人结款临近付款日：按"结款记录"整体展示（一条结款可能跨多条红人合作跟踪记录），
 // 字段复用见后端 ProgressReminderDetail 各字段注释里 INFLUENCER_PAYMENT_DUE 的说明。
 // 2026-08-17 新增"查看涉及的红人视频项目"/"涉及的内部需求编号"两列（放在"结算月份"后面）：
-// 一条结款记录可能勾选了多条视频/分属多个需求，换行分隔的多值字符串按一行一个纯文本展示
-// （见下面 bodyCell 的 involvedProjectNos/involvedRequirementNos 分支）——内部项目编号/内部
-// 需求编号是标识符不是分类字段，这个表格里其它地方的单值版本也是纯文本，不用彩色标签，这里
-// 延续同样的展示方式。宽度按"品牌-团队-月份-账号-序号"这类编号的实际长度（30-40字符左右）
-// 留够放下完整一条不换行，不设行数/高度上限——结款记录关联的视频数一般是个位数到十几条，
-// 没必要为极端情况牺牲正常情况下的可读性
+//   - "查看涉及的红人视频项目"：跟"红人结款"列表页（PaymentListPage.vue）同款交互——列表里
+//     不直接铺开一长串项目编号（可能很长），改成一个链接，点开 PaymentItemSelectorModal（view
+//     模式，只读）弹窗展示明细。requirementId 这个字段这一类复用存的正是这条结款记录自己的
+//     id（见后端注释），拿来当 existingPaymentId 传给弹窗即可，不需要额外查询。后端算好的
+//     involvedProjectNos 字符串字段目前这一列用不上了（弹窗自己会查一遍明细），暂时留着不删——
+//     万一以后要在别处（比如导出）用到不用再改后端。
+//   - "涉及的内部需求编号"：内部需求编号是标识符不是分类字段，这个表格里其它地方的单值版本
+//     也是纯文本展示，不用彩色标签，这里延续同样的风格，换行分隔的多值字符串一行一个列出。
+//     宽度按"品牌-团队-月份-账号-序号"这类编号的实际长度（30-40字符左右）留够放下完整一条
+//     不换行，不设行数/高度上限——结款记录关联的视频数一般是个位数到十几条，没必要为极端
+//     情况牺牲正常情况下的可读性
 const INFLUENCER_PAYMENT_DUE_COLUMNS = [
   { title: '结款单号',      dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 190,
     customRender: ({ text }) => text || '—' },
@@ -382,7 +408,7 @@ const INFLUENCER_PAYMENT_DUE_COLUMNS = [
   { title: '红人团队',      key: 'teamName',            width: 160 },
   { title: '结算月份',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160,
     customRender: ({ text }) => text || '—' },
-  { title: '查看涉及的红人视频项目', key: 'involvedProjectNos', width: 260 },
+  { title: '查看涉及的红人视频项目', key: 'viewInvolvedProjects', width: 180 },
   { title: '涉及的内部需求编号', key: 'involvedRequirementNos', width: 260 },
   { title: '合作数量',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
     customRender: ({ text }) => text != null ? text : '—' },
