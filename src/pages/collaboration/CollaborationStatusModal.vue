@@ -123,10 +123,11 @@ const authStore = useAuthStore()
 const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
 
 // 跟后端 CollaborationTrackingService.EARLY_STAGE_CLIENT_ORDER_ID_PROGRESSES 保持一致：
-// 前期制作流程这8个状态（待客户出brief~已发布未结算），流转时"客户方的项目订单"可选填写
-// （2026-08 新增，Shawn 要求：拿到订单号就顺手登记，不用等到"已加入客户未结算列表"才能填）
+// 前期制作流程这9个状态（待客户出brief~已发布未结算，2026-08-17 新增"待红人下单"后从8个
+// 变成9个），流转时"客户方的项目订单"可选填写（2026-08 新增，Shawn 要求：拿到订单号就顺手
+// 登记，不用等到"已加入客户未结算列表"才能填）
 const EARLY_STAGE_CLIENT_ORDER_ID_PROGRESS = [
-  'PENDING_CLIENT_BRIEF', 'CONTRACT_SENT', 'INFLUENCER_ORDERED', 'SHOOTING_GUIDE_SENT',
+  'PENDING_CLIENT_BRIEF', 'CONTRACT_SENT', 'PENDING_INFLUENCER_ORDER', 'INFLUENCER_ORDERED', 'SHOOTING_GUIDE_SENT',
   'PENDING_DRAFT', 'PENDING_REVISION', 'PENDING_PUBLISH', 'PUBLISHED_UNSETTLED'
 ]
 function isEarlyStageClientOrderIdProgress(v) { return !!v && EARLY_STAGE_CLIENT_ORDER_ID_PROGRESS.includes(v) }

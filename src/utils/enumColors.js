@@ -25,7 +25,10 @@ export function paymentProgressColor(value) {
 // 提取自 CollaborationListPage.vue，供红人结款/进度提醒等其他也展示"视频项目进度"的
 // 页面共用，不用各自复制一份
 const COLLAB_PROGRESS_COLOR = {
-  PENDING_CLIENT_BRIEF: 'default', CONTRACT_SENT: 'default', INFLUENCER_ORDERED: 'purple',
+  // 2026-08-17 新增"待红人下单"，插在"合同已发给红人"和"红人已下单"之间——跟这两个一样是
+  // 还没真正开始拍摄制作的早期阶段，沿用同一档中性色
+  PENDING_CLIENT_BRIEF: 'default', CONTRACT_SENT: 'default', PENDING_INFLUENCER_ORDER: 'default',
+  INFLUENCER_ORDERED: 'purple',
   SHOOTING_GUIDE_SENT: 'purple',
   PENDING_DRAFT: 'default', PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
   PUBLISHED_UNSETTLED: 'blue', JOINED_CLIENT_UNSETTLED_LIST: 'cyan',
