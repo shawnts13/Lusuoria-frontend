@@ -49,6 +49,11 @@
         <template #icon><FilterOutlined /></template>
         {{ filters.onlyIncomplete ? '查看全部需求' : '查看未完成的需求' }}
       </a-button>
+      <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyUnestablished }"
+        @click="toggleOnlyUnestablished">
+        <template #icon><FilterOutlined /></template>
+        {{ filters.onlyUnestablished ? '查看全部需求' : '查看未实施完的需求' }}
+      </a-button>
       <a-button class="incomplete-filter-btn" :class="{ active: filters.onlyMissingInvoice }"
         @click="toggleOnlyMissingInvoice">
         <template #icon><FilterOutlined /></template>
@@ -321,6 +326,11 @@ const filters = reactive({
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   // "查看未完成的需求"开关：只看"需求完成进度"没到100%的（含还没有任何条目、显示0%的情况）
   onlyIncomplete: false,
+  // "查看未实施完的需求"开关（2026-08 新增）：跟 onlyIncomplete 互斥，口径不是"需求完成进度"
+  // （completedCount，只看已发布/已结算/折损这几个终态），而是"已实施"（establishedCount，
+  // 名额有没有被建立的跟踪记录占满）——跟"新建合作跟踪"按钮是否还能点是同一个判定式，见
+  // isRequirementComplete()。已实施为0的记录自然也落在这个筛选范围内，不用单独再判一次
+  onlyUnestablished: false,
   // "查看未上传invoice的需求"/"查看未上传合同的需求"开关（2026-08 新增）：跟 onlyIncomplete
   // 互斥（后端一次只认一个），口径分别对齐"Invoice逾期"/"合同上传逾期"提醒批次的候选范围
   // （需求已完成 + 涉及invoice上传/每次需求签一次合同 + 还没传），只是不按超期天数分档，
@@ -563,6 +573,7 @@ async function loadData() {
       completedMonth: filters.completedMonth?.trim() || undefined,
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       onlyIncomplete: filters.onlyIncomplete,
+      onlyUnestablished: filters.onlyUnestablished,
       onlyMissingInvoice: filters.onlyMissingInvoice,
       onlyMissingContract: filters.onlyMissingContract,
       onlyUnsettled: filters.onlyUnsettled,
@@ -594,7 +605,7 @@ function resetFilters() {
   Object.assign(filters, {
     brandId: undefined, teamId: undefined, accountName: undefined,
     requirementMonth: undefined, completedMonth: undefined, internalRequirementNo: undefined,
-    onlyIncomplete: false, onlyMissingInvoice: false, onlyMissingContract: false,
+    onlyIncomplete: false, onlyUnestablished: false, onlyMissingInvoice: false, onlyMissingContract: false,
     onlyUnsettled: false
   })
   pagination.current = 1
@@ -603,28 +614,34 @@ function resetFilters() {
   loadData()
 }
 
-// 四个"查看未XX的需求"开关互斥（后端一次只认一个），打开一个就把其余的关掉
+// 五个"查看未XX的需求"开关互斥（后端一次只认一个），打开一个就把其余的关掉
 function toggleOnlyIncomplete() {
   filters.onlyIncomplete = !filters.onlyIncomplete
-  if (filters.onlyIncomplete) { filters.onlyMissingInvoice = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
+  if (filters.onlyIncomplete) { filters.onlyUnestablished = false; filters.onlyMissingInvoice = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
+  pagination.current = 1
+  loadData()
+}
+function toggleOnlyUnestablished() {
+  filters.onlyUnestablished = !filters.onlyUnestablished
+  if (filters.onlyUnestablished) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
   pagination.current = 1
   loadData()
 }
 function toggleOnlyMissingInvoice() {
   filters.onlyMissingInvoice = !filters.onlyMissingInvoice
-  if (filters.onlyMissingInvoice) { filters.onlyIncomplete = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
+  if (filters.onlyMissingInvoice) { filters.onlyIncomplete = false; filters.onlyUnestablished = false; filters.onlyMissingContract = false; filters.onlyUnsettled = false }
   pagination.current = 1
   loadData()
 }
 function toggleOnlyMissingContract() {
   filters.onlyMissingContract = !filters.onlyMissingContract
-  if (filters.onlyMissingContract) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false; filters.onlyUnsettled = false }
+  if (filters.onlyMissingContract) { filters.onlyIncomplete = false; filters.onlyUnestablished = false; filters.onlyMissingInvoice = false; filters.onlyUnsettled = false }
   pagination.current = 1
   loadData()
 }
 function toggleOnlyUnsettled() {
   filters.onlyUnsettled = !filters.onlyUnsettled
-  if (filters.onlyUnsettled) { filters.onlyIncomplete = false; filters.onlyMissingInvoice = false; filters.onlyMissingContract = false }
+  if (filters.onlyUnsettled) { filters.onlyIncomplete = false; filters.onlyUnestablished = false; filters.onlyMissingInvoice = false; filters.onlyMissingContract = false }
   pagination.current = 1
   loadData()
 }
@@ -659,8 +676,9 @@ async function handleDeleteConfirm() {
   } finally { deleting.value = false }
 }
 function handleExport() {
-  // 2026-08 修复：之前漏传了4个"查看XX的需求"快捷筛选开关，导致点了快捷筛选按钮之后再导出，
-  // 导出的还是忽略这个筛选条件的数据（后端 exportExcel 现在也认这几个参数了）
+  // 2026-08 修复：之前漏传了几个"查看XX的需求"快捷筛选开关，导致点了快捷筛选按钮之后再导出，
+  // 导出的还是忽略这个筛选条件的数据（后端 exportExcel 现在也认这几个参数了）。onlyUnestablished
+  // 是新增的第5个开关，沿用同一套写法一起传
   requirementApi.exportExcel({
     brandId: filters.brandId,
     teamId: filters.teamId,
@@ -669,6 +687,7 @@ function handleExport() {
     completedMonth: filters.completedMonth,
     internalRequirementNo: filters.internalRequirementNo,
     onlyIncomplete: filters.onlyIncomplete,
+    onlyUnestablished: filters.onlyUnestablished,
     onlyMissingInvoice: filters.onlyMissingInvoice,
     onlyMissingContract: filters.onlyMissingContract,
     onlyUnsettled: filters.onlyUnsettled
