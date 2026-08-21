@@ -38,13 +38,18 @@
       <a-row :gutter="16" v-if="form.influencerId">
         <a-col :span="12">
           <a-form-item label="品牌方">
+            <!-- 2026-08-21 新增：编辑已有需求时品牌方禁止修改（后端 InfluencerRequirementService.save()
+                 同步加了硬校验，这里禁用下拉框是提前给出提示，避免填完整张表单才在提交时报错） -->
             <a-select v-model:value="form.brandId" allow-clear show-search
               :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
-              :disabled="availableBrands.length <= 1"
+              :disabled="!!form.id || availableBrands.length <= 1"
               placeholder="选择品牌方" @change="onBrandChange">
               <a-select-option v-for="b in availableBrands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
             </a-select>
-            <div v-if="availableBrands.length > 1" style="font-size:12px;color:#faad14;margin-top:2px">
+            <div v-if="form.id" style="font-size:12px;color:#595959;margin-top:2px">
+              品牌方一旦确定不允许修改
+            </div>
+            <div v-else-if="availableBrands.length > 1" style="font-size:12px;color:#faad14;margin-top:2px">
               该红人有多个品牌方-团队，请手动选择
             </div>
           </a-form-item>
