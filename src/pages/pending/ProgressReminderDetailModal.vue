@@ -75,20 +75,24 @@
                 </a-popconfirm>
               </template>
               <template v-else>
-                <!-- "已跟管理层确认此需求不涉及合同"（2026-08-21 新增）：只在"合同上传逾期"这一类
-                     展示，方便直接在这个页面处理，效果等同"标记已处理"，见
-                     handleConfirmContractNotApplicable() -->
-                <template v-if="category === 'REQUIREMENT_CONTRACT_OVERDUE' && canManageContracts">
-                  <a-popconfirm title="已跟管理层确认此需求不涉及合同"
-                    @confirm="handleConfirmContractNotApplicable(record)">
-                    <a style="color:#fa8c16">已跟管理层确认此需求不涉及合同</a>
-                  </a-popconfirm>
-                  <a-divider type="vertical" />
-                </template>
                 <a-popconfirm title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
                   @confirm="handleAcknowledge(record)">
                   <a style="color:#52c41a">标记已处理</a>
                 </a-popconfirm>
+                <!-- "已跟管理层确认此需求不涉及合同"（2026-08-21 新增，同日改版）：只在"合同上传
+                     逾期"这一类展示，效果等同"标记已处理"，见 handleConfirmContractNotApplicable()。
+                     原来跟前面几个操作链接横排在一起，挤在窄列里经常被拆成两截、很难看，改成放在
+                     "标记已处理"后面、用 <br> 另起一行；display:inline-block + white-space:nowrap
+                     保证这12个字的文案本身不会再被换行拆断（配合上面"操作"列加宽到210，正常
+                     宽度下一行就能放下，实在放不下时靠这个弹窗表格已有的横向滚动条，不会挤压
+                     换行） -->
+                <template v-if="category === 'REQUIREMENT_CONTRACT_OVERDUE' && canManageContracts">
+                  <br />
+                  <a-popconfirm title="已跟管理层确认此需求不涉及合同"
+                    @confirm="handleConfirmContractNotApplicable(record)">
+                    <a style="color:#fa8c16;display:inline-block;white-space:nowrap;margin-top:4px">已跟管理层确认此需求不涉及合同</a>
+                  </a-popconfirm>
+                </template>
               </template>
             </template>
           </template>
@@ -382,7 +386,9 @@ const CONTRACT_OVERDUE_COLUMNS = [
     customRender: ({ text }) => text != null ? text + '天' : '—' },
   { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
     customRender: ({ text }) => text != null ? text + '天' : '—' },
-  { title: '操作',          key: 'action',                    width: 170 }
+  // 这一类"操作"列比其它类别宽（170 -> 210）：多了"已跟管理层确认此需求不涉及合同"这个按钮，
+  // 单独另起一行展示，文字本身就有12个字，170 装不下会被拆成两行，见下面模板里的说明
+  { title: '操作',          key: 'action',                    width: 210 }
 ]
 
 // 合同即将到期：按 (品牌方,团队) 这个组合整体展示（2026-08 起团队下所有红人共用同一份合同，
