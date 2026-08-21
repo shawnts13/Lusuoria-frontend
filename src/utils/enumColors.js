@@ -30,7 +30,10 @@ const COLLAB_PROGRESS_COLOR = {
   PENDING_CLIENT_BRIEF: 'default', CONTRACT_SENT: 'default', PENDING_INFLUENCER_ORDER: 'default',
   INFLUENCER_ORDERED: 'purple',
   SHOOTING_GUIDE_SENT: 'purple',
-  PENDING_DRAFT: 'default', PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
+  // 2026-08-21 新增"待客户给草稿反馈"，插在"待草稿"和"待红人修改"之间——单独一档颜色
+  // (magenta)，跟"待红人修改"(gold)区分开：一个是等客户反馈，一个是等红人动手改
+  PENDING_DRAFT: 'default', PENDING_CLIENT_DRAFT_FEEDBACK: 'magenta',
+  PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
   PUBLISHED_UNSETTLED: 'blue', JOINED_CLIENT_UNSETTLED_LIST: 'cyan',
   SETTLED: 'green', DELAYED: 'red'
 }
