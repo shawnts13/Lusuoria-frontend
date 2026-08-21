@@ -113,6 +113,18 @@
               </a-select-option>
             </a-select>
           </a-form-item>
+
+          <!-- 特殊回款周期（2026-08-21 新增）：Shawn 要求红色字体标记——这个字段优先级最高，
+               会覆盖品牌方/团队级别配置的回款周期规则，用红色突出提醒操作人这是一个特殊配置 -->
+          <a-form-item>
+            <template #label><span style="color:#c00000">特殊回款周期</span></template>
+            <a-input-number v-model:value="form.specialPaymentCycleDays" :min="1" :precision="0"
+              style="width:100%" addon-after="天" placeholder="留空=没有特殊回款周期" />
+            <div style="font-size:12px;color:#c00000;margin-top:2px">
+              配置后优先级最高，覆盖品牌方/团队级别配置的回款周期规则——该红人关联的需求完成进度
+              达到100%时开始计时，超过这个天数视为回款逾期
+            </div>
+          </a-form-item>
         </a-col>
 
         <!-- 右列 -->
@@ -223,6 +235,7 @@ const form = reactive({
   contacts: EMPTY_CONTACTS(),
   contactStatus: 'UNDEVELOPED',
   followerPerson: null,
+  specialPaymentCycleDays: null,
   influencerCost: '', notes: '',
   adSpendCost: '', copyrightCost: ''
 })
@@ -317,6 +330,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       contacts:       contactsToObj(rec.contacts),
       contactStatus:  rec.contactStatus  || 'UNDEVELOPED',
       followerPerson: rec.followerPerson || null,
+      specialPaymentCycleDays: rec.specialPaymentCycleDays ?? null,
       influencerCost: rec.influencerCost || '',
       adSpendCost:    rec.adSpendCost    || '',
       copyrightCost:  rec.copyrightCost  || '',
@@ -329,6 +343,7 @@ watch(() => [props.visible, props.record], ([visible, rec]) => {
       followerCount:null, links:[],
       email:'', contacts:EMPTY_CONTACTS(),
       contactStatus:'UNDEVELOPED', followerPerson:null,
+      specialPaymentCycleDays:null,
       influencerCost:'', notes:'',
       adSpendCost:'', copyrightCost:''
     })
@@ -401,6 +416,7 @@ async function handleSave() {
       contacts:       contactsToJson(form.contacts),
       contactStatus:  form.contactStatus,
       followerPerson: form.followerPerson,
+      specialPaymentCycleDays: form.specialPaymentCycleDays,
       influencerCost: form.influencerCost,
       adSpendCost:    form.adSpendCost,
       copyrightCost:  form.copyrightCost,

@@ -483,6 +483,21 @@ function invoiceButtonState(record) {
     : { disabled: true, reason: 'notComplete', tooltip: '该需求尚未实施完成，还无需上传Invoice' }
 }
 function getTeamName(id) { return teams.value.find(t => t.id === id)?.name }
+function getTeam(id) { return teams.value.find(t => t.id === id) }
+
+// 这条需求最终生效的合同签订周期是不是"一年签一次合同"：团队有显式覆盖
+// （forcePerRequirementContract 非 null）就用团队的值，没配置就落回品牌方整体设置——
+// 2026-08-21 新增，修复 contractCellState()/contractButtonState() 之前只看品牌方自己的
+// contractCycleType、完全没考虑团队级双向覆盖的 bug（Shawn 反馈"品牌方是每需求一签，
+// 团队已经覆盖成一年一签，但需求管理这边还是当成每需求一签处理"）。跟后端
+// InfluencerTeam.isPerRequirementContract() 保持同一套算法，只是这里直接判断"是不是一年一签"
+// （算法反过来），调用方语义更直接
+function resolvedIsAnnual(record) {
+  const brand = getBrand(record.brandId)
+  const team = record.teamId != null ? getTeam(record.teamId) : null
+  if (team && team.forcePerRequirementContract != null) return team.forcePerRequirementContract === false
+  return brand?.contractCycleType === 'ANNUAL'
+}
 function getInfluencerName(id) { return influencers.value.find(i => i.id === id)?.accountName }
 
 // 判断"需求月份"（yyyyMM）是否落在合同有效期 [startDate, endDate] 内：只要这个月里有任意
@@ -527,8 +542,7 @@ async function loadTeamContracts() {
 // 团队级合同，匹配上就直接展示真实链接，没匹配上则展示可点击的引导文案（点击效果等同操作列的
 // "上传合同"按钮跳转团队管理）
 function contractCellState(record) {
-  const brand = getBrand(record.brandId)
-  const isAnnual = brand?.contractCycleType === 'ANNUAL'
+  const isAnnual = resolvedIsAnnual(record)
   if (!isAnnual) {
     if (record.contractLink) return { mode: 'link', href: record.contractLink }
     // 2026-08-21 新增：已经跟管理层确认过"不涉及合同"，不再展示"—"+按钮，改成纯文案回显
@@ -560,8 +574,7 @@ async function handleConfirmContractNotApplicable(record) {
 // 且没匹配上任何合同 -> 同样是"上传合同"，但保留 contract-btn-goto 的不起眼配色跟真正能
 // 直接上传的那种区分开，点击后跳转团队管理
 function contractButtonState(record) {
-  const brand = getBrand(record.brandId)
-  const isAnnual = brand?.contractCycleType === 'ANNUAL'
+  const isAnnual = resolvedIsAnnual(record)
   if (!isAnnual) {
     return { disabled: false, mode: 'upload', label: '上传合同', tooltip: null }
   }
