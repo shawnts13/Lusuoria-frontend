@@ -12,16 +12,22 @@
         <div class="hint-box">
           本次将按当前列表页的筛选条件，把命中的全部 {{ preview.totalCount }} 条记录（不只是当前
           这一页）统一标记为"已收到客户回款"——已经是这个状态的记录也会一并纳入（可能只是想更新
-          收到回款日期），请核对下方按客户方付款批次分组的明细，确认范围无误后再提交。
+          收到回款日期）。下方明细按"客户方付款批次号"分组；不涉及客户方付款批次的品牌方
+          （"客户方付款批次号"展示为"不涉及"）改按"品牌方/团队"分组，请核对范围无误后再提交。
         </div>
-        <a-table :columns="groupColumns" :data-source="preview.groups" row-key="clientPaymentBatch"
+        <a-table :columns="groupColumns" :data-source="preview.groups" :row-key="(r, i) => i"
           size="small" :pagination="false" style="margin-top:12px">
           <template #bodyCell="{ column, record }">
+            <!-- brandTeamLabel 可能是多个"品牌方/团队"换行拼接（同一客户方付款批次涉及多个
+                 品牌方/团队时），white-space:pre-line 让换行符真正生效 -->
+            <template v-if="column.key === 'brandTeamLabel'">
+              <div style="white-space:pre-line;color:#262626">{{ record.brandTeamLabel }}</div>
+            </template>
             <template v-if="column.key === 'totalClientPrice'">{{ fmtNum(record.totalClientPrice) }}</template>
           </template>
           <template #summary>
             <a-table-summary-row>
-              <a-table-summary-cell>汇总（共 {{ preview.groups.length }} 个批次）</a-table-summary-cell>
+              <a-table-summary-cell :col-span="2">汇总（共 {{ preview.groups.length }} 行）</a-table-summary-cell>
               <a-table-summary-cell>{{ preview.totalCount }}</a-table-summary-cell>
               <a-table-summary-cell>{{ fmtNum(preview.totalClientPrice) }}</a-table-summary-cell>
             </a-table-summary-row>
@@ -59,8 +65,13 @@ const submitting = ref(false)
 const preview = ref(null)
 const receivedDate = ref(null)
 
+// 2026-08-21 新增"品牌方/团队"列（Shawn 要求）：分组本身仍然是按"客户方付款批次号"（有
+// 批次号的记录）或"品牌方/团队"（不涉及批次号的记录）两种口径二选一分的，见后端
+// markClientPaymentReceivedPreview() 的说明；这一列只是把命中的品牌方/团队展示出来，
+// 不改变分组粒度——同一个批次号下如果涉及多个品牌方/团队，这一列会换行列出多个
 const groupColumns = [
-  { title: '客户方付款批次号', dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch' },
+  { title: '客户方付款批次号', dataIndex: 'clientPaymentBatch', key: 'clientPaymentBatch', width: 160 },
+  { title: '品牌方/团队', dataIndex: 'brandTeamLabel', key: 'brandTeamLabel' },
   { title: '条数', dataIndex: 'count', key: 'count', width: 90 },
   { title: '客户合作总价格（$）', dataIndex: 'totalClientPrice', key: 'totalClientPrice', width: 160 }
 ]
