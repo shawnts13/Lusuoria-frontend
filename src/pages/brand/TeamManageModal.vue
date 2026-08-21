@@ -23,13 +23,18 @@
           <a-tag :color="colorForValue(record.name)">{{ record.name }}</a-tag>
         </template>
         <template v-if="column.key === 'forcePerRequirementContract'">
-          <a-tag v-if="isAnnualBrand && record.forcePerRequirementContract" color="orange">
-            特殊：一次需求签一次合同
+          <!-- 2026-08-21 起支持双向覆盖（原来只能"品牌方一年一签→团队覆盖成每需求一签"这一个
+               方向，现在反过来也支持），这一列不再只在"一年签一次合同"品牌方下才有内容 -->
+          <a-tag v-if="record.forcePerRequirementContract === true" color="orange">
+            强制：一次需求签一次合同
           </a-tag>
-          <span v-else style="color:#8c8c8c">—</span>
+          <a-tag v-else-if="record.forcePerRequirementContract === false" color="purple">
+            强制：一年签一次合同
+          </a-tag>
+          <span v-else style="color:#8c8c8c">跟随品牌方设置</span>
         </template>
         <template v-if="column.key === 'defaultContractRange'">
-          <span v-if="isAnnualBrand && record.defaultContractEndDate" style="color:#262626">
+          <span v-if="resolvedIsAnnual(record) && record.defaultContractEndDate" style="color:#262626">
             {{ record.defaultContractEndDate }}
           </span>
           <span v-else style="color:#8c8c8c">—</span>
@@ -43,7 +48,7 @@
           </span>
         </template>
         <template v-if="column.key === 'teamContract'">
-          <a v-if="!record.forcePerRequirementContract" @click="openContractModal(record.id, record.name)">
+          <a v-if="resolvedIsAnnual(record)" @click="openContractModal(record.id, record.name)">
             查看合同
           </a>
           <span v-else style="color:#8c8c8c">一次需求签一次合同，见红人需求管理</span>
@@ -88,22 +93,24 @@
         <a-form-item label="团队名称" required>
           <a-input v-model:value="teamForm.name" />
         </a-form-item>
-        <template v-if="isAnnualBrand">
-          <a-form-item label="特殊：每次需求签一次合同">
-            <a-switch v-model:checked="teamForm.forcePerRequirementContract" />
+        <a-form-item label="合同签订周期覆盖">
+          <a-select v-model:value="teamForm.forcePerRequirementContract" allow-clear
+            :placeholder="`跟随品牌方设置（当前：${isAnnualBrand ? '一年签一次合同' : '一次需求签一次合同'}）`">
+            <a-select-option :value="true">强制：一次需求签一次合同</a-select-option>
+            <a-select-option :value="false">强制：一年签一次合同</a-select-option>
+          </a-select>
+          <div class="hint-box">
+            留空=跟随品牌方整体的合同签订周期设置；这里单独选了其中一种，就以这个团队的配置为准
+            （覆盖品牌方整体设置，两个方向都支持——比如某些特殊团队的合作模式跟品牌方整体不一样）。
+          </div>
+        </a-form-item>
+        <template v-if="!formIsPerRequirement">
+          <a-form-item label="兜底默认合同到期日期">
+            <a-date-picker v-model:value="teamForm.defaultContractEndDate" value-format="YYYY-MM-DD" style="width:100%" />
             <div class="hint-box">
-              该品牌方整体是"一年签一次合同"，如果这个团队要按"每次需求单独签一次合同"处理
-              （例如某些特殊团队的合作模式跟品牌方整体不一样），打开这个开关。
+              如果这个团队还没有上传过任何团队合同，系统会按这个合同到期日期判断合同是否快到期。
             </div>
           </a-form-item>
-          <template v-if="!teamForm.forcePerRequirementContract">
-            <a-form-item label="兜底默认合同到期日期">
-              <a-date-picker v-model:value="teamForm.defaultContractEndDate" value-format="YYYY-MM-DD" style="width:100%" />
-              <div class="hint-box">
-                如果这个团队还没有上传过任何团队合同，系统会按这个合同到期日期判断合同是否快到期。
-              </div>
-            </a-form-item>
-          </template>
         </template>
         <a-form-item label="是否涉及公对公发票">
           <a-select v-model:value="teamForm.involvesCorporateInvoice" allow-clear
@@ -150,17 +157,17 @@ const isAnnualBrand = computed(() => props.brand?.contractCycleType === 'ANNUAL'
 
 const CONTRACT_CYCLE_LABELS = { ANNUAL: '一年签一次合同', PER_REQUIREMENT: '一次需求签一次合同' }
 
-// "团队合同"列只有"一年签一次合同"的品牌方才有意义，跟其余固定列拼在一起
+// "团队合同"列 2026-08-21 起始终展示——团队级合同周期现在可以双向覆盖品牌方整体设置，
+// 每需求一签的品牌方底下也可能有个别团队被覆盖成一年签一次合同，需要"查看合同"入口
 const columns = computed(() => {
-  const base = [
+  return [
     { title: '团队名称', key: 'name' },
     { title: '合同周期覆盖', key: 'forcePerRequirementContract' },
     { title: '兜底默认合同到期日期', key: 'defaultContractRange' },
-    { title: '是否涉及公对公发票', key: 'involvesCorporateInvoice' }
+    { title: '是否涉及公对公发票', key: 'involvesCorporateInvoice' },
+    { title: '团队合同', key: 'teamContract', width: 110 },
+    { title: '操作', key: 'action', width: 140 }
   ]
-  if (isAnnualBrand.value) base.push({ title: '团队合同', key: 'teamContract', width: 110 })
-  base.push({ title: '操作', key: 'action', width: 140 })
-  return base
 })
 
 // 团队级合同列表弹窗
@@ -180,12 +187,29 @@ function resolvedInvolvesCorporateInvoice(record) {
   return props.brand?.defaultInvolvesCorporateInvoice === true
 }
 
+// 解析这个团队最终的合同签订周期是不是"一年签一次合同"：团队有显式覆盖
+// （forcePerRequirementContract 非 null）就用团队的值（true=每需求一签，false=一年一签），
+// 没配置就落回品牌方整体设置——2026-08-21 起双向覆盖，跟后端
+// InfluencerTeam.isPerRequirementContract() 保持一致算法
+function resolvedIsAnnual(record) {
+  if (record.forcePerRequirementContract != null) return record.forcePerRequirementContract === false
+  return isAnnualBrand.value
+}
+
 const teamFormVisible = ref(false)
 const editingTeam = ref(null)
 const savingTeam = ref(false)
 const teamForm = reactive({
-  id: null, name: '', forcePerRequirementContract: false,
+  id: null, name: '', forcePerRequirementContract: null,
   defaultContractEndDate: null, involvesCorporateInvoice: null
+})
+
+// 表单里当前选择（含未覆盖时跟随品牌方）下，这个团队最终是不是"一次需求签一次合同"——
+// 决定"兜底默认合同到期日期"这个字段要不要显示
+const formIsPerRequirement = computed(() => {
+  return teamForm.forcePerRequirementContract != null
+    ? teamForm.forcePerRequirementContract === true
+    : !isAnnualBrand.value
 })
 
 async function loadTeams() {
@@ -215,7 +239,7 @@ watch(() => props.visible, v => { if (v) loadTeams() })
 
 function openCreateTeam() {
   editingTeam.value = null
-  Object.assign(teamForm, { id: null, name: '', forcePerRequirementContract: false,
+  Object.assign(teamForm, { id: null, name: '', forcePerRequirementContract: null,
     defaultContractEndDate: null, involvesCorporateInvoice: null })
   teamFormVisible.value = true
 }
@@ -224,7 +248,9 @@ function openEditTeam(record) {
   editingTeam.value = record
   Object.assign(teamForm, {
     id: record.id, name: record.name,
-    forcePerRequirementContract: !!record.forcePerRequirementContract,
+    // 2026-08-21 起三态字段，原样回显 null/true/false，不再强制转成布尔值（那样会把
+    // "没配置"误显示成"强制一年签一次合同"）
+    forcePerRequirementContract: record.forcePerRequirementContract ?? null,
     defaultContractEndDate: record.defaultContractEndDate || null,
     involvesCorporateInvoice: record.involvesCorporateInvoice ?? null
   })
