@@ -164,7 +164,11 @@
               <span class="amount-cell">
                 <a @click="openDetail(record)">{{ record.videoCount ?? 0 }} 条</a>
                 <span style="margin:0 4px">/</span>
-                <a @click="openDetail(record)">{{ fmt(record.baseAmount) }}</a>
+                <!-- 2026-08-21 新增：既是项目负责人又是项目管理员时，"薪酬"这一列把项目管理员
+                     固定月薪并进提成金额里一起显示——不然"薪酹+阶梯Bonus+奖金"这几列加起来会
+                     跟"总工资"对不上（Shawn 反馈）。"查看详情"弹窗里这块仍然单独展示成一行，
+                     不受这里影响，见 payAmount() 说明 -->
+                <a @click="openDetail(record)">{{ fmt(payAmount(record)) }}</a>
               </span>
             </template>
             <template v-else-if="record.employeeRole === '财务' || record.employeeRole === 'IT后勤'">
@@ -448,6 +452,17 @@ function fmt(val) {
   if (isNaN(n)) return '—'
   const prefix = currency.value === 'RMB' ? '¥' : '$'
   return prefix + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+// "薪酬"列展示用（2026-08-21 新增）：项目负责人同时是项目管理员时，把项目管理员固定月薪
+// 并进提成金额一起显示，让"薪酬+阶梯Bonus+奖金"这几列加起来能对上"总工资"列——总工资
+// （record.totalAmount）后端已经把这三项加上项目管理员固定月薪一起算好了，"薪酬"这一列单独
+// 展示 baseAmount 时如果不带上这一块，几列手动相加会跟总工资对不上（Shawn 反馈）。
+// "查看详情"弹窗里项目管理员固定月薪仍然单独展示成一行，不复用这个函数，两种展示策略互不影响
+function payAmount(record) {
+  const base = parseFloat(record.baseAmount) || 0
+  const projectAdminSalary = parseFloat(record.projectAdminSalaryRmb) || 0
+  return base + projectAdminSalary
 }
 
 function openDetail(record) {
