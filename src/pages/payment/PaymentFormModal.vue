@@ -92,6 +92,9 @@
       <a-form-item label="预计付款日" name="expectedPaymentDate">
         <a-date-picker v-model:value="form.expectedPaymentDate" value-format="YYYY-MM-DD" style="width:100%" />
         <div v-if="brandCycleHint" style="font-size:12px;color:#595959;margin-top:4px">{{ brandCycleHint }}</div>
+        <!-- 特殊回款周期提示（2026-08-21 新增，Shawn 要求红字）：涉及的红人配置了优先级最高的
+             特殊回款周期时展示，提醒操作人这个日期的依据不是常规的品牌方付款周期 -->
+        <div v-if="specialCycleHint" style="font-size:12px;color:#c00000;margin-top:4px">{{ specialCycleHint }}</div>
       </a-form-item>
 
       <template v-if="!form.id">
@@ -287,6 +290,10 @@ const brandCycleHint = computed(() => {
 // 两个字段（对账日期/品牌方）不管谁先填，只要凑齐了都要试一次自动填充，所以两边都要 watch
 function tryAutoFillExpectedPaymentDate() {
   if (form.id || !form.reconcileDate) return
+  // 特殊回款周期优先级最高：如果已勾选的记录里有红人配了这个字段，这里就不能再用
+  // "对账日期+N天"的月结公式覆盖掉——否则用户先勾选完（触发 trySpecialCycleAutoFill
+  // 正确填好日期）、再手填/改对账日期时，这个 watch 会把正确的日期悄悄覆盖成错的。
+  if (form.selectedItems.some(i => i.specialPaymentCycle)) return
   const brand = props.brands.find(b => b.id === form.brandId)
   if (brand?.paymentCycleType === 'MONTH_END' && brand.daysAfterMonthEnd != null) {
     form.expectedPaymentDate = dayjs(form.reconcileDate).add(brand.daysAfterMonthEnd, 'day').format('YYYY-MM-DD')
@@ -297,22 +304,53 @@ watch(() => form.brandId, tryAutoFillExpectedPaymentDate)
 
 // 需要invoice + 按红人成本阈值分档的品牌方：勾选完"涉及的红人视频项目"后自动算好"预计付款日"
 // 回填，用户仍可在此基础上手动改。此时勾选的这批记录必然属于同一个需求（见
-// PaymentItemSelectorModal 的互斥勾选规则，一次结款只能对应一个需求/一张invoice），取第一条
-// 的 requirementPayableCost/requirementCompletedAt 即可代表整批。requirementPayableCost 是
-// "实际可结款成本"（已排除"折损"条目，2026-08 修正——不是 InfluencerRequirement 的计划总成本）。
-// 只在新建态生效，跟上面"月结"那段自动填充同一个道理——编辑已有记录时不该因为重新勾选就悄悄
-// 覆盖已保存的值。
+// PaymentItemSelectorModal 的互斥勾选规则，一次结款只能对应一个需求/一张invoice）。
+// 2026-08-21 改成直接读第一条候选项的 deadlineDate（后端 InfluencerPaymentService.
+// computeCycleInfo() 已经算好——之前这里在前端用 brand.costThresholdAmount 等字段重新按
+// 阈值分档算一遍，是一份跟后端重复维护的逻辑；这份重复在这次新增红人"特殊回款周期"
+// （优先级最高，覆盖品牌方阈值分档）时暴露出问题——前端这份复制逻辑完全不知道这个新规则，
+// 只改后端 computeCycleInfo() 不会反映到这里。改成直接用后端已经算好的 deadlineDate，
+// 不会再出现前后端两份公式不一致的风险，也顺带天然支持了特殊回款周期。
+// 只在新建态生效——编辑已有记录时不该因为重新勾选就悄悄覆盖已保存的值。
 function tryAutoFillExpectedPaymentDateFromCostThreshold(selected) {
   if (form.id) return
   const brand = props.brands.find(b => b.id === form.brandId)
   if (!brand || brand.paymentCycleType !== 'COST_THRESHOLD' || brand.requiresInvoice === false) return
-  if (brand.costThresholdAmount == null || brand.daysWithinThreshold == null || brand.daysAboveThreshold == null) return
   const first = selected[0]
-  if (!first || first.requirementPayableCost == null || !first.requirementCompletedAt) return
-  const days = +first.requirementPayableCost <= +brand.costThresholdAmount
-    ? brand.daysWithinThreshold : brand.daysAboveThreshold
-  form.expectedPaymentDate = dayjs(first.requirementCompletedAt).add(days, 'day').format('YYYY-MM-DD')
+  if (!first || !first.deadlineDate) return
+  form.expectedPaymentDate = dayjs(first.deadlineDate).format('YYYY-MM-DD')
 }
+
+// 红人"特殊回款周期"优先级最高的自动填充（2026-08-21 新增）：不管品牌方是月结、按成本阈值
+// 分档、还是压根没配置付款周期，只要勾选的记录里有红人配了这个字段，就该用它算出来的
+// deadlineDate（后端已经算好，见 specialCycleHint 旁边的说明），不该走品牌方那几种口径。
+// 在 tryAutoFillExpectedPaymentDateFromCostThreshold() 之前调用、命中就直接返回 true 让
+// 调用方跳过后面那个品牌方专属的自动填充，避免两边都想覆盖 expectedPaymentDate 打架。
+function trySpecialCycleAutoFill(selected) {
+  if (form.id) return false
+  const special = selected.find(i => i.specialPaymentCycle && i.deadlineDate)
+  if (!special) return false
+  form.expectedPaymentDate = dayjs(special.deadlineDate).format('YYYY-MM-DD')
+  return true
+}
+
+// "特殊回款周期"提示（2026-08-21 新增，Shawn 要求）：本次勾选的记录里，只要有任意一条是走
+// 红人"特殊回款周期"算出来的最迟结款日（specialPaymentCycle=true），就在"预计付款日"下方
+// 用红字列出涉及的红人+对应天数，提醒操作人这条结款记录的日期依据不是常规的品牌方付款周期。
+// 同一个红人可能出现在多条勾选记录里，按红人账号名去重，只展示一次
+const specialCycleHint = computed(() => {
+  const specialItems = form.selectedItems.filter(i => i.specialPaymentCycle)
+  if (!specialItems.length) return ''
+  const seen = new Set()
+  const parts = []
+  for (const item of specialItems) {
+    const key = item.accountName + '|' + item.cycleDays
+    if (seen.has(key)) continue
+    seen.add(key)
+    parts.push(`特殊回款周期为${item.cycleDays}天的红人${item.accountName}`)
+  }
+  return '该结款记录涉及' + parts.join('、')
+})
 
 // 付款状态/实际付款日这两个字段只在"新建"表单里出现（编辑态用"状态流转"改），
 // 编辑态时 form.paymentStatus/actualPaymentDate 只是从记录带过来的展示用残留值，
@@ -360,7 +398,10 @@ async function handleSelectorConfirm(selected) {
       form.exchangeRate = null
     }
 
-    tryAutoFillExpectedPaymentDateFromCostThreshold(selected)
+    // 特殊回款周期优先级最高：命中就不再走品牌方阈值分档那套自动填充逻辑，避免两边打架。
+    if (!trySpecialCycleAutoFill(selected)) {
+      tryAutoFillExpectedPaymentDateFromCostThreshold(selected)
+    }
   }
   recomputeRmb()
 }
