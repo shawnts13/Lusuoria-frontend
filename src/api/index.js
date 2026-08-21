@@ -387,9 +387,14 @@ export const progressReminderApi = {
   // N+1/重复全表扫描已经修过一轮，但这类"重算全部"操作本身耗时会随数据量增长，超时时间也
   // 该比普通接口宽松，不能只靠优化查询兜底）
   recompute:    ()   => http.post('/api/progress-reminders/recompute', null, { timeout: 120000 }),
-  // "项目流转后更新提示内容"：重算进度滞留-项目/进度滞留-财务/Invoice逾期/合同上传逾期/
-  // 合同即将到期/删除审核待处理/进度倒退审核待处理/执行成本修改审核待处理这8类
-  recomputeProjectFlow: () => http.post('/api/progress-reminders/recompute-project-flow', null, { timeout: 120000 }),
+  // "项目流转后更新提示内容"（2026-08-21 改成异步）：重算进度滞留-项目/进度滞留-财务/
+  // Invoice逾期/合同上传逾期/合同即将到期/删除审核待处理/进度倒退审核待处理/执行成本修改
+  // 审核待处理这8类——这个操作是全表扫描，之前同步执行时连 120 秒的超时都不够用（见 recompute
+  // 上面那条注释同样的问题，这个更严重，已经改成后台异步跑）。这个接口现在只负责"触发"，
+  // 立刻返回，不用再给它加长超时，走全局默认的 30 秒足够；真正等待完成用下面的
+  // recomputeProjectFlowStatus() 轮询
+  recomputeProjectFlow: () => http.post('/api/progress-reminders/recompute-project-flow'),
+  recomputeProjectFlowStatus: () => http.get('/api/progress-reminders/recompute-project-flow/status'),
   popupCheck:   ()   => http.get('/api/progress-reminders/popup-check'),
   popupDismiss: ()   => http.post('/api/progress-reminders/popup-dismiss'),
   // "标记已处理"（2026-07 新增，仅进度滞留/Invoice逾期这3类支持）
