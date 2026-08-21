@@ -19,10 +19,10 @@
           </a-select-option>
         </a-select>
         <div v-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#595959;margin-top:2px">
-          "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
+          "已加入客户未结算列表"/"客户已结算"/"已收到客户回款"仅能由财务/管理层设置
         </div>
         <div v-else-if="!authStore.canWrite" style="font-size:12px;color:#595959;margin-top:2px">
-          财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"之间流转
+          财务账号只能在"已发布（未结算）"、"已加入客户未结算列表"、"客户已结算"、"已收到客户回款"之间流转
         </div>
       </a-form-item>
       <!-- 2026-08 新增：流转到"已发布（未结算）"等三个阶段时，视频发布链接/发布时间直接在这里填，
@@ -96,12 +96,17 @@
         <a-input v-model:value="clientOrderId" placeholder="拿到后填写" />
       </a-form-item>
       <a-form-item label="客户方的项目订单"
-        v-if="(progress === 'JOINED_CLIENT_UNSETTLED_LIST' || progress === 'SETTLED') && requiresClientOrderId" required>
+        v-if="CLIENT_ORDER_ID_REQUIRED_PROGRESS.includes(progress) && requiresClientOrderId" required>
         <a-input v-model:value="clientOrderId" placeholder="请填写客户方的项目订单" />
       </a-form-item>
       <a-form-item label="客户方付款批次单号"
-        v-if="progress === 'SETTLED' && authStore.canSetFinanceSettlementProgress && requiresClientPaymentBatch" required>
+        v-if="CLIENT_PAYMENT_BATCH_REQUIRED_PROGRESS.includes(progress) && authStore.canSetFinanceSettlementProgress && requiresClientPaymentBatch" required>
         <a-input v-model:value="clientPaymentBatch" placeholder="请填写客户方付款批次单号" />
+      </a-form-item>
+      <!-- 2026-08-21 新增：流转到"已收到客户回款"（真正的最终状态）时必填，日期选择控件，
+           默认填当天（见下面 watch progress），允许人工改成实际收到回款的日期 -->
+      <a-form-item label="收到回款日期" v-if="progress === 'PAYMENT_RECEIVED'" required>
+        <a-date-picker v-model:value="clientPaymentReceivedDate" style="width:100%" value-format="YYYY-MM-DD" />
       </a-form-item>
     </a-form>
   </a-modal>
@@ -118,20 +123,25 @@ import { formatDate } from '../../utils/dateFormat'
 const { getOptions } = useOptions()
 const authStore = useAuthStore()
 
-// 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层/
-// 项目负责人/执行人员/IT后勤设置
-const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+// 跟后端 requireFinanceForSettlementProgress() 保持一致：这三个状态只能由财务/管理层/
+// 项目负责人/执行人员/IT后勤设置（2026-08-21 新增"已收到客户回款"）
+const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED']
 
 // 跟后端 CollaborationTrackingService.EARLY_STAGE_CLIENT_ORDER_ID_PROGRESSES 保持一致：
-// 前期制作流程这10个状态（待客户出brief~已发布未结算，2026-08-17 新增"待红人下单"后从8个
-// 变成9个，2026-08-21 新增"待客户给草稿反馈"后从9个变成10个），流转时"客户方的项目订单"
-// 可选填写（2026-08 新增，Shawn 要求：拿到订单号就顺手登记，不用等到"已加入客户未结算列表"
-// 才能填）
+// 前期制作流程这9个状态（待客户出brief~待发布，2026-08-17 新增"待红人下单"后从8个变成9个，
+// 2026-08-21 新增"待客户给草稿反馈"后一度变成10个，同日"已发布（未结算）"改成强制填写、从这个
+// "可选"集合移出，又变回9个），流转时"客户方的项目订单"可选填写（2026-08 新增，Shawn 要求：
+// 拿到订单号就顺手登记，不用等到"已加入客户未结算列表"才能填）
 const EARLY_STAGE_CLIENT_ORDER_ID_PROGRESS = [
   'PENDING_CLIENT_BRIEF', 'CONTRACT_SENT', 'PENDING_INFLUENCER_ORDER', 'INFLUENCER_ORDERED', 'SHOOTING_GUIDE_SENT',
-  'PENDING_DRAFT', 'PENDING_CLIENT_DRAFT_FEEDBACK', 'PENDING_REVISION', 'PENDING_PUBLISH', 'PUBLISHED_UNSETTLED'
+  'PENDING_DRAFT', 'PENDING_CLIENT_DRAFT_FEEDBACK', 'PENDING_REVISION', 'PENDING_PUBLISH'
 ]
 function isEarlyStageClientOrderIdProgress(v) { return !!v && EARLY_STAGE_CLIENT_ORDER_ID_PROGRESS.includes(v) }
+
+// 跟后端"客户方的项目订单/客户方付款批次必填"的判断条件保持一致（2026-08-21 新增"已发布
+// （未结算）"/"已收到客户回款"）
+const CLIENT_ORDER_ID_REQUIRED_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED']
+const CLIENT_PAYMENT_BATCH_REQUIRED_PROGRESS = ['SETTLED', 'PAYMENT_RECEIVED']
 
 const props = defineProps({
   visible: Boolean,
@@ -140,8 +150,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
-// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致
-const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致（2026-08-21 新增"已收到客户回款"）
+const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED']
 function qualifies(v) { return !!v && QUALIFYING_PROGRESS.includes(v) }
 
 const progress = ref(null)
@@ -149,6 +159,8 @@ const reason = ref('')
 const notes = ref('')
 const clientPaymentBatch = ref('')
 const clientOrderId = ref('')
+// 收到回款日期（2026-08-21 新增）：流转到"已收到客户回款"时必填，默认当天，见下面 watch progress
+const clientPaymentReceivedDate = ref(null)
 const saving = ref(false)
 
 // 视频发布链接/发布时间（2026-08 新增，见下面 needsPublishInfo）：链接支持多条，
@@ -191,6 +203,14 @@ watch(publishLinks, () => {
   }
 }, { deep: true })
 
+// 选中"已收到客户回款"时，收到回款日期还空着的话默认带成今天（北京时间），用户可以再改——
+// 不覆盖已经带入的数据库原值（见上面 watch visible 的说明）
+watch(progress, v => {
+  if (v === 'PAYMENT_RECEIVED' && !clientPaymentReceivedDate.value) {
+    clientPaymentReceivedDate.value = formatDate(new Date())
+  }
+})
+
 // 品牌方是否涉及这两个字段（2026-08 新增），跟后端 Brand.requiresClientOrderId()/
 // requiresClientPaymentBatch() 保持一致：null/true 都按"涉及"处理，只有显式 false 才是"不涉及"
 const currentBrand = computed(() => props.brands?.find(b => b.id === props.record?.brandId))
@@ -210,6 +230,10 @@ watch(() => props.visible, v => {
     notes.value = props.record.notes || ''
     clientPaymentBatch.value = props.record.clientPaymentBatch || ''
     clientOrderId.value = props.record.clientOrderId || ''
+    // 已经有值就带入（供核对/修改，比如财务想更新一下收到回款日期），没有值先留空，
+    // 等下面 watch progress 检测到选中"已收到客户回款"时再默认填今天
+    clientPaymentReceivedDate.value = props.record.clientPaymentReceivedDate
+      ? formatDate(props.record.clientPaymentReceivedDate) : null
     publishLinks.value = props.record.publishLink ? splitLinks(props.record.publishLink) : ['']
     publishDateLocal.value = props.record.publishDate ? formatDate(props.record.publishDate) : null
     original.progress = props.record.progress || null
@@ -231,10 +255,11 @@ const autoPaymentLabel = computed(() => {
 // "客户已结算"就不用在这里重新问一遍了
 const recordHasPublishInfo = computed(() => !!props.record?.publishLink && !!props.record?.publishDate)
 
-// 2026-08 改：三个阶段（已发布未结算/已加入客户未结算列表/客户已结算）各自只问各自新增的信息，
-// 不再像以前那样每次流转都把前面阶段的字段重新问一遍（"需要填的信息一直在增加"的冗余问题）。
-// 视频发布链接/发布时间只在流转到"已发布（未结算）"——三个阶段里第一个要求"视频已发布"的
-// 节点——时在这里填，直接更新到这条记录上，不用再跳去"编辑"表单；后两个阶段不重复问。
+// 2026-08 改：这几个阶段（已发布未结算/已加入客户未结算列表/客户已结算/已收到客户回款，
+// 2026-08-21 新增第四个）各自只问各自新增的信息，不再像以前那样每次流转都把前面阶段的字段
+// 重新问一遍（"需要填的信息一直在增加"的冗余问题）。视频发布链接/发布时间只在流转到"已发布
+// （未结算）"——这几个阶段里第一个要求"视频已发布"的节点——时在这里填，直接更新到这条记录上，
+// 不用再跳去"编辑"表单；后面几个阶段不重复问。
 // 唯一的兜底：理论上允许跳过"已发布（未结算）"直接流转到后两个阶段（不常见），这种情况下
 // 记录确实还没有这两个字段，不补填的话会撞到后端"缺发布链接/时间"的校验却没地方填，
 // 所以数据缺失时仍然在这里出现——不违反"减少冗余"的初衷，只在真的缺数据时才出现
@@ -278,20 +303,24 @@ async function handleSave() {
     message.warning('请先填写视频发布链接和视频发布时间，才能流转到这个状态')
     return
   }
-  const needsOrderId = (progress.value === 'JOINED_CLIENT_UNSETTLED_LIST' || progress.value === 'SETTLED')
-    && requiresClientOrderId.value
+  const needsOrderId = CLIENT_ORDER_ID_REQUIRED_PROGRESS.includes(progress.value) && requiresClientOrderId.value
   if (needsOrderId && !clientOrderId.value?.trim()) {
     message.warning('该品牌方涉及"客户方的项目订单"，请先填写')
     return
   }
-  // 前期制作流程这8个状态：客户方的项目订单可选填写，不强制、有值才提交——跟上面 v-if 的
+  // 前期制作流程这9个状态：客户方的项目订单可选填写，不强制、有值才提交——跟上面 v-if 的
   // 展示条件保持一致，品牌方不涉及这个字段时不提交（字段也不会渲染，clientOrderId 恒为空，
   // 这里加上判断只是让代码意图跟展示条件对得上，不是修复实际问题）
   const submitsEarlyStageOrderId = isEarlyStageClientOrderIdProgress(progress.value) && requiresClientOrderId.value
-  const needsPaymentBatch = progress.value === 'SETTLED' && authStore.canSetFinanceSettlementProgress
-    && requiresClientPaymentBatch.value
+  const needsPaymentBatch = CLIENT_PAYMENT_BATCH_REQUIRED_PROGRESS.includes(progress.value)
+    && authStore.canSetFinanceSettlementProgress && requiresClientPaymentBatch.value
   if (needsPaymentBatch && !clientPaymentBatch.value?.trim()) {
     message.warning('该品牌方涉及"客户方付款批次"，请先填写客户方付款批次单号')
+    return
+  }
+  // 2026-08-21 新增：流转到"已收到客户回款"必填，不受品牌方配置开关约束
+  if (progress.value === 'PAYMENT_RECEIVED' && !clientPaymentReceivedDate.value) {
+    message.warning('请填写收到回款日期')
     return
   }
   saving.value = true
@@ -303,7 +332,8 @@ async function handleSave() {
       clientOrderId: (needsOrderId || submitsEarlyStageOrderId) ? clientOrderId.value.trim() : null,
       clientPaymentBatch: needsPaymentBatch ? clientPaymentBatch.value.trim() : null,
       publishLink: needsPublishInfo.value ? joinedPublishLinks : null,
-      publishDate: needsPublishInfo.value ? publishDateLocal.value : null
+      publishDate: needsPublishInfo.value ? publishDateLocal.value : null,
+      clientPaymentReceivedDate: progress.value === 'PAYMENT_RECEIVED' ? clientPaymentReceivedDate.value : null
     })
     if (res.data?.pendingApproval) {
       message.success('已提交审核，待管理员同意后生效')

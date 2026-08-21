@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.204.0'
-export const APP_VERSION_TIME = '2026-08-21 08:48'
+export const APP_VERSION = '1.205.0'
+export const APP_VERSION_TIME = '2026-08-21 11:30'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -94,11 +94,11 @@ export const useAuthStore = defineStore('auth', {
     canManageBrands: (state) => state.employeeRole === '管理层',
     // "导入历史"删除记录按钮：只有"管理层"能看到并操作，供清理误操作/测试产生的脏历史记录用
     canDeleteImportBatch: (state) => state.employeeRole === '管理层',
-    // "红人合作跟踪"里，视频项目进度流转到"已加入客户未结算列表"/"客户已结算"这两个财务专属
-    // 终态：跟后端 EmployeeRoleUtil.canSetSettlementProgressExtraRole() 保持一致——ADMIN，
-    // 或员工角色是"财务"/"管理层"的 STAFF 账号；2026-08 起放宽到"项目负责人"/"执行人员"/
-    // "IT后勤"也能操作（Shawn 反馈）；其余角色（基础权限）只能流转到"已发布（未结算）"和
-    // "折损"这两个终态
+    // "红人合作跟踪"里，视频项目进度流转到"已加入客户未结算列表"/"客户已结算"/"已收到客户回款"
+    // 这三个财务专属状态（2026-08-21 新增"已收到客户回款"，真正的最终状态）：跟后端
+    // EmployeeRoleUtil.canSetSettlementProgressExtraRole() 保持一致——ADMIN，或员工角色是
+    // "财务"/"管理层"的 STAFF 账号；2026-08 起放宽到"项目负责人"/"执行人员"/"IT后勤"也能
+    // 操作（Shawn 反馈）；其余角色（基础权限）只能流转到"已发布（未结算）"和"折损"这两个终态
     canSetFinanceSettlementProgress: (state) => state.role === 'ADMIN'
       || ['财务', '管理层', '项目负责人', '执行人员', 'IT后勤'].includes(state.employeeRole),
     // 新建"红人合作跟踪"时，项目负责人默认填成自己的资格：员工角色是"项目负责人"或"管理层"，
@@ -123,7 +123,16 @@ export const useAuthStore = defineStore('auth', {
     // 三种员工角色可见，跟后端 recomputeExecutorCostsScoped() 允许的范围一致——管理层等同于
     // "特殊的项目负责人"（看全部），项目负责人/执行人员各自只能算自己名下/自己执行的那部分，
     // 具体范围判断在后端做，这里只负责按钮的显隐
-    canRecomputeOwnExecutorCosts: (state) => ['项目负责人', '执行人员', '管理层'].includes(state.employeeRole)
+    canRecomputeOwnExecutorCosts: (state) => ['项目负责人', '执行人员', '管理层'].includes(state.employeeRole),
+    // "红人合作跟踪"的"Excel 导入"按钮（2026-08-21 新增放宽）：除了 canWrite（ADMIN/STAFF）
+    // 以外，员工角色="财务"的账号也能看到并使用——财务通常是 SysUser 角色 AUDITOR（只读+导出），
+    // 不满足 canWrite，这里单独加一条口子，跟后端 CollaborationTrackingController.importExcel()
+    // 里"AUDITOR 必须是财务"的校验保持一致
+    canImportCollaborationTracking: (state) => state.role === 'ADMIN' || state.role === 'STAFF' || state.employeeRole === '财务',
+    // "批量标记为已收到客户回款"按钮（2026-08-21 新增）：Shawn 明确要求只对财务/管理层开放，
+    // 比状态流转弹窗（canSetFinanceSettlementProgress，额外放行项目负责人/执行人员/IT后勤）
+    // 更收紧，跟后端 CollaborationTrackingService.markClientPaymentReceivedBulk() 的权限判断一致
+    canMarkPaymentReceived: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole)
   },
 
   actions: {

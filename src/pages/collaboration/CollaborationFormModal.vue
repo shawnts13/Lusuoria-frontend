@@ -135,8 +135,16 @@
             </a-select>
             <div v-if="form.id" style="font-size:12px;color:#ff4d4f;margin-top:2px">视频项目进度请使用"状态流转"功能修改</div>
             <div v-else-if="!authStore.canSetFinanceSettlementProgress" style="font-size:12px;color:#595959;margin-top:2px">
-              "已加入客户未结算列表"/"客户已结算"仅能由财务/管理层设置
+              "已加入客户未结算列表"/"客户已结算"/"已收到客户回款"仅能由财务/管理层设置
             </div>
+          </a-form-item>
+        </a-col>
+        <!-- 2026-08-21 新增：视频项目进度已经是"已收到客户回款"的记录才展示（前期阶段填了也没有
+             意义），跟"客户方的项目订单"/"客户方付款批次"一样是普通输入框，写权限没有额外限制，
+             用来核对/修正当初状态流转时填的日期 -->
+        <a-col :span="8" v-if="form.progress === 'PAYMENT_RECEIVED'">
+          <a-form-item label="收到回款日期">
+            <a-date-picker v-model:value="form.clientPaymentReceivedDate" style="width:100%" value-format="YYYY-MM-DD" />
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -372,8 +380,9 @@ const emit = defineEmits(['update:visible', 'saved', 'need-executor-cost'])
 
 const { getOptions, getLabel } = useOptions()
 const authStore = useAuthStore()
-// 跟后端 requireFinanceForSettlementProgress() 保持一致：这两个状态只能由财务/管理层设置
-const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+// 跟后端 requireFinanceForSettlementProgress() 保持一致：这三个状态只能由财务/管理层设置
+// （2026-08-21 新增"已收到客户回款"）
+const FINANCE_ONLY_PROGRESS = ['JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED']
 // 汇率/其他外部成本（人民币）/外部成本备注这几个财务记账细节字段的可见性，统一用
 // authStore.canViewCostBookkeeping（跟后端 ProjectFieldVisibility 的 FULL 层级判定保持
 // 一致）。"内部执行成本"不受这里影响，因为项目负责人可能涉及设置执行人员的成本，
@@ -391,6 +400,7 @@ const form = reactive({
   platforms: [], demandContent: '',
   publishLinks: [''], publishDate: null,
   progress: null, influencerPaymentProgress: null, videoType: null, oldMaterialSourceLink: null, clientOrderId: '', clientPaymentBatch: '',
+  clientPaymentReceivedDate: null,
   projectManagerId: null, executorId: null,
   influencerCost: null, clientPrice: null, notes: '',
   exchangeRate: null, otherExternalCost: 0, otherExternalCostNote: '', internalExecutionCost: 0,
@@ -477,6 +487,7 @@ watch(() => props.visible, (v) => {
         oldMaterialSourceLink: rec.oldMaterialSourceLink || null,
         clientOrderId: rec.clientOrderId || '',
         clientPaymentBatch: rec.clientPaymentBatch || '',
+        clientPaymentReceivedDate: rec.clientPaymentReceivedDate ? formatDate(rec.clientPaymentReceivedDate) : null,
         projectManagerId: rec.projectManagerId || null,
         executorId: rec.executorId || null,
         influencerCost: rec.influencerCost ?? null,
@@ -495,6 +506,7 @@ watch(() => props.visible, (v) => {
       Object.assign(form, {
         id:null, internalProjectNo:null, internalRequirementNo:null, brandId:null, influencerId:null, teamId:null, countryMarket:null, platforms:[], demandContent:'',
         publishLinks:[''], publishDate:null, progress:null, influencerPaymentProgress:null, videoType:null, oldMaterialSourceLink:null, clientOrderId:'', clientPaymentBatch:'',
+        clientPaymentReceivedDate:null,
         // 项目负责人默认填成自己（仅当创建人的员工角色是"项目负责人"/"管理层"时），依然可以改；
         // 执行人员角色理论上不会新建跟踪，万一新建也不自动填，保持空
         projectManagerId: authStore.canDefaultAsProjectManager ? authStore.employeeId : null,
@@ -656,6 +668,7 @@ function buildPayload() {
     oldMaterialSourceLink: form.videoType === 'OLD_MATERIAL_REPOST' ? (form.oldMaterialSourceLink || null) : null,
     clientOrderId: form.clientOrderId || null,
     clientPaymentBatch: form.clientPaymentBatch || null,
+    clientPaymentReceivedDate: form.clientPaymentReceivedDate || null,
     projectManagerId: form.projectManagerId || null,
     executorId: form.executorId || null,
     influencerCost: form.influencerCost,
@@ -748,29 +761,45 @@ function blockSaveForMissingCommissionRate() {
   })
 }
 
-// 2026-08 新增：新建时如果直接把视频项目进度选成了"已加入客户未结算列表"/"客户已结算"，
-// 跟后端 doSave() 的同一条硬性校验保持一致——品牌方涉及对应字段时必须先填。编辑时视频项目
-// 进度只能通过"状态流转"弹窗修改（这里的下拉框被禁用），那边已经有一份镜像校验，这里不重复
+// 2026-08 新增：新建时如果直接把视频项目进度选成了"已发布（未结算）"/"已加入客户未结算列表"/
+// "客户已结算"/"已收到客户回款"（2026-08-21 起并入前两个），跟后端 doSave() 的同一条硬性校验
+// 保持一致——品牌方涉及对应字段时必须先填。编辑时视频项目进度只能通过"状态流转"弹窗修改
+// （这里的下拉框被禁用），那边已经有一份镜像校验，这里不重复
+const CLIENT_ORDER_ID_REQUIRED_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED']
+const CLIENT_PAYMENT_BATCH_REQUIRED_PROGRESS = ['SETTLED', 'PAYMENT_RECEIVED']
 function needsClientOrderIdCheck() {
   if (form.id) return false
-  if (!(form.progress === 'JOINED_CLIENT_UNSETTLED_LIST' || form.progress === 'SETTLED')) return false
+  if (!CLIENT_ORDER_ID_REQUIRED_PROGRESS.includes(form.progress)) return false
   return requiresClientOrderId.value && !form.clientOrderId?.trim()
 }
 function needsClientPaymentBatchCheck() {
   if (form.id) return false
-  if (form.progress !== 'SETTLED') return false
+  if (!CLIENT_PAYMENT_BATCH_REQUIRED_PROGRESS.includes(form.progress)) return false
   return requiresClientPaymentBatch.value && !form.clientPaymentBatch?.trim()
+}
+// 2026-08-21 新增：新建时直接把视频项目进度选成"已收到客户回款"，收到回款日期必填，
+// 不受品牌方配置开关约束
+function needsClientPaymentReceivedDateCheck() {
+  if (form.id) return false
+  return form.progress === 'PAYMENT_RECEIVED' && !form.clientPaymentReceivedDate
 }
 function blockSaveForMissingClientOrderId() {
   Modal.warning({
     title: '无法保存',
-    content: '该品牌方涉及"客户方的项目订单"，视频项目进度为"已加入客户未结算列表"/"客户已结算"时必须先填写"客户方的项目订单"。'
+    content: '该品牌方涉及"客户方的项目订单"，视频项目进度为"已发布（未结算）"/"已加入客户未结算列表"/'
+      + '"客户已结算"/"已收到客户回款"时必须先填写"客户方的项目订单"。'
   })
 }
 function blockSaveForMissingClientPaymentBatch() {
   Modal.warning({
     title: '无法保存',
-    content: '该品牌方涉及"客户方付款批次"，视频项目进度为"客户已结算"时必须先填写"客户方付款批次"。'
+    content: '该品牌方涉及"客户方付款批次"，视频项目进度为"客户已结算"/"已收到客户回款"时必须先填写"客户方付款批次"。'
+  })
+}
+function blockSaveForMissingClientPaymentReceivedDate() {
+  Modal.warning({
+    title: '无法保存',
+    content: '视频项目进度为"已收到客户回款"时必须先填写"收到回款日期"。'
   })
 }
 
@@ -788,6 +817,10 @@ async function doSave() {
     }
     if (needsClientPaymentBatchCheck()) {
       blockSaveForMissingClientPaymentBatch()
+      return
+    }
+    if (needsClientPaymentReceivedDateCheck()) {
+      blockSaveForMissingClientPaymentReceivedDate()
       return
     }
     if (await needsExecutorCostBeforeSave()) {

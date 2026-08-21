@@ -9,20 +9,26 @@
         <a-button @click="handleExport">
           <template #icon><ExportOutlined /></template>Excel 导出
         </a-button>
-        <template v-if="authStore.canWrite">
+        <!-- 2026-08-21 起 Excel 导入/导入历史 也对员工角色="财务"的账号开放（Shawn 要求：
+             财务需要能批量更新红人合作跟踪的记录），财务通常是 SysUser 角色 AUDITOR、不满足
+             canWrite，用 canImportCollaborationTracking 单独判断（本身已经涵盖 canWrite），
+             跟后端 CollaborationTrackingController.importExcel() 的权限口径保持一致。
+             "新建跟踪"不在这次开放范围内，仍然只有 canWrite 能看到 -->
+        <template v-if="authStore.canImportCollaborationTracking">
           <a-upload :before-upload="handleImport" :show-upload-list="false" accept=".xlsx,.xls">
             <a-button><template #icon><UploadOutlined /></template>Excel 导入</a-button>
           </a-upload>
           <a-button @click="router.push('/import-batches')" style="color:#fa8c16;border-color:#fa8c16">
             <template #icon><HistoryOutlined /></template>导入历史
           </a-button>
-          <a-button type="primary" @click="batchCreateModalVisible = true">
-            <template #icon><PlusOutlined /></template>新建跟踪
-          </a-button>
         </template>
+        <a-button v-if="authStore.canWrite" type="primary" @click="batchCreateModalVisible = true">
+          <template #icon><PlusOutlined /></template>新建跟踪
+        </a-button>
       </a-space>
     </div>
-    <div v-if="authStore.canWrite || authStore.isAdmin || authStore.canRecomputeOwnExecutorCosts" style="display:flex;justify-content:flex-end;margin-bottom:16px">
+    <div v-if="authStore.canWrite || authStore.isAdmin || authStore.canRecomputeOwnExecutorCosts || authStore.canMarkPaymentReceived"
+      style="display:flex;justify-content:flex-end;margin-bottom:16px">
       <a-space>
         <a-button v-if="authStore.canWrite" @click="legacyLinkModalVisible = true">
           <template #icon><LinkOutlined /></template>存量记录关联需求
@@ -37,6 +43,12 @@
           @confirm="handleRecomputeProfits">
           <a-button :loading="recomputing">重新计算利润</a-button>
         </a-popconfirm>
+        <!-- "批量标记为已收到客户回款"（2026-08-21 新增）：只对财务/管理层开放（比状态流转弹窗
+             更收紧），点击先打开预览弹窗核对范围，弹窗内部再决定要不要真正提交，见
+             CollaborationMarkPaymentReceivedModal.vue -->
+        <a-button v-if="authStore.canMarkPaymentReceived" @click="openMarkPaymentReceivedModal">
+          批量标记为"已收到客户回款"
+        </a-button>
       </a-space>
     </div>
 
@@ -73,20 +85,18 @@
         style="width:120px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('platform')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
-      <a-tooltip :title="filters.progress ? getLabel('collab_progress', filters.progress) : ''">
-        <a-select v-model:value="filters.progress" placeholder="视频项目进度"
-          style="width:140px" allow-clear @change="loadData">
-          <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-        </a-select>
-      </a-tooltip>
-      <a-tooltip :title="filters.influencerPaymentProgress ? getLabel('influencer_payment_progress', filters.influencerPaymentProgress) : ''">
-        <a-select v-model:value="filters.influencerPaymentProgress" placeholder="红人结款进度"
-          style="width:160px" allow-clear @change="loadData">
-          <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
-        </a-select>
-      </a-tooltip>
-      <a-select v-model:value="filters.videoType" placeholder="项目视频类型"
-        style="width:140px" allow-clear @change="loadData">
+      <!-- 2026-08-21 起支持多选（仍可以只选一个）：mode="multiple" 后 filters.progress
+           变成数组，选中的值会以标签形式直接展示在选择框里，不再需要额外的悬浮提示 -->
+      <a-select v-model:value="filters.progress" mode="multiple" :max-tag-count="1" placeholder="视频项目进度"
+        style="min-width:160px" allow-clear @change="loadData">
+        <a-select-option v-for="o in getOptions('collab_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+      </a-select>
+      <a-select v-model:value="filters.influencerPaymentProgress" mode="multiple" :max-tag-count="1" placeholder="红人结款进度"
+        style="min-width:180px" allow-clear @change="loadData">
+        <a-select-option v-for="o in getOptions('influencer_payment_progress')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
+      </a-select>
+      <a-select v-model:value="filters.videoType" mode="multiple" :max-tag-count="1" placeholder="项目视频类型"
+        style="min-width:160px" allow-clear @change="loadData">
         <a-select-option v-for="o in getOptions('video_type')" :key="o.value" :value="o.value">{{ o.label }}</a-select-option>
       </a-select>
       <a-date-picker v-model:value="filters.videoMonthVal" picker="month"
@@ -103,8 +113,8 @@
         allow-clear @press-enter="loadData" />
       <a-input v-model:value="filters.clientPaymentBatch" placeholder="客户方付款批次" style="width:150px"
         allow-clear @press-enter="loadData" />
-      <a-select v-model:value="filters.projectManagerId" placeholder="项目负责人"
-        style="width:130px" allow-clear show-search
+      <a-select v-model:value="filters.projectManagerId" mode="multiple" :max-tag-count="1" placeholder="项目负责人"
+        style="min-width:150px" allow-clear show-search
         :filter-option="(input, opt) => opt.label.toLowerCase().includes(input.trim().toLowerCase())"
         @change="loadData">
         <a-select-option v-for="e in projectManagerCandidates" :key="e.id" :value="e.id" :label="e.name">{{ e.name }}</a-select-option>
@@ -117,7 +127,7 @@
           查看由我负责的记录
         </a-button>
       </a-tooltip>
-      <a-tooltip title="只看视频项目进度不是&quot;客户已结算&quot;也不是&quot;折损&quot;的记录">
+      <a-tooltip title="只看视频项目进度不是&quot;已收到客户回款&quot;也不是&quot;折损&quot;的记录">
         <a-button class="orange-filter-btn" :class="{ active: filters.onlyIncomplete }"
           style="margin-left:16px" @click="toggleOnlyIncomplete">
           查看未完成的记录
@@ -202,6 +212,10 @@
             <span v-else style="color:#bbb">—</span>
           </template>
 
+          <template v-if="column.key === 'clientPaymentReceivedDate'">
+            {{ record.clientPaymentReceivedDate ? formatDate(record.clientPaymentReceivedDate) : '—' }}
+          </template>
+
           <template v-if="column.key === 'influencerPaymentProgress'">
             <a-tag v-if="record.influencerPaymentProgress" :color="paymentProgressColor(record.influencerPaymentProgress)">
               {{ getLabel('influencer_payment_progress', record.influencerPaymentProgress) }}
@@ -247,10 +261,11 @@
               <a v-else style="color:#ff4d4f" @click="openDeleteReason(record)">删除</a>
             </a-space>
             <!-- 财务（SysUser角色是AUDITOR、没有普通canWrite写权限的情况很常见）虽然不能编辑/删除，
-                 但仍然需要能把"已发布（未结算）"流转到"已加入客户未结算列表"/"客户已结算"这两个
-                 财务专属终态。只有记录已经进入结算区间（已发布未结算及以后）时才露出这个入口——
-                 还没发布的记录财务什么都不能改，露出个打开就全部禁用的弹窗没有意义，跟后端
-                 updateStatus() 里"AUDITOR只能在结算区间内流转"的限制保持一致 -->
+                 但仍然需要能把"已发布（未结算）"流转到"已加入客户未结算列表"/"客户已结算"/
+                 "已收到客户回款"这几个财务专属状态（2026-08-21 新增"已收到客户回款"）。只有
+                 记录已经进入结算区间（已发布未结算及以后）时才露出这个入口——还没发布的记录
+                 财务什么都不能改，露出个打开就全部禁用的弹窗没有意义，跟后端 updateStatus()
+                 里"AUDITOR只能在结算区间内流转"的限制保持一致 -->
             <a-space v-else-if="authStore.canSetFinanceSettlementProgress && QUALIFYING_PROGRESS.includes(record.progress)">
               <a @click="openStatusModal(record)">状态流转</a>
             </a-space>
@@ -310,6 +325,12 @@
       :influencers="influencers"
       @linked="loadData"
     />
+
+    <CollaborationMarkPaymentReceivedModal
+      v-model:visible="markPaymentReceivedModalVisible"
+      :filter-payload="markPaymentReceivedFilterPayload"
+      @saved="loadData"
+    />
   </div>
 </template>
 
@@ -330,12 +351,13 @@ import CollaborationFormModal from './CollaborationFormModal.vue'
 import CollaborationStatusModal from './CollaborationStatusModal.vue'
 import CollaborationExecutorCostModal from './CollaborationExecutorCostModal.vue'
 import CollaborationBatchCreateModal from './CollaborationBatchCreateModal.vue'
+import CollaborationMarkPaymentReceivedModal from './CollaborationMarkPaymentReceivedModal.vue'
 import LegacyRequirementLinkModal from '../requirement/LegacyRequirementLinkModal.vue'
 
 const authStore = useAuthStore()
-// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致，财务只读账号能操作
-// "状态流转"的前提条件（见"操作"列的 v-else-if）
-const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED']
+// 跟后端 CollaborationProgress.allowsPaymentProgress() 保持一致（2026-08-21 新增
+// "已收到客户回款"），财务只读账号能操作"状态流转"的前提条件（见"操作"列的 v-else-if）
+const QUALIFYING_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED']
 const { getOptions, getLabel } = useOptions()
 const { loadBrands, loadTeams, loadInfluencersSimple, loadEmployees } = useReferenceData()
 const { tableWrapperRef, topScrollRef, scrollWidth, onTopScroll, remeasure } = useTopScrollbar()
@@ -359,6 +381,9 @@ const modalVisible        = ref(false)
 const editingRecord       = ref(null)
 const batchCreateModalVisible = ref(false)
 const legacyLinkModalVisible = ref(false)
+const markPaymentReceivedModalVisible = ref(false)
+// 打开"批量标记为已收到客户回款"弹窗那一刻现算好的筛选条件快照，见 openMarkPaymentReceivedModal()
+const markPaymentReceivedFilterPayload = ref({})
 const statusModalVisible  = ref(false)
 const statusModalRecord   = ref(null)
 const executorCostModalVisible = ref(false)
@@ -388,7 +413,8 @@ const filters = reactive({
   // 展示成下拉框，纯粹是深链参数，用户手动改别的筛选条件不会保留它）
   influencerId: route.query.influencerId ? Number(route.query.influencerId) : undefined,
   platform: undefined,
-  progress: route.query.progress || undefined,
+  // 2026-08-21 起这4个筛选支持多选，值改成数组——深链只会带单个 progress 值，包一层数组即可
+  progress: route.query.progress ? [route.query.progress] : undefined,
   influencerPaymentProgress: undefined, videoType: undefined,
   videoMonth: undefined, videoMonthVal: undefined,
   // 视频发布日期区间跟视频发布月份互斥（选一个会清空另一个），见 onVideoMonthChange/onVideoDateRangeChange
@@ -397,7 +423,8 @@ const filters = reactive({
   internalRequirementNo: route.query.internalRequirementNo || undefined,
   clientOrderId: undefined, clientPaymentBatch: undefined, projectManagerId: undefined,
   onlyMyResponsibility: false,
-  // "查看未完成的记录"：视频项目进度不是"客户已结算"也不是"折损"（这两个是终态，不用再跟进）
+  // "查看未完成的记录"：视频项目进度不是"已收到客户回款"也不是"折损"（这两个是终态，
+  // 2026-08-21 起从"客户已结算"改成"已收到客户回款"，不用再跟进）
   onlyIncomplete: route.query.onlyIncomplete === 'true',
   // "查看视频未发布的记录"（2026-08 新增）：视频发布链接还是空的，但不包括"折损"（终态，
   // 不算还没发布）。跟 onlyMyResponsibility/onlyIncomplete 互不影响，可以同时生效
@@ -423,6 +450,8 @@ const allColumns = [
   // 宽度按各自最长的标签留够空间（tag 组件内部不换行，太窄会被裁切显示不全）：
   // 视频项目进度最长"已加入客户未结算列表"，红人结款进度最长"已纳入红人结款批次（缺少invoice）"
   { title: '视频项目进度',  key: 'progress',       width: 180, sorter: true },
+  // 2026-08-21 新增，展示位置在"视频项目进度"和"红人结款进度"之间（Shawn 要求）
+  { title: '收到回款日期',  dataIndex: 'clientPaymentReceivedDate', key: 'clientPaymentReceivedDate', width: 120, sorter: true },
   { title: '红人结款进度',  key: 'influencerPaymentProgress', width: 260 },
   { title: '项目视频类型',  key: 'videoType',      width: 120, sorter: true },
   { title: '采买旧视频的原链接', dataIndex: 'oldMaterialSourceLink', key: 'oldMaterialSourceLink', width: 200, ellipsis: true },
@@ -522,6 +551,14 @@ function splitLinks(str) {
   if (!str) return []
   return str.split('\n').map(s => s.trim()).filter(Boolean)
 }
+// 多选筛选（视频项目进度/红人结款进度/项目视频类型/项目负责人）传空数组给后端会被
+// Spring 绑定成"非 null 但空"的 List，触发 JPQL "IN ()" 语法错误（后端认的是"整个参数为
+// null 才不生效"）——一个都没选时必须归一成 undefined，不能是 []，见 CollaborationTracking
+// Repository.findByFilters 的 ":progress IS NULL OR c.progress IN :progress" 写法
+function nonEmpty(arr) {
+  return Array.isArray(arr) && arr.length > 0 ? arr : undefined
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -532,9 +569,9 @@ async function loadData() {
       accountName:        filters.accountName?.trim() || undefined,
       influencerId:       filters.influencerId,
       platform:           filters.platform,
-      progress:           filters.progress,
-      influencerPaymentProgress: filters.influencerPaymentProgress,
-      videoType:          filters.videoType,
+      progress:           nonEmpty(filters.progress),
+      influencerPaymentProgress: nonEmpty(filters.influencerPaymentProgress),
+      videoType:          nonEmpty(filters.videoType),
       videoMonth:         filters.videoMonth,
       videoDateStart:     filters.videoDateRange?.[0],
       videoDateEnd:       filters.videoDateRange?.[1],
@@ -542,7 +579,7 @@ async function loadData() {
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
-      projectManagerId:   filters.projectManagerId,
+      projectManagerId:   nonEmpty(filters.projectManagerId),
       onlyMyResponsibility: filters.onlyMyResponsibility,
       onlyIncomplete:     filters.onlyIncomplete,
       onlyUnpublished:    filters.onlyUnpublished,
@@ -625,7 +662,7 @@ const canFilterMyResponsibility = computed(() =>
   ['项目负责人', '执行人员', '管理层', '财务'].includes(authStore.employeeRole))
 const myResponsibilityTooltip = computed(() => {
   if (['项目负责人', '执行人员', '管理层'].includes(authStore.employeeRole)) {
-    return '只看自己作为项目负责人/执行人员的记录，再按是否还需要跟进（未到"客户已结算"/"折损"）优先排序'
+    return '只看自己作为项目负责人/执行人员的记录，再按是否还需要跟进（未到"已收到客户回款"/"折损"）优先排序'
   }
   return '只看需要处理的记录（视频项目进度为"已发布（未结算）"/"已加入客户未结算列表"）'
 })
@@ -669,12 +706,49 @@ async function handleDeleteConfirm() {
 function handleExport() {
   // filters.videoDateRange 是个数组，后端认的是 videoDateStart/videoDateEnd 两个独立参数，
   // 不能直接把整个 filters 对象透传（exportExcel 内部会把 videoDateRange 数组 toString 成
-  // 逗号拼接的字符串，后端不认识这个参数名，日期区间筛选就不会生效）
+  // 逗号拼接的字符串，后端不认识这个参数名，日期区间筛选就不会生效）。
+  // progress/influencerPaymentProgress/videoType/projectManagerId 这4个多选筛选同样要用
+  // nonEmpty() 把"一个都没选"归一成 undefined（原因见 loadData() 上的注释）——exportExcel
+  // 内部用 URLSearchParams 拼参数，非空数组会被 String() 自动转成逗号拼接的字符串
+  // （如"A,B"），后端 Spring 对 List<Enum> 参数天然支持"单个值按逗号切分"，不需要额外处理
   collaborationApi.exportExcel({
     ...filters,
+    progress: nonEmpty(filters.progress),
+    influencerPaymentProgress: nonEmpty(filters.influencerPaymentProgress),
+    videoType: nonEmpty(filters.videoType),
+    projectManagerId: nonEmpty(filters.projectManagerId),
     videoDateStart: filters.videoDateRange?.[0],
     videoDateEnd: filters.videoDateRange?.[1]
   })
+}
+
+// "批量标记为已收到客户回款"（2026-08-21 新增）：打开弹窗那一刻把当前筛选条件现算成一份
+// 快照传给弹窗（不含分页/排序，弹窗内部按这份条件取全部命中记录，不只是当前页）——弹窗
+// 打开期间用户如果回来改筛选条件，不会影响已经打开的弹窗，符合"核对的就是点击那一刻的范围"
+function openMarkPaymentReceivedModal() {
+  markPaymentReceivedFilterPayload.value = {
+    brandId: filters.brandId,
+    teamId: filters.teamId || undefined,
+    countryMarket: filters.countryMarket,
+    accountName: filters.accountName?.trim() || undefined,
+    influencerId: filters.influencerId,
+    platform: filters.platform,
+    progress: nonEmpty(filters.progress),
+    influencerPaymentProgress: nonEmpty(filters.influencerPaymentProgress),
+    videoType: nonEmpty(filters.videoType),
+    videoMonth: filters.videoMonth,
+    videoDateStart: filters.videoDateRange?.[0],
+    videoDateEnd: filters.videoDateRange?.[1],
+    internalProjectNo: filters.internalProjectNo?.trim() || undefined,
+    internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
+    clientOrderId: filters.clientOrderId?.trim() || undefined,
+    clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
+    projectManagerId: nonEmpty(filters.projectManagerId),
+    onlyIncomplete: filters.onlyIncomplete,
+    onlyUnpublished: filters.onlyUnpublished,
+    onlyMissingRequirementNo: filters.onlyMissingRequirementNo
+  }
+  markPaymentReceivedModalVisible.value = true
 }
 
 async function handleRecomputeProfits() {

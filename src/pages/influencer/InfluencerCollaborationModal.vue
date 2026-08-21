@@ -388,8 +388,10 @@ function openDetail(record) {
   window.open(`/collaborations?internalProjectNo=${encodeURIComponent(record.internalProjectNo || '')}`, '_blank')
 }
 function openAll() {
+  // "已完结项目"（COMPLETED）的判定口径 2026-08-21 起从"客户已结算"改成"已收到客户回款"
+  // （真正的终态），见 CollaborationTrackingRepository.findByInfluencerAndCompletionStatus
   const query = props.category === 'COMPLETED'
-    ? `influencerId=${props.influencerId}&progress=SETTLED`
+    ? `influencerId=${props.influencerId}&progress=PAYMENT_RECEIVED`
     : `influencerId=${props.influencerId}&onlyIncomplete=true`
   window.open(`/collaborations?${query}`, '_blank')
 }

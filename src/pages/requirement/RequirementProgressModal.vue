@@ -93,8 +93,9 @@ const filteredRecords = computed(() => {
 })
 
 // 跟后端"需求完成进度"分子的口径保持一致（countCompletedByRequirementNos）：
-// 已发布(未结算)/已加入客户未结算列表/客户已结算/折损 这四个状态算"已完成"
-const COMPLETED_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'DELAYED']
+// 已发布(未结算)/已加入客户未结算列表/客户已结算/已收到客户回款/折损 这五个状态算"已完成"
+// （2026-08-21 新增"已收到客户回款"）
+const COMPLETED_PROGRESS = ['PUBLISHED_UNSETTLED', 'JOINED_CLIENT_UNSETTLED_LIST', 'SETTLED', 'PAYMENT_RECEIVED', 'DELAYED']
 const completedCount = computed(() =>
   filteredRecords.value.filter(r => COMPLETED_PROGRESS.includes(r.progress)).length)
 

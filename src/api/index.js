@@ -205,7 +205,13 @@ export const collaborationApi = {
   }),
 
   // "复制"批量新建：一次性提交多条视频项目，整批在一个事务里校验+保存
-  batchCreate: (list) => http.post('/api/collaboration-trackings/batch', list)
+  batchCreate: (list) => http.post('/api/collaboration-trackings/batch', list),
+
+  // "批量标记为已收到客户回款"（2026-08-21 新增）：preview 弹窗打开时调用取预览分组数据，
+  // confirm 弹窗确认提交时调用真正执行。两个接口共用同一份筛选条件请求体
+  // （跟列表页 filters 字段一一对应），见 CollaborationMarkPaymentReceivedModal.vue
+  markPaymentReceivedPreview: (payload) => http.post('/api/collaboration-trackings/payment-received/preview', payload),
+  markPaymentReceivedConfirm: (payload) => http.post('/api/collaboration-trackings/payment-received/confirm', payload)
 }
 
 // ===== 红人需求管理 =====

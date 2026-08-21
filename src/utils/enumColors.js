@@ -20,8 +20,8 @@ export function paymentProgressColor(value) {
   return PAYMENT_PROGRESS_COLOR[value] || 'default'
 }
 
-// 沿着"待客户出brief → ... → 客户已结算"这条流水线渐进上色：早期阶段用中性色，
-// 越接近完成越暖/越亮，"客户已结算"是终态用绿色，"折损"是异常终态用红色。
+// 沿着"待客户出brief → ... → 已收到客户回款"这条流水线渐进上色：早期阶段用中性色，
+// 越接近完成越暖/越亮，"已收到客户回款"是真正的终态用绿色，"折损"是异常终态用红色。
 // 提取自 CollaborationListPage.vue，供红人结款/进度提醒等其他也展示"视频项目进度"的
 // 页面共用，不用各自复制一份
 const COLLAB_PROGRESS_COLOR = {
@@ -35,7 +35,10 @@ const COLLAB_PROGRESS_COLOR = {
   PENDING_DRAFT: 'default', PENDING_CLIENT_DRAFT_FEEDBACK: 'magenta',
   PENDING_PUBLISH: 'orange', PENDING_REVISION: 'gold',
   PUBLISHED_UNSETTLED: 'blue', JOINED_CLIENT_UNSETTLED_LIST: 'cyan',
-  SETTLED: 'green', DELAYED: 'red'
+  // 2026-08-21："客户已结算"不再是终态（改成"已收到客户回款"之后才算），原来的绿色让给
+  // PAYMENT_RECEIVED，SETTLED 改用 lime（比 cyan 更暖、比 green 淡，体现"快到了但还没完全
+  // 结束"），保持"越接近完成越暖/越亮"的渐进逻辑
+  SETTLED: 'lime', PAYMENT_RECEIVED: 'green', DELAYED: 'red'
 }
 
 export function collabProgressColor(value) {
