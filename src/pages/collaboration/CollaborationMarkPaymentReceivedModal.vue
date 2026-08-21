@@ -1,13 +1,41 @@
 <template>
-  <a-modal :open="visible" title="批量标记为&quot;已收到客户回款&quot;" width="640px"
+  <a-modal :open="visible" title="批量标记为&quot;已收到客户回款&quot;"
+    :width="preview?.hasEmptyPaymentBatch ? '1100px' : '640px'"
     :confirm-loading="submitting" :ok-button-props="{ disabled: !canConfirm }"
     @ok="handleConfirm" @cancel="close">
     <a-spin :spinning="loading">
-      <!-- 命中范围里存在"客户方付款批次"为空的记录：整体拒绝，不渲染任何分组明细，
-           防止财务筛选条件选错、误把不该动的记录也纳入范围（2026-08-21 新增，Shawn 明确要求） -->
-      <a-alert v-if="preview?.hasEmptyPaymentBatch" type="error" show-icon
-        message="当前页面存在&quot;客户方付款批次&quot;为空的记录，请重新确认筛选条件！"
-        style="margin-bottom:16px" />
+      <!-- 命中范围里存在"该品牌方涉及客户方付款批次却没填"的记录：整体拒绝，不渲染分组明细，
+           防止财务筛选条件选错、误把不该动的记录也纳入范围（2026-08-21 新增，Shawn 明确要求；
+           2026-08-21 同日追加：把具体是哪些记录漏填了列出来，方便财务直接对照排查，不用回
+           列表页自己一条条找） -->
+      <template v-if="preview?.hasEmptyPaymentBatch">
+        <a-alert type="error" show-icon
+          message="当前页面存在&quot;客户方付款批次&quot;为空的记录，请重新确认筛选条件！"
+          style="margin-bottom:12px" />
+        <a-table :columns="missingBatchColumns" :data-source="preview.missingPaymentBatchRecords"
+          :row-key="(r, i) => i" size="small" :pagination="false" :scroll="{ x: 1300 }">
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'brandName'">
+              <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
+              <span v-else style="color:#bbb">—</span>
+            </template>
+            <template v-if="column.key === 'teamName'">
+              <a-tag v-if="record.teamName" :color="colorForValue(record.teamName)">{{ record.teamName }}</a-tag>
+              <span v-else style="color:#bbb">—</span>
+            </template>
+            <template v-if="column.key === 'publishLink'">
+              <div v-if="record.publishLink" style="white-space:pre-line;font-size:12px">{{ record.publishLink }}</div>
+              <span v-else style="color:#bbb">—</span>
+            </template>
+            <template v-if="column.key === 'publishDate'">
+              {{ record.publishDate ? formatDate(record.publishDate) : '—' }}
+            </template>
+            <template v-if="column.key === 'clientPrice'">
+              {{ record.clientPrice != null ? fmtNum(record.clientPrice) : '—' }}
+            </template>
+          </template>
+        </a-table>
+      </template>
       <template v-else-if="preview">
         <div class="hint-box">
           本次将按当前列表页的筛选条件，把命中的全部 {{ preview.totalCount }} 条记录（不只是当前
@@ -51,6 +79,26 @@ import { ref, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { collaborationApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
+import { colorForValue } from '../../utils/tagColor'
+
+// "客户方付款批次为空"报错时的问题记录明细列（2026-08-21 新增，Shawn 要求）：内部需求编号/
+// 内部项目编号/品牌方/红人团队/红人社媒完整名字/需求内容/视频发布链接/视频发布时间/
+// 客户合作价格，供财务对照排查是哪条记录漏填了，不用回列表页自己一条条找
+const missingBatchColumns = [
+  { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 190,
+    customRender: ({ text }) => text || '—' },
+  { title: '内部项目编号', dataIndex: 'internalProjectNo', key: 'internalProjectNo', width: 190,
+    customRender: ({ text }) => text || '—' },
+  { title: '品牌方',       dataIndex: 'brandName',           key: 'brandName',           width: 110 },
+  { title: '红人团队',     dataIndex: 'teamName',             key: 'teamName',             width: 130 },
+  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',         width: 150,
+    customRender: ({ text }) => text || '—' },
+  { title: '需求内容',     dataIndex: 'demandContent',        key: 'demandContent',        width: 160, ellipsis: true,
+    customRender: ({ text }) => text || '—' },
+  { title: '视频发布链接', dataIndex: 'publishLink',          key: 'publishLink',          width: 220 },
+  { title: '视频发布时间', dataIndex: 'publishDate',          key: 'publishDate',          width: 110 },
+  { title: '客户合作价格（$）', dataIndex: 'clientPrice',     key: 'clientPrice',          width: 150 }
+]
 
 const props = defineProps({
   visible: Boolean,
