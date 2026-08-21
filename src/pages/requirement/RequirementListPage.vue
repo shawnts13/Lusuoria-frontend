@@ -144,11 +144,11 @@
             <span v-else-if="contractCellState(record).mode === 'notApplicable'" style="font-size:12px;color:#595959">
               已跟管理层确认此需求不涉及合同
             </span>
-            <span v-else style="display:inline-flex;align-items:center;gap:6px">
+            <span v-else style="display:flex;align-items:center;width:100%">
               <span style="color:#bbb">—</span>
               <a-popconfirm v-if="canManageContracts" title="已跟管理层确认此需求不涉及合同"
                 @confirm="handleConfirmContractNotApplicable(record)">
-                <a style="font-size:12px">确认该需求不涉及合同</a>
+                <a-button size="small" style="margin-left:auto">确认该需求不涉及合同</a-button>
               </a-popconfirm>
             </span>
           </template>
