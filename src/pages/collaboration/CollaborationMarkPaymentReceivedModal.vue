@@ -13,7 +13,7 @@
           message="当前页面存在&quot;客户方付款批次&quot;为空的记录，请重新确认筛选条件！"
           style="margin-bottom:12px" />
         <a-table :columns="missingBatchColumns" :data-source="preview.missingPaymentBatchRecords"
-          :row-key="(r, i) => i" size="small" :pagination="false" :scroll="{ x: 1300 }">
+          :row-key="(r, i) => i" size="small" :pagination="false" :scroll="{ x: 1600 }">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'brandName'">
               <a-tag v-if="record.brandName" :color="colorForValue(record.brandName)">{{ record.brandName }}</a-tag>
@@ -38,10 +38,10 @@
       </template>
       <template v-else-if="preview">
         <div class="hint-box">
-          本次将按当前列表页的筛选条件，把命中的全部 {{ preview.totalCount }} 条记录（不只是当前
-          这一页）统一标记为"已收到客户回款"——已经是这个状态的记录也会一并纳入（可能只是想更新
-          收到回款日期）。下方明细按"客户方付款批次号"分组；不涉及客户方付款批次的品牌方
-          （"客户方付款批次号"展示为"不涉及"）改按"品牌方/团队"分组，请核对范围无误后再提交。
+          本次将按当前列表页的筛选条件，把命中的全部 {{ preview.totalCount }} 条记录统一标记为
+          "已收到客户回款"——已经是这个状态的记录也会一并纳入（用于"可能只想更新收到回款日期"
+          这种情况）。下方明细按"客户方付款批次号"分组；同时包含不涉及客户方付款批次的品牌方，
+          请核对范围无误后再提交。
         </div>
         <a-table :columns="groupColumns" :data-source="preview.groups" :row-key="(r, i) => i"
           size="small" :pagination="false" style="margin-top:12px">
@@ -81,9 +81,10 @@ import { collaborationApi } from '../../api/index'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
 
-// "客户方付款批次为空"报错时的问题记录明细列（2026-08-21 新增，Shawn 要求）：内部需求编号/
-// 内部项目编号/品牌方/红人团队/红人社媒完整名字/需求内容/视频发布链接/视频发布时间/
-// 客户合作价格，供财务对照排查是哪条记录漏填了，不用回列表页自己一条条找
+// "客户方付款批次为空"报错时的问题记录明细列（2026-08-21 新增，Shawn 要求；同日追加"客户方的
+// 项目订单"，放在"客户合作价格（$）"后面）：内部需求编号/内部项目编号/品牌方/红人团队/红人
+// 社媒完整名字/需求内容/视频发布链接/视频发布时间/客户合作价格/客户方的项目订单，供财务对照
+// 排查是哪条记录漏填了，不用回列表页自己一条条找
 const missingBatchColumns = [
   { title: '内部需求编号', dataIndex: 'internalRequirementNo', key: 'internalRequirementNo', width: 190,
     customRender: ({ text }) => text || '—' },
@@ -97,7 +98,9 @@ const missingBatchColumns = [
     customRender: ({ text }) => text || '—' },
   { title: '视频发布链接', dataIndex: 'publishLink',          key: 'publishLink',          width: 220 },
   { title: '视频发布时间', dataIndex: 'publishDate',          key: 'publishDate',          width: 110 },
-  { title: '客户合作价格（$）', dataIndex: 'clientPrice',     key: 'clientPrice',          width: 150 }
+  { title: '客户合作价格（$）', dataIndex: 'clientPrice',     key: 'clientPrice',          width: 150 },
+  { title: '客户方的项目订单', dataIndex: 'clientOrderId',    key: 'clientOrderId',        width: 160,
+    customRender: ({ text }) => text || '—' }
 ]
 
 const props = defineProps({
