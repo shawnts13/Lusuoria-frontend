@@ -41,6 +41,20 @@
             <a-tag v-if="record.paymentProgressLabel" :color="colorForValue(record.paymentProgressLabel)">{{ record.paymentProgressLabel }}</a-tag>
             <span v-else style="color:#bbb">—</span>
           </template>
+          <!-- 2026-08-21 新增：COLLAB_PAYMENT_DUE 这一类，红人名字旁边标红提示"配置了特殊回款
+               周期"（record.specialPaymentCycle，后端 addCollabPaymentDueDetail() 写入），方便
+               管理层一眼看出这条是不是走的最高优先级的红人个人配置，而不是品牌方/团队规则 -->
+          <template v-if="column.key === 'accountName' && category === 'COLLAB_PAYMENT_DUE'">
+            {{ record.accountName }}
+            <span v-if="record.specialPaymentCycle" style="color:#c00000;margin-left:4px">（配置了特殊回款周期）</span>
+          </template>
+          <!-- 同上：这一类的"结款周期"如果是走特殊回款周期算出来的，数值本身标红，跟上面的
+               名字标注呼应，方便核对是不是同一批需要特别注意的记录 -->
+          <template v-if="column.key === 'cycleDays' && category === 'COLLAB_PAYMENT_DUE'">
+            <span :style="record.specialPaymentCycle ? 'color:#c00000;font-weight:600' : ''">
+              {{ record.cycleDays != null ? record.cycleDays + '天' : '—' }}
+            </span>
+          </template>
           <template v-if="column.key === 'videoTypeLabel'">
             <a-tag v-if="record.videoTypeLabel" :color="colorForValue(record.videoTypeLabel)">{{ record.videoTypeLabel }}</a-tag>
             <span v-else style="color:#bbb">—</span>
@@ -298,7 +312,10 @@ const PAYMENT_DUE_COLUMNS = [
     customRender: ({ text }) => text || '—' },
   { title: '品牌方',        dataIndex: 'brandName',          key: 'brandName',          width: 120 },
   { title: '红人团队',      key: 'teamName',            width: 160 },
-  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 150 },
+  // accountName/cycleDays 这两列改成 bodyCell 模板渲染（去掉 customRender），因为要根据
+  // record.specialPaymentCycle（2026-08-21 新增，见后端 ProgressReminderDetail 同名字段注释）
+  // 决定要不要标红——只在这个类别（COLLAB_PAYMENT_DUE）用到，见下方模板里 category 判断
+  { title: '红人社媒完整名字', dataIndex: 'accountName',      key: 'accountName',        width: 220 },
   { title: '需求内容',      dataIndex: 'demandContent',       key: 'demandContent',       width: 160, ellipsis: true,
     customRender: ({ text }) => text || '—' },
   { title: '红人视频制作与发布成本（$）', dataIndex: 'influencerCost', key: 'influencerCost', width: 180,
@@ -309,8 +326,7 @@ const PAYMENT_DUE_COLUMNS = [
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '需求完成时间',  dataIndex: 'requirementCompletedAt', key: 'requirementCompletedAt', width: 150,
     customRender: ({ text }) => text ? formatDateTime(text) : '—' },
-  { title: '结款周期',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90,
-    customRender: ({ text }) => text != null ? text + '天' : '—' },
+  { title: '结款周期',      dataIndex: 'cycleDays',           key: 'cycleDays',           width: 90 },
   { title: '最迟结款日',    dataIndex: 'deadlineDate',        key: 'deadlineDate',        width: 110,
     customRender: ({ text }) => text ? formatDate(text) : '—' },
   { title: '超出天数',      dataIndex: 'overdueDays',         key: 'overdueDays',         width: 90,
