@@ -148,7 +148,7 @@
               <span style="color:#bbb">—</span>
               <a-popconfirm v-if="canManageContracts" title="已跟管理层确认此需求不涉及合同"
                 @confirm="handleConfirmContractNotApplicable(record)">
-                <a-button size="small" style="margin-left:auto">确认该需求不涉及合同</a-button>
+                <a-button size="small" style="margin-left:auto;color:#fa8c16;border-color:#fa8c16">确认该需求不涉及合同</a-button>
               </a-popconfirm>
             </span>
           </template>
