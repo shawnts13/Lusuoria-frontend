@@ -132,7 +132,12 @@ export const useAuthStore = defineStore('auth', {
     // "批量标记为已收到客户回款"按钮（2026-08-21 新增）：Shawn 明确要求只对财务/管理层开放，
     // 比状态流转弹窗（canSetFinanceSettlementProgress，额外放行项目负责人/执行人员/IT后勤）
     // 更收紧，跟后端 CollaborationTrackingService.markClientPaymentReceivedBulk() 的权限判断一致
-    canMarkPaymentReceived: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole)
+    canMarkPaymentReceived: (state) => state.role === 'ADMIN' || ['财务', '管理层'].includes(state.employeeRole),
+    // "红人合作跟踪"财务角色 Excel 导入只能更新、不能新增（2026-08-21 新增，见后端
+    // CollaborationTrackingExcelHandler 的 financeImportUpdateOnly）——"下载导入模板"这个
+    // 按钮对财务没有意义（模板是给"新增"用的，财务没有新增权限），所以单独判断隐藏掉；
+    // ADMIN 排除在外，跟后端口径保持一致
+    isFinanceImportUpdateOnly: (state) => state.role !== 'ADMIN' && state.employeeRole === '财务'
   },
 
   actions: {

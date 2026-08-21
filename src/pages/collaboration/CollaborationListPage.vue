@@ -3,7 +3,10 @@
     <div class="page-header">
       <span class="page-title">2. 红人合作跟踪</span>
       <a-space>
-        <a-button @click="collaborationApi.downloadTemplate()">
+        <!-- 财务角色 Excel 导入只能"更新"不能"新增"（见 CollaborationTrackingExcelHandler
+             的 financeImportUpdateOnly），导入模板是给"新增"用的，财务用不上，不展示（Shawn
+             要求，2026-08-21） -->
+        <a-button v-if="!authStore.isFinanceImportUpdateOnly" @click="collaborationApi.downloadTemplate()">
           <template #icon><DownloadOutlined /></template>下载导入模板
         </a-button>
         <a-button @click="handleExport">
@@ -555,8 +558,22 @@ function splitLinks(str) {
 // Spring 绑定成"非 null 但空"的 List，触发 JPQL "IN ()" 语法错误（后端认的是"整个参数为
 // null 才不生效"）——一个都没选时必须归一成 undefined，不能是 []，见 CollaborationTracking
 // Repository.findByFilters 的 ":progress IS NULL OR c.progress IN :progress" 写法
+//
+// 2026-08-21 bug 修复：这里原来直接把数组传给 axios 的 GET params，axios（1.x）默认
+// paramsSerializer 会把数组序列化成 "progress[]=A&progress[]=B" 这种带方括号的写法，
+// 但 Spring MVC 的 @RequestParam List<X> 只认参数名严格等于 "progress" 的重复/逗号写法，
+// 完全不认识 "progress[]" 这个参数名，导致后端永远绑定到 null、筛选条件悄悄失效（前端没有
+// 任何报错，因为请求本身是成功的，只是筛选条件没生效）——这个坑只影响 GET 查询参数
+// （collaborationApi.list()），不影响 POST JSON 请求体（markPaymentReceivedPreview/Confirm
+// 走的是 requestBody，Jackson 认真正的 JSON 数组，不能同时用这个函数拼逗号字符串，那两处
+// 继续用下面的 nonEmpty() 保留数组类型）。GET 场景改用 nonEmptyCsv()，把数组提前手动拼成
+// 逗号分隔的字符串再传给 axios——这也是本文件 exportExcel() 之外、这个项目里其它接口
+// （比如 teamContractApi.byTeamIds）一直以来处理"数组类型查询参数"的写法，不是新发明的规则。
 function nonEmpty(arr) {
   return Array.isArray(arr) && arr.length > 0 ? arr : undefined
+}
+function nonEmptyCsv(arr) {
+  return Array.isArray(arr) && arr.length > 0 ? arr.join(',') : undefined
 }
 
 async function loadData() {
@@ -569,9 +586,9 @@ async function loadData() {
       accountName:        filters.accountName?.trim() || undefined,
       influencerId:       filters.influencerId,
       platform:           filters.platform,
-      progress:           nonEmpty(filters.progress),
-      influencerPaymentProgress: nonEmpty(filters.influencerPaymentProgress),
-      videoType:          nonEmpty(filters.videoType),
+      progress:           nonEmptyCsv(filters.progress),
+      influencerPaymentProgress: nonEmptyCsv(filters.influencerPaymentProgress),
+      videoType:          nonEmptyCsv(filters.videoType),
       videoMonth:         filters.videoMonth,
       videoDateStart:     filters.videoDateRange?.[0],
       videoDateEnd:       filters.videoDateRange?.[1],
@@ -579,7 +596,7 @@ async function loadData() {
       internalRequirementNo: filters.internalRequirementNo?.trim() || undefined,
       clientOrderId:      filters.clientOrderId?.trim() || undefined,
       clientPaymentBatch: filters.clientPaymentBatch?.trim() || undefined,
-      projectManagerId:   nonEmpty(filters.projectManagerId),
+      projectManagerId:   nonEmptyCsv(filters.projectManagerId),
       onlyMyResponsibility: filters.onlyMyResponsibility,
       onlyIncomplete:     filters.onlyIncomplete,
       onlyUnpublished:    filters.onlyUnpublished,
@@ -708,15 +725,14 @@ function handleExport() {
   // 不能直接把整个 filters 对象透传（exportExcel 内部会把 videoDateRange 数组 toString 成
   // 逗号拼接的字符串，后端不认识这个参数名，日期区间筛选就不会生效）。
   // progress/influencerPaymentProgress/videoType/projectManagerId 这4个多选筛选同样要用
-  // nonEmpty() 把"一个都没选"归一成 undefined（原因见 loadData() 上的注释）——exportExcel
-  // 内部用 URLSearchParams 拼参数，非空数组会被 String() 自动转成逗号拼接的字符串
-  // （如"A,B"），后端 Spring 对 List<Enum> 参数天然支持"单个值按逗号切分"，不需要额外处理
+  // nonEmptyCsv() 拼成逗号分隔的字符串（原因见 loadData() 上方 nonEmptyCsv() 的注释——
+  // GET 查询参数不能直接传数组），"一个都没选"时归一成 undefined
   collaborationApi.exportExcel({
     ...filters,
-    progress: nonEmpty(filters.progress),
-    influencerPaymentProgress: nonEmpty(filters.influencerPaymentProgress),
-    videoType: nonEmpty(filters.videoType),
-    projectManagerId: nonEmpty(filters.projectManagerId),
+    progress: nonEmptyCsv(filters.progress),
+    influencerPaymentProgress: nonEmptyCsv(filters.influencerPaymentProgress),
+    videoType: nonEmptyCsv(filters.videoType),
+    projectManagerId: nonEmptyCsv(filters.projectManagerId),
     videoDateStart: filters.videoDateRange?.[0],
     videoDateEnd: filters.videoDateRange?.[1]
   })
