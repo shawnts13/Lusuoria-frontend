@@ -74,10 +74,22 @@
                   <a>取消标记</a>
                 </a-popconfirm>
               </template>
-              <a-popconfirm v-else title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
-                @confirm="handleAcknowledge(record)">
-                <a style="color:#52c41a">标记已处理</a>
-              </a-popconfirm>
+              <template v-else>
+                <!-- "已跟管理层确认此需求不涉及合同"（2026-08-21 新增）：只在"合同上传逾期"这一类
+                     展示，方便直接在这个页面处理，效果等同"标记已处理"，见
+                     handleConfirmContractNotApplicable() -->
+                <template v-if="category === 'REQUIREMENT_CONTRACT_OVERDUE' && canManageContracts">
+                  <a-popconfirm title="已跟管理层确认此需求不涉及合同"
+                    @confirm="handleConfirmContractNotApplicable(record)">
+                    <a style="color:#fa8c16">已跟管理层确认此需求不涉及合同</a>
+                  </a-popconfirm>
+                  <a-divider type="vertical" />
+                </template>
+                <a-popconfirm title="标记为已处理？下次批次前不会再提醒这条（进度有变化时会自动恢复提醒）"
+                  @confirm="handleAcknowledge(record)">
+                  <a style="color:#52c41a">标记已处理</a>
+                </a-popconfirm>
+              </template>
             </template>
           </template>
         </template>
@@ -107,7 +119,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import PaymentItemSelectorModal from '../payment/PaymentItemSelectorModal.vue'
-import { progressReminderApi } from '../../api/index'
+import { progressReminderApi, requirementApi } from '../../api/index'
 import { formatDate, formatDateTime } from '../../utils/dateFormat'
 import { useTopScrollbar } from '../../composables/useTopScrollbar'
 import { useAuthStore } from '../../store/auth'
@@ -144,6 +156,9 @@ const REQUIREMENT_CATEGORIES = ['REQUIREMENT_INVOICE_OVERDUE', 'REQUIREMENT_CONT
 const ACKNOWLEDGEABLE_CATEGORIES = [...STALL_CATEGORIES, ...REQUIREMENT_CATEGORIES]
 const canAcknowledge = computed(() =>
   ACKNOWLEDGEABLE_CATEGORIES.includes(props.category) && !authStore.isAdmin && !authStore.isManagement)
+// "已跟管理层确认此需求不涉及合同"按钮（2026-08-21 新增，仅 REQUIREMENT_CONTRACT_OVERDUE 这
+// 一类有意义）的权限口径，跟 RequirementListPage.vue 的"确认该需求不涉及合同"按钮保持一致
+const canManageContracts = computed(() => authStore.canWrite || authStore.canManageTeamContracts)
 
 const loading = ref(false)
 const list = ref([])
@@ -551,6 +566,20 @@ async function handleAcknowledge(record) {
   // 2026-07 起后端不再把标记已处理的行从列表里移除（那样会导致主卡片标题的笔数——跑批时
   // 固定算好的，不受标记影响——跟点进详情看到的笔数对不上），改成原地标记 acknowledged，
   // 这一行继续展示，只是变灰 + 换成"已标记为已处理"文案
+  const target = list.value.find(r => r.id === record.id)
+  if (target) target.acknowledged = true
+}
+
+/**
+ * "已跟管理层确认此需求不涉及合同"（2026-08-21 新增，仅 REQUIREMENT_CONTRACT_OVERDUE）：
+ * 先调需求管理那边的确认接口直接把标记写到这条需求上（无需管理层审核），再复用"标记已处理"
+ * 的 acknowledge 接口把这条提醒也标记掉——Shawn 要求"点击之后，效果跟点击了标记已处理一样"，
+ * 两步操作对用户来说是一次点击、一个确认弹窗，不需要分两次点。
+ */
+async function handleConfirmContractNotApplicable(record) {
+  await requirementApi.confirmContractNotApplicable(record.requirementId)
+  await progressReminderApi.acknowledge(props.category, record.requirementId)
+  message.success('已确认该需求不涉及合同，并标记为已处理')
   const target = list.value.find(r => r.id === record.id)
   if (target) target.acknowledged = true
 }

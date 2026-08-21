@@ -139,10 +139,21 @@
             <a v-else-if="contractCellState(record).mode === 'gotoTeamContract'"
               @click="goToTeamContract(record)"
               style="font-size:12px;color:#595959;cursor:pointer">{{ contractCellState(record).text }}</a>
-            <span v-else style="color:#bbb">—</span>
+            <!-- "已跟管理层确认此需求不涉及合同"（2026-08-21 新增）：无需管理层审核，直接生效，
+                 见 handleConfirmContractNotApplicable() -->
+            <span v-else-if="contractCellState(record).mode === 'notApplicable'" style="font-size:12px;color:#595959">
+              已跟管理层确认此需求不涉及合同
+            </span>
+            <span v-else style="display:inline-flex;align-items:center;gap:6px">
+              <span style="color:#bbb">—</span>
+              <a-popconfirm v-if="canManageContracts" title="已跟管理层确认此需求不涉及合同"
+                @confirm="handleConfirmContractNotApplicable(record)">
+                <a style="font-size:12px">确认该需求不涉及合同</a>
+              </a-popconfirm>
+            </span>
           </template>
           <template v-if="column.key === 'action'">
-            <a-space v-if="authStore.canWrite || authStore.canManagePayments">
+            <a-space v-if="authStore.canWrite || authStore.canManagePayments || authStore.canManageTeamContracts">
               <template v-if="authStore.canWrite">
                 <a @click="openEdit(record)">编辑</a>
                 <a-divider type="vertical" />
@@ -160,7 +171,13 @@
                       @click="openBatchCreateForRequirement(record)">新建合作跟踪</a-button>
                   </span>
                 </a-tooltip>
-                <a-divider type="vertical" />
+              </template>
+              <!-- "上传合同"：2026-08 起除了 canWrite 之外，员工角色="法务"的账号
+                   （canManageTeamContracts，见 store/auth.js 注释——法务通常是 SysUser 角色
+                   AUDITOR，不满足 canWrite）也能操作，跟"品牌方/红人团队管理"里上传团队合同
+                   用的是同一个权限判定，Shawn 要求两处保持一致 -->
+              <template v-if="authStore.canWrite || authStore.canManageTeamContracts">
+                <a-divider v-if="authStore.canWrite" type="vertical" />
                 <a-tooltip :title="contractButtonState(record).tooltip">
                   <span>
                     <a-button size="small" :disabled="contractButtonState(record).disabled"
@@ -170,7 +187,7 @@
                 </a-tooltip>
               </template>
               <template v-if="authStore.canManagePayments">
-                <a-divider v-if="authStore.canWrite" type="vertical" />
+                <a-divider v-if="authStore.canWrite || authStore.canManageTeamContracts" type="vertical" />
                 <a-tooltip :title="settlementButtonState(record).tooltip">
                   <span>
                     <a-button size="small" :disabled="settlementButtonState(record).disabled"
@@ -513,11 +530,28 @@ function contractCellState(record) {
   const brand = getBrand(record.brandId)
   const isAnnual = brand?.contractCycleType === 'ANNUAL'
   if (!isAnnual) {
-    return record.contractLink ? { mode: 'link', href: record.contractLink } : { mode: 'none' }
+    if (record.contractLink) return { mode: 'link', href: record.contractLink }
+    // 2026-08-21 新增：已经跟管理层确认过"不涉及合同"，不再展示"—"+按钮，改成纯文案回显
+    if (record.contractNotApplicable) return { mode: 'notApplicable' }
+    return { mode: 'none' }
   }
   const matched = matchedTeamContract(record)
   if (matched) return { mode: 'link', href: matched.contractLink }
   return { mode: 'gotoTeamContract', text: '该品牌方是一年签一次合同，请在"品牌方/红人团队管理"处上传' }
+}
+
+// "确认该需求不涉及合同"按钮/待处理页同款按钮的权限口径：跟"上传合同"一致——canWrite（ADMIN/
+// STAFF）或员工角色="法务"等团队合同管理角色（canManageTeamContracts），见 store/auth.js 注释
+const canManageContracts = computed(() => authStore.canWrite || authStore.canManageTeamContracts)
+
+/**
+ * "确认该需求不涉及合同"点击后：调后端接口直接生效（无需管理层审核），成功后原地把这条记录
+ * 的 contractNotApplicable 置 true，"合同链接"列跟着变成回显文案，不用重新拉一次列表。
+ */
+async function handleConfirmContractNotApplicable(record) {
+  await requirementApi.confirmContractNotApplicable(record.id)
+  message.success('已确认该需求不涉及合同')
+  record.contractNotApplicable = true
 }
 
 // "上传合同"操作按钮的三态：每次需求签一次合同 -> 始终可点的"上传合同"；一年签一次合同且

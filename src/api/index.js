@@ -239,6 +239,9 @@ export const requirementApi = {
     http.post(`/api/influencer-requirements/${id}/invoice-link`, { invoiceLink }),
   uploadContractLink: (id, contractLink) =>
     http.post(`/api/influencer-requirements/${id}/contract-link`, { contractLink }),
+  // "确认该需求不涉及合同"（2026-08-21 新增）：无需管理层审核，直接生效
+  confirmContractNotApplicable: (id) =>
+    http.post(`/api/influencer-requirements/${id}/contract-not-applicable`),
 
   exportExcel: (params) => {
     const qs = new URLSearchParams(
