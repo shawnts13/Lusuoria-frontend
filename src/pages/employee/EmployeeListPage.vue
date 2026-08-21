@@ -19,6 +19,10 @@
           <template v-if="column.key === 'role'">
             <a-tag v-if="record.role" :color="colorForValue(record.role)">{{ record.role }}</a-tag>
             <span v-else style="color:#bbb">—</span>
+            <!-- "项目管理员"是叠加在角色之上的独立身份（2026-08-21 新增），不是 role 本身的值，
+                 所以单独加一个标签，不跟角色标签合并，颜色特意跟角色标签体系区分开（用固定的
+                 紫色而不是 colorForValue 生成色，避免恰好撞上某个角色本身的颜色） -->
+            <a-tag v-if="record.projectAdminSince" color="purple" style="margin-left:4px">项目管理员</a-tag>
           </template>
           <template v-if="column.key === 'email'">
             <span v-if="record.email">{{ record.email }}</span>
@@ -64,6 +68,23 @@
               <span style="color:#262626;font-size:12px">法务每月薪资由管理层手动在"工资单"模块设置</span>
             </template>
             <span v-else style="color:#595959">薪资规则待定</span>
+            <!-- 项目管理员固定月薪 + 负责管理的品牌方（2026-08-21 新增）：跟上面按角色互斥展示
+                 的薪资块不同，这块是"叠加"展示的——项目负责人同时是项目管理员时，提成信息
+                 跟这块会一起显示，不是二选一 -->
+            <div v-if="record.projectAdminSince" style="font-size:12px;line-height:1.8;margin-top:4px;padding-top:4px;border-top:1px dashed #e8e8e8">
+              <div>
+                <span style="color:#595959">项目管理员月薪：</span>
+                <span v-if="record.projectAdminFixedMonthlySalary != null"
+                  v-html="highlightAmounts('¥' + fmtNum(record.projectAdminFixedMonthlySalary))"></span>
+                <span v-else style="color:#bbb">—</span>
+              </div>
+              <div v-if="managedBrandsByEmployeeId[record.id]?.length">
+                <span style="color:#595959">负责品牌方：</span>
+                <a-tag v-for="bid in managedBrandsByEmployeeId[record.id]" :key="bid"
+                  :color="colorForValue(brandNameById[bid])" style="margin:1px 2px 1px 0">{{ brandNameById[bid] || bid }}</a-tag>
+              </div>
+              <div v-else style="color:#c00000">尚未配置负责管理的品牌方</div>
+            </div>
           </template>
           <template v-if="column.key === 'action'">
             <a-space>
@@ -164,6 +185,40 @@
           </div>
         </template>
 
+        <!-- "项目管理员"身份（2026-08-21 新增）：只能叠加在"项目负责人"角色上（管理层本身已经
+             包含这些权限，不需要也不允许再叠加，见 CLAUDE.md 项目管理员需求说明），跟上面
+             提成/bonus 是"同时展示"关系，不是互斥的 tab 切换 -->
+        <div v-if="form.role === '项目负责人'" class="bonus-section">
+          <div class="bonus-section-header">项目管理员身份</div>
+          <a-form-item label="同时是项目管理员" :label-col="{ span: 10 }" :wrapper-col="{ span: 13 }">
+            <a-switch v-model:checked="form.isProjectAdmin" @change="onToggleProjectAdmin" />
+          </a-form-item>
+          <template v-if="form.isProjectAdmin">
+            <a-form-item label="负责管理的品牌方" :label-col="{ span: 10 }" :wrapper-col="{ span: 13 }">
+              <a-select v-model:value="form.managedBrandIds" mode="multiple" allow-clear show-search
+                option-filter-prop="label" placeholder="选择该项目管理员负责的品牌方（自动覆盖品牌方下全部团队）">
+                <a-select-option v-for="b in brands" :key="b.id" :value="b.id" :label="b.name">{{ b.name }}</a-select-option>
+              </a-select>
+              <div style="font-size:12px;color:#595959;margin-top:4px">
+                可以先留空、后续再配置；不选品牌方时不影响项目管理员身份本身的其他权限
+              </div>
+            </a-form-item>
+            <a-form-item label="项目管理员固定月薪" :label-col="{ span: 10 }" :wrapper-col="{ span: 13 }"
+              name="projectAdminFixedMonthlySalary" :rules="[{ required: true, message: '请填写项目管理员固定月薪' }]">
+              <a-input-number v-model:value="form.projectAdminFixedMonthlySalary"
+                style="width:100%" :min="0" :precision="2" addon-after="元/月" />
+            </a-form-item>
+            <a-form-item label="成为项目管理员的时间" :label-col="{ span: 10 }" :wrapper-col="{ span: 13 }"
+              name="projectAdminSince" :rules="[{ required: true, message: '请选择成为项目管理员的时间' }]">
+              <a-date-picker v-model:value="form.projectAdminSince" value-format="YYYY-MM-DD" style="width:100%" />
+              <div style="font-size:12px;color:#595959;margin-top:4px">
+                只有这个月份及以后的工资单/数据看板才会计入项目管理员固定月薪；已经确认过的工资单
+                不会因为改这个日期而变动
+              </div>
+            </a-form-item>
+          </template>
+        </div>
+
         <!-- 财务 / IT后勤：固定月薪 -->
         <a-form-item v-if="isFixedSalaryRole(form.role)" label="固定月薪（人民币）">
           <a-input-number v-model:value="form.fixedMonthlySalary"
@@ -188,11 +243,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import { employeeApi, executorPayRateApi } from '../../api/index'
 import { useOptions } from '../../composables/useOptions'
+import { useReferenceData } from '../../composables/useReferenceData'
 import { formatDate } from '../../utils/dateFormat'
 import { colorForValue } from '../../utils/tagColor'
 import { videoTypeColor } from '../../utils/enumColors'
@@ -201,6 +257,7 @@ import { VIDEO_TYPES, VIDEO_TYPE_LABELS, formatVideoTypeTiers } from '../../util
 import ExecutorRateFields from './ExecutorRateFields.vue'
 
 const { getOptions } = useOptions()
+const { loadBrands } = useReferenceData()
 
 const COMMISSION_ROLES  = ['项目负责人', '管理层']
 const FIXED_SALARY_ROLES = ['财务', 'IT后勤']
@@ -228,6 +285,12 @@ function isLegalRole(role)       { return role === LEGAL_ROLE }
 
 const loading = ref(false)
 const list    = ref([])
+// "项目管理员"负责管理的品牌方（2026-08-21 新增）：brands 供表单多选下拉+列表标签取名用，
+// brandNameById 是按 id 索引的 Map（普通对象），managedBrandsByEmployeeId 是列表页批量展示用，
+// 结构跟 bonusTiersByEmployeeId 是同一个思路（key 为员工 id）
+const brands = ref([])
+const brandNameById = computed(() => Object.fromEntries(brands.value.map(b => [b.id, b.name])))
+const managedBrandsByEmployeeId = ref({})
 // 执行人员薪资标准（这里代表"管理层"那份配置，见 ExecutorRateFields 的 managerId 解析规则），
 // 结构：{ [executorId]: { [videoType]: [tier, ...] } }，供列表"薪资信息"列直接展示当前已配置的档位
 const executorRates = ref({})
@@ -270,11 +333,24 @@ const emptyForm = () => ({
   defaultCommissionRate: null, commissionRateDisplay: 0,
   bonusTierCurrency: 'RMB', bonusTiers: [],
   fixedMonthlySalary: null,
+  // "项目管理员"身份（2026-08-21 新增），见表单里对应的开关+三个字段
+  isProjectAdmin: false, managedBrandIds: [],
+  projectAdminFixedMonthlySalary: null, projectAdminSince: null,
   notes: ''
 })
 
 function addBonusTier() {
   form.bonusTiers.push({ minAmount: null, maxAmount: null, bonusRate: null, bonusRateDisplay: 0 })
+}
+
+// 关闭"同时是项目管理员"开关时清空三个关联字段，避免用户开了又关、提交时残留旧值
+// （后端本身也会在 isProjectAdmin=false 时无条件清空这三个字段，这里只是让表单显示跟提交结果一致）
+function onToggleProjectAdmin(checked) {
+  if (!checked) {
+    form.managedBrandIds = []
+    form.projectAdminFixedMonthlySalary = null
+    form.projectAdminSince = null
+  }
 }
 
 const form = reactive(emptyForm())
@@ -323,11 +399,13 @@ function fmtNum(val) {
 async function loadData() {
   loading.value = true
   try {
-    const [empRes, rateRes] = await Promise.all([
+    const [empRes, rateRes, brandsData] = await Promise.all([
       employeeApi.list(),
-      executorPayRateApi.list()
+      executorPayRateApi.list(),
+      loadBrands() // 品牌方引用数据（60秒内存缓存），供"负责管理的品牌方"多选下拉+列表标签取名用
     ])
     list.value = sortByRoleThenName(empRes.data || [])
+    brands.value = brandsData
     const map = {}
     for (const t of (rateRes.data || [])) {
       if (!map[t.executorId]) map[t.executorId] = {}
@@ -342,6 +420,15 @@ async function loadData() {
       bonusTiersByEmployeeId.value = bonusRes.data || {}
     } else {
       bonusTiersByEmployeeId.value = {}
+    }
+
+    // "项目管理员"负责管理的品牌方：只对已经开通身份（projectAdminSince 不为空）的员工批量查
+    const projectAdminIds = list.value.filter(e => e.projectAdminSince).map(e => e.id)
+    if (projectAdminIds.length) {
+      const managedRes = await employeeApi.getManagedBrandsBulk(projectAdminIds)
+      managedBrandsByEmployeeId.value = managedRes.data || {}
+    } else {
+      managedBrandsByEmployeeId.value = {}
     }
   } finally { loading.value = false }
 }
@@ -362,7 +449,13 @@ async function openEdit(r) {
     commissionRateDisplay: r.defaultCommissionRate != null
       ? +(parseFloat(r.defaultCommissionRate) * 100).toFixed(0) : 0,
     bonusTierCurrency: r.bonusTierCurrency || 'RMB',
-    bonusTiers: []
+    bonusTiers: [],
+    // "项目管理员"身份：projectAdminSince 不为空即代表已开通，回显日期时同样要格式化成
+    // value-format 需要的 'YYYY-MM-DD' 字符串，否则 a-date-picker 认不出后端返回的原始时间戳
+    isProjectAdmin: !!r.projectAdminSince,
+    projectAdminSince: r.projectAdminSince ? formatDate(r.projectAdminSince) : null,
+    projectAdminFixedMonthlySalary: r.projectAdminFixedMonthlySalary,
+    managedBrandIds: []
   })
   modalVisible.value = true
   if (isCommissionRole(r.role)) {
@@ -371,6 +464,11 @@ async function openEdit(r) {
       ...t,
       bonusRateDisplay: t.bonusRate != null ? +(parseFloat(t.bonusRate) * 100).toFixed(0) : 0
     }))
+  }
+  // 已开通项目管理员身份的，额外拉一次已配置的负责品牌方列表回显到多选框
+  if (r.projectAdminSince) {
+    const managedRes = await employeeApi.getManagedBrands(r.id)
+    form.managedBrandIds = managedRes.data || []
   }
 }
 

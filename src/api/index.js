@@ -118,6 +118,9 @@ export const employeeApi = {
   delete:  (id)   => http.delete(`/api/employees/${id}`),
   getBonusTiers: (id) => http.get(`/api/employees/${id}/bonus-tiers`),
   getBonusTiersBulk: (employeeIds) => http.get('/api/employees/bonus-tiers', { params: { employeeIds: employeeIds.join(',') } }),
+  // "项目管理员"负责管理的品牌方（2026-08-21 新增）
+  getManagedBrands: (id) => http.get(`/api/employees/${id}/managed-brands`),
+  getManagedBrandsBulk: (employeeIds) => http.get('/api/employees/managed-brands', { params: { employeeIds: employeeIds.join(',') } }),
 
   exportExcel: (role) => downloadWithAuth(
     `${BASE}/api/employees/export/excel${role ? '?role=' + role : ''}`, '员工.xlsx')

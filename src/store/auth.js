@@ -3,8 +3,8 @@ import { authApi } from '../api/index'
 
 // 每次部署时递增此版本号，并更新发布时间
 // 用户下次访问页面时会看到"版本已更新"提示
-export const APP_VERSION = '1.206.0'
-export const APP_VERSION_TIME = '2026-08-21 14:35'
+export const APP_VERSION = '1.207.0'
+export const APP_VERSION_TIME = '2026-08-21 15:11'
 
 const VERSION_KEY = 'lusuoria_app_version'
 
@@ -30,7 +30,7 @@ export function clearAllCache() {
   // 清除 sessionStorage（useOptions 缓存等）
   sessionStorage.clear()
   // 清除 localStorage 里的缓存（保留登录状态）
-  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', 'employeeRole', 'employeeId', VERSION_KEY]
+  const keep = ['token', 'username', 'displayName', 'role', 'isManagement', 'employeeRole', 'employeeId', 'isProjectAdmin', VERSION_KEY]
   Object.keys(localStorage).forEach(key => {
     if (!keep.includes(key)) localStorage.removeItem(key)
   })
@@ -48,7 +48,10 @@ export const useAuthStore = defineStore('auth', {
     employeeRole: localStorage.getItem('employeeRole') || null,
     // 登录账号关联的员工 id（未关联员工时为 null），供"新建红人合作跟踪时把项目负责人默认
     // 填成自己"这类场景使用
-    employeeId: localStorage.getItem('employeeId') ? Number(localStorage.getItem('employeeId')) : null
+    employeeId: localStorage.getItem('employeeId') ? Number(localStorage.getItem('employeeId')) : null,
+    // "项目管理员"身份（2026-08-21 新增）：叠加在 employeeRole="项目负责人" 之上的独立身份，
+    // 不是 employeeRole 本身的值，见后端 Employee.projectAdminSince 字段注释
+    isProjectAdmin: localStorage.getItem('isProjectAdmin') === 'true'
   }),
 
   getters: {
@@ -137,7 +140,12 @@ export const useAuthStore = defineStore('auth', {
     // CollaborationTrackingExcelHandler 的 financeImportUpdateOnly）——"下载导入模板"这个
     // 按钮对财务没有意义（模板是给"新增"用的，财务没有新增权限），所以单独判断隐藏掉；
     // ADMIN 排除在外，跟后端口径保持一致
-    isFinanceImportUpdateOnly: (state) => state.role !== 'ADMIN' && state.employeeRole === '财务'
+    isFinanceImportUpdateOnly: (state) => state.role !== 'ADMIN' && state.employeeRole === '财务',
+    // "待处理"页面的完整审批队列（删除申请/进度倒退申请/内部执行成本修改申请）：2026-08-21
+    // 起从"仅 ADMIN"放宽给"项目管理员"，但项目管理员看到的是后端按品牌方范围过滤后的子集，
+    // 前端只负责决定要不要展示这块 UI，跟后端 PendingApprovalController.list() 的
+    // @PreAuthorize 放宽保持一致
+    canAccessPendingApprovalQueue: (state) => state.role === 'ADMIN' || state.isProjectAdmin
   },
 
   actions: {
@@ -150,6 +158,7 @@ export const useAuthStore = defineStore('auth', {
       this.isManagement = !!res.data.isManagement
       this.employeeRole = res.data.employeeRole || null
       this.employeeId   = res.data.employeeId ?? null
+      this.isProjectAdmin = !!res.data.isProjectAdmin
       localStorage.setItem('token',        this.token)
       localStorage.setItem('username',     this.username)
       localStorage.setItem('displayName',  this.displayName)
@@ -159,12 +168,14 @@ export const useAuthStore = defineStore('auth', {
       else localStorage.removeItem('employeeRole')
       if (this.employeeId != null) localStorage.setItem('employeeId', String(this.employeeId))
       else localStorage.removeItem('employeeId')
+      localStorage.setItem('isProjectAdmin', String(this.isProjectAdmin))
     },
     logout() {
       this.token = this.username = this.displayName = this.role = null
       this.isManagement = false
       this.employeeRole = null
       this.employeeId = null
+      this.isProjectAdmin = false
       localStorage.removeItem('token')
       localStorage.removeItem('username')
       localStorage.removeItem('displayName')
@@ -172,6 +183,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('isManagement')
       localStorage.removeItem('employeeRole')
       localStorage.removeItem('employeeId')
+      localStorage.removeItem('isProjectAdmin')
     }
   }
 })

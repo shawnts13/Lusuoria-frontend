@@ -74,6 +74,12 @@
           <div v-if="detail.extraBonusAmount != null" class="line">
             <span>奖金</span><span>{{ fmt(detail.extraBonusAmount) }}</span>
           </div>
+          <!-- "项目管理员"固定月薪（2026-08-21 新增）：只有既是项目负责人又是项目管理员的员工
+               才会非空，正交叠加在提成/Bonus之上，位置固定排在提成金额/Bonus/奖金的下方、
+               总工资的上方（Shawn 明确要求这个展示顺序） -->
+          <div v-if="detail.projectAdminSalaryRmb != null" class="line">
+            <span>项目管理员固定月薪</span><span>{{ fmt(detail.projectAdminSalaryRmb) }}</span>
+          </div>
 
           <div class="line total">
             <span>{{ totalLineLabel }}</span>

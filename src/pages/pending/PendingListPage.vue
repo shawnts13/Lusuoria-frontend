@@ -16,7 +16,9 @@
     <!-- 进度提醒：2026-07 起对所有非访客角色开放，具体能看到哪几类由后端按身份过滤 -->
     <ProgressReminderSection v-if="!authStore.isGuest" />
 
-    <template v-if="authStore.isAdmin">
+    <!-- 2026-08-21 起从"仅 ADMIN"放宽给"项目管理员"，见 authStore.canAccessPendingApprovalQueue——
+         项目管理员看到的是后端已经按自己负责管理的品牌方过滤后的子集，前端不需要额外区分 -->
+    <template v-if="authStore.canAccessPendingApprovalQueue">
       <div class="filter-bar">
         <a-select v-model:value="filters.category" placeholder="类别" style="width:180px"
           allow-clear @change="loadData">
@@ -199,5 +201,5 @@ async function handleReject() {
 
 // 审批列表只有 ADMIN 能看，非 ADMIN 的"管理层"用户进这个页面只是为了看进度提醒，
 // 不应该去调 /api/pending-approvals（后端是 hasRole('ADMIN')，会报无权限）
-onMounted(() => { if (authStore.isAdmin) loadData() })
+onMounted(() => { if (authStore.canAccessPendingApprovalQueue) loadData() })
 </script>
